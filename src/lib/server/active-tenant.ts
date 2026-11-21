@@ -1,4 +1,4 @@
-import { dev } from '$app/environment';
+import { dev } from '$app/env';
 import { isHttpError, type Cookies } from '@sveltejs/kit';
 import { assertTenantAccess, tenantsForUser } from '$lib/server/tenant';
 import type { Tenant, User } from '$lib/server/db/schema';

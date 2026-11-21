@@ -3,7 +3,7 @@
 // requêtes SSR (utilisateurs et tenants confondus). Ne l'appeler QUE côté
 // client (handlers d'événements, $effect, onMount), jamais pendant le rendu
 // serveur ni dans un load. `toast()` ignore l'appel côté serveur par garde.
-import { browser } from '$app/environment';
+import { browser } from '$app/env';
 
 export type ToastKind = 'signal' | 'advisory' | 'warning' | 'info';
 export type ToastItem = { id: number; kind: ToastKind; message: string };
