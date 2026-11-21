@@ -4,6 +4,8 @@
 set -eu
 DB="${DATABASE_URL#file:}"
 rm -f "$DB" "$DB-wal" "$DB-shm"
+# tsx resolves $lib through .svelte-kit/tsconfig.json, absent from a fresh checkout.
+npx svelte-kit sync
 npm run db:migrate
 npm run db:seed:demo
 npm run build
