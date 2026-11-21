@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { page } from '$app/state';
+	import { localNext } from '$lib/return-path';
 	import ClientHeader from '$lib/components/ClientHeader.svelte';
 	import {
 		Button,
@@ -13,6 +15,8 @@
 	import type { ActionData, PageData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
+
+	const next = $derived(localNext(page.url.searchParams.get('next')));
 
 	const fields: [string, string, string][] = [
 		['email', 'E-mail', 'email'],
@@ -31,6 +35,21 @@
 		</h2>
 		<Button href="/lists" variant="ghost" size="sm">Toutes les listes</Button>
 	</div>
+
+	{#if next}
+		<div
+			class="flex flex-col gap-3 rounded-lg border border-line-strong bg-surface-1 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+		>
+			<p class="text-ink-dim">
+				{data.targets.length === 0
+					? 'Importez des destinataires, puis poursuivez la création de la campagne.'
+					: `${data.targets.length} destinataire(s) dans cette liste. Vous pouvez poursuivre la création de la campagne.`}
+			</p>
+			<Button href={next} variant="primary" class="w-full sm:w-auto">
+				Continuer vers la campagne
+			</Button>
+		</div>
+	{/if}
 
 	<p class="text-ink-dim">
 		Les destinataires de cette liste reçoivent les campagnes qui l'utilisent. Importez un CSV ou

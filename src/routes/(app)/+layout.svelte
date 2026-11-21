@@ -7,12 +7,19 @@
 	import Toast from '$lib/components/ui/Toast.svelte';
 	let { data, children } = $props();
 
-	const links = [
+	// Listes et profils d'envoi dépendent du client : visibles seulement s'il y en a un d'actif.
+	const links = $derived([
 		{ href: '/dashboard', label: 'Tableau de bord' },
 		{ href: '/campaigns', label: 'Campagnes' },
+		...(data.activeTenant
+			? [
+					{ href: '/lists', label: 'Listes' },
+					{ href: '/sending-profiles', label: "Profils d'envoi" }
+				]
+			: []),
 		{ href: '/tenants', label: 'Clients' },
 		{ href: '/scenarios', label: 'Scénarios' }
-	];
+	]);
 
 	// Squelette affiché seulement après un court délai (évite le clignotement) ;
 	// la page reste montée pour ne pas perdre la saisie en cas d'échec.

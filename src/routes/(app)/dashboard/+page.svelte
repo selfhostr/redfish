@@ -84,6 +84,7 @@
 				{#if data.listCount === 0}
 					<Button variant="ghost" href="/lists">Créer une liste de destinataires</Button>
 				{/if}
+				<Button variant="ghost" href="/sending-profiles">Ajouter un profil d'envoi</Button>
 			</div>
 		</EmptyState>
 	{:else}

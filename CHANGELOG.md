@@ -12,6 +12,7 @@ First complete version (target `0.1.0`).
 - Job worker with a database-backed queue, SMTP sending of MJML e-mails, graceful shutdown on SIGTERM.
 - Tracking of opens, clicks and reports through unique links, with detection of mail scanners and bots. No credential is captured.
 - Five scenarios: `microsoft365` and four Swiss-themed scenarios, plus the awareness landing page.
+- Lists and sending profiles in the main navigation; list creation chains into CSV import, and campaign creation warns when the chosen list is empty.
 - Per-campaign funnel report with print and PDF output.
 - Hardening: rate limiting, strict CSP, host isolation between dashboard and tracking, strong secret key validation.
 - Daily anonymisation of expired targets and optional Litestream backup.

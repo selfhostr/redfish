@@ -1,5 +1,5 @@
 import { parse } from 'csv-parse/sync';
-import { and, eq } from 'drizzle-orm';
+import { and, count, eq } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { targetLists, targets } from '$lib/server/db/schema';
 import type { Target, TargetList } from '$lib/server/db/schema';
@@ -36,6 +36,17 @@ export async function createList(tenantId: string, name: string): Promise<Target
 
 export async function listLists(tenantId: string): Promise<TargetList[]> {
 	return db.select().from(targetLists).where(eq(targetLists.tenantId, tenantId)).all();
+}
+
+/** Nombre de cibles par liste du tenant (les listes vides sont absentes de la map). */
+export async function countTargetsByList(tenantId: string): Promise<Map<string, number>> {
+	const rows = db
+		.select({ listId: targets.listId, n: count() })
+		.from(targets)
+		.where(eq(targets.tenantId, tenantId))
+		.groupBy(targets.listId)
+		.all();
+	return new Map(rows.map((r) => [r.listId, r.n]));
 }
 
 /** Liste du tenant, sinon null (jamais d'accès inter-tenant). */
