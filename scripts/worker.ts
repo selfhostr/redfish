@@ -4,11 +4,13 @@ import { startWorker, stopWorker } from '../src/lib/server/jobs/worker';
 // (la file ne réclame que les types ayant un handler enregistré).
 import '../src/lib/server/jobs/handlers/send-email';
 import { scheduleRetention } from '../src/lib/server/jobs/handlers/retention';
+import { scheduleCompletionCheck } from '../src/lib/server/jobs/handlers/campaign-completion';
 import { scheduleLaunchCheck } from '../src/lib/server/jobs/handlers/scheduled-launch';
 
 // Amorce la purge quotidienne de rétention (no-op si déjà planifiée).
 await scheduleRetention();
 await scheduleLaunchCheck();
+await scheduleCompletionCheck();
 startWorker(Number(process.env.WORKER_INTERVAL_MS ?? 5000));
 console.log('worker started');
 

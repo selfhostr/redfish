@@ -1,0 +1,1 @@
+ALTER TABLE `campaigns` ADD `completed_at` integer;

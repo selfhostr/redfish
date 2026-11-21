@@ -18,6 +18,7 @@
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
 	let showDelete = $state(false);
+	let showComplete = $state(false);
 	let confirmName = $state('');
 	const nameMatches = $derived(confirmName.trim() === data.campaign.name);
 
@@ -325,39 +326,70 @@
 		</Panel>
 	{/if}
 
-	<Panel>
-		{#snippet header()}
-			<h2 class="rf-eyebrow">Signalements manuels</h2>
-		{/snippet}
-		<form method="POST" action="?/report" use:enhance class="flex flex-col gap-3">
-			<p class="text-ink-dim">
-				Collez les adresses e-mail (une par ligne) des personnes qui ont signalé ce message à leur
-				service informatique, par exemple en le transmettant à une boîte de sécurité.
-			</p>
-			<Field label="Adresses e-mail" id="field-reportEmails">
-				{#snippet input()}
-					<textarea
-						id="field-reportEmails"
-						name="emails"
-						rows="5"
-						required
-						class="rf-input w-full max-w-full min-w-0"></textarea>
-				{/snippet}
-			</Field>
-			<Button type="submit" variant="secondary" class="max-md:w-full sm:self-start">
-				Enregistrer les signalements
-			</Button>
-			{#if form && 'reported' in form && form.reported}
-				<p class="text-ink" role="status">
-					{form.reported.matched} signalement(s) enregistré(s).
-					{#if form.reported.unmatched.length > 0}
-						Adresses sans correspondance dans cette campagne :
-						{form.reported.unmatched.join(', ')}.
-					{/if}
+	{#if data.campaign.status !== 'completed'}
+		<Panel>
+			{#snippet header()}
+				<h2 class="rf-eyebrow">Signalements manuels</h2>
+			{/snippet}
+			<form method="POST" action="?/report" use:enhance class="flex flex-col gap-3">
+				<p class="text-ink-dim">
+					Collez les adresses e-mail (une par ligne) des personnes qui ont signalé ce message à leur
+					service informatique, par exemple en le transmettant à une boîte de sécurité.
 				</p>
-			{/if}
-		</form>
-	</Panel>
+				<Field label="Adresses e-mail" id="field-reportEmails">
+					{#snippet input()}
+						<textarea
+							id="field-reportEmails"
+							name="emails"
+							rows="5"
+							required
+							class="rf-input w-full max-w-full min-w-0"></textarea>
+					{/snippet}
+				</Field>
+				<Button type="submit" variant="secondary" class="max-md:w-full sm:self-start">
+					Enregistrer les signalements
+				</Button>
+				{#if form && 'reported' in form && form.reported}
+					<p class="text-ink" role="status">
+						{form.reported.matched} signalement(s) enregistré(s).
+						{#if form.reported.unmatched.length > 0}
+							Adresses sans correspondance dans cette campagne :
+							{form.reported.unmatched.join(', ')}.
+						{/if}
+					</p>
+				{/if}
+			</form>
+		</Panel>
+	{/if}
+
+	{#if data.campaign.status === 'sending'}
+		<Panel>
+			{#snippet header()}
+				<h2 class="rf-eyebrow">Clôture</h2>
+			{/snippet}
+			<div class="flex flex-col gap-4">
+				<p class="text-ink-dim">
+					La campagne est clôturée automatiquement une fois les envois terminés et la période
+					d'observation écoulée. Clôturer maintenant fige les statistiques : les événements suivants
+					ne sont plus enregistrés. Cette action est irréversible.
+				</p>
+				{#if !showComplete}
+					<div>
+						<Button variant="secondary" class="max-md:w-full" onclick={() => (showComplete = true)}>
+							Clôturer la campagne
+						</Button>
+					</div>
+				{:else}
+					<form method="POST" action="?/complete" use:enhance class="flex gap-3 max-md:flex-col">
+						<Button type="submit" class="max-md:w-full">Confirmer la clôture</Button>
+						<Button variant="ghost" class="max-md:w-full" onclick={() => (showComplete = false)}>
+							Annuler
+						</Button>
+					</form>
+				{/if}
+			</div>
+		</Panel>
+	{/if}
 
 	<Panel>
 		{#snippet header()}

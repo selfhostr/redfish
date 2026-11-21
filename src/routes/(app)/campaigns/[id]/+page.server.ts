@@ -7,6 +7,7 @@ import {
 import { audit } from '$lib/server/audit';
 import { parseUtcDateTime } from '$lib/server/datetime';
 import { deleteCampaign, getCampaign, scheduleCampaign } from '$lib/server/campaigns';
+import { completeCampaign } from '$lib/server/campaigns/completion';
 import { LaunchError, launchCampaign } from '$lib/server/campaigns/launch';
 import { listFailedRecipients, retryFailedSends } from '$lib/server/campaigns/retry';
 import { runPreflight } from '$lib/server/campaigns/preflight';
@@ -127,6 +128,9 @@ export const actions: Actions = {
 	report: async ({ request, locals, params }) => {
 		if (!locals.user) throw redirect(303, '/login');
 		const campaign = await loadCampaign(locals.user, params.id);
+		// Campagne clôturée : statistiques figées, comme pour le tracking.
+		if (campaign.status === 'completed')
+			return fail(409, { error: 'Campagne terminée : les signalements ne sont plus enregistrés.' });
 		const raw = String((await request.formData()).get('emails') ?? '');
 		const emails = raw
 			.split(/[\r\n,;]+/)
@@ -140,6 +144,14 @@ export const actions: Actions = {
 			details: { matched: matched.length, unmatched: unmatched.length }
 		});
 		return { reported: { matched: matched.length, unmatched } };
+	},
+	complete: async ({ locals, params }) => {
+		if (!locals.user) throw redirect(303, '/login');
+		const campaign = await loadCampaign(locals.user, params.id);
+		if (!completeCampaign(campaign.id))
+			return fail(409, { error: `Seule une campagne en cours d'envoi peut être clôturée.` });
+		audit(locals.user, 'campaign.complete', { ...campaignRef(campaign), details: { auto: false } });
+		return { success: true };
 	},
 	delete: async ({ request, locals, params }) => {
 		if (!locals.user) throw redirect(303, '/login');

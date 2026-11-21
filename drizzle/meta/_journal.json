@@ -64,6 +64,13 @@
       "when": 1795282837177,
       "tag": "0008_failed_send_reason",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1795284084511,
+      "tag": "0009_campaign_completed_at",
+      "breakpoints": true
     }
   ]
 }

@@ -206,6 +206,8 @@ export const campaigns = sqliteTable(
 		scheduledAt: integer('scheduled_at', { mode: 'timestamp' }),
 		/** Motif du dernier échec de lancement programmé (campagne repassée en brouillon). */
 		launchError: text('launch_error'),
+		/** Clôture (automatique après la fenêtre d'observation, ou manuelle) ; null tant que non terminée. */
+		completedAt: integer('completed_at', { mode: 'timestamp' }),
 		createdAt: createdAt()
 	},
 	(t) => [
