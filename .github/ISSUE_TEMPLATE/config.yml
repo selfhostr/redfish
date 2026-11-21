@@ -1,8 +1,8 @@
 blank_issues_enabled: false
 contact_links:
-  - name: Report a security vulnerability
+  - name: Documentation
+    url: https://redfish.selfhostr.io/docs/
+    about: Installation, configuration, first campaign and the security model.
+  - name: Security issue
     url: https://github.com/selfhostr/redfish/security/advisories/new
-    about: Report vulnerabilities privately. Never open a public issue for one.
-  - name: Questions and discussion
-    url: https://github.com/selfhostr/redfish/discussions
-    about: Ask questions and discuss usage with the community.
+    about: Report privately; never in a public issue.

@@ -4,6 +4,8 @@
 
 <h3>redfish runs authorized security awareness campaigns, self hosted, for your organization.</h3>
 
+[Site](https://redfish.selfhostr.io) · [Docs](https://redfish.selfhostr.io/docs/) · [Changelog](CHANGELOG.md)
+
 [![CI](https://github.com/selfhostr/redfish/actions/workflows/ci.yml/badge.svg)](https://github.com/selfhostr/redfish/actions/workflows/ci.yml) [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/selfhostr/redfish/badge)](https://scorecard.dev/viewer/?uri=github.com/selfhostr/redfish) [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 </div>
