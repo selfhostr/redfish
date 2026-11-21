@@ -13,7 +13,15 @@ import { scenarios } from '$lib/server/db/schema';
 import { getScenario, loadScenarios } from './loader';
 
 /** Les quatre paquets du catalogue Suisse/Valais livrés par cette tâche. */
-const KEYS = ['admin-valais', 'livraison-colis', 'facture-qr', 'banque-regionale', 'groupe-mutuel', 'swisscom', 'microsoft-teams'];
+const KEYS = [
+	'admin-valais',
+	'livraison-colis',
+	'facture-qr',
+	'banque-regionale',
+	'groupe-mutuel',
+	'swisscom',
+	'microsoft-teams'
+];
 
 beforeEach(() => {
 	db.delete(scenarios).run();
