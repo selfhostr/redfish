@@ -91,13 +91,9 @@ function store(content: string): string {
 	return name;
 }
 
-const decode = (s: string) =>
-	s
-		.replace(/&amp;/g, '&')
-		.replace(/&quot;/g, '"')
-		.replace(/&#39;/g, "'")
-		.replace(/&lt;/g, '<')
-		.replace(/&gt;/g, '>');
+/** HTML attribute entities, decoded in a single pass (no double unescaping). */
+const ENTITIES: Record<string, string> = { amp: '&', quot: '"', '#39': "'", lt: '<', gt: '>' };
+const decode = (s: string) => s.replace(/&(amp|quot|#39|lt|gt);/g, (_, e: string) => ENTITIES[e]);
 
 class Session {
 	cookies = new Map<string, string>();
@@ -239,13 +235,13 @@ function writeOutput() {
 	const index = join(OUT, 'index.html');
 	let html = readFileSync(index, 'utf8');
 	// The bootstrap script becomes a file: the demo's CSP allows no inline script.
-	const m = /<script[^>]*>([\s\S]*?)<\/script>/.exec(html);
+	const m = /<script\b[^>]*>([\s\S]*?)<\/script\s*>/i.exec(html);
 	if (!m) throw new Error('bootstrap script not found in index.html');
 	const boot = m[1].trim() + '\n';
 	const bootName = `_app/boot.${createHash('sha256').update(boot).digest('hex').slice(0, 8)}.js`;
 	writeFileSync(join(OUT, bootName), boot);
 	html = html.replace(m[0], `<script src="${BASE}/${bootName}"></script>`);
-	if (/<script(?![^>]*\ssrc=)/.test(html)) throw new Error('inline script left in index.html');
+	if (/<script\b(?![^>]*\ssrc=)/i.test(html)) throw new Error('inline script left in index.html');
 	writeFileSync(index, html);
 	// The same shell for every recorded page (static hosts serve /x from x.html) and for 404s.
 	writeFileSync(join(OUT, '404.html'), html);
