@@ -18,9 +18,19 @@ redfish reads its settings from environment variables. With Docker Compose they 
 | `REDFISH_AUDIT_RETENTION_DAYS` | `365`                                              | no                    | How long audit log entries are kept, in days. See [retention and backup](retention-backup.md).                                                                                                                                        |
 | `MIGRATE_SNAPSHOT_KEEP`        | `3`                                                | no                    | Number of pre-migration snapshots to keep; `0` disables them. See [retention and backup](retention-backup.md).                                                                                                                        |
 | `MIGRATE_SNAPSHOT_DIR`         | `<database folder>/snapshots`                      | no                    | Folder for pre-migration snapshots.                                                                                                                                                                                                   |
-| `SEED_EMAIL`                   | none                                               | for `npm run db:seed` | Email of the account to create.                                                                                                                                                                                                       |
-| `SEED_PASSWORD`                | none                                               | for `npm run db:seed` | Password of that account. Pass it on the command line, not in `.env`.                                                                                                                                                                 |
+| `SEED_EMAIL`                   | none                                               | for seeding           | Email of the account to create.                                                                                                                                                                                                       |
+| `SEED_PASSWORD`                | none                                               | for seeding           | Password of that account. Pass it on the command line, not in `.env`.                                                                                                                                                                 |
 | `SEED_ROLE`                    | `operator`                                         | no                    | `operator` or `superadmin`. Only a superadmin can create and import scenarios.                                                                                                                                                        |
+
+## First account
+
+`SEED_*` variables are read by the seed script only. With the published image:
+
+```sh
+docker compose run --rm -e SEED_EMAIL=you@example.org -e SEED_PASSWORD='a-long-password' -e SEED_ROLE=superadmin web node build/seed.js
+```
+
+In development: `docker compose -f docker-compose.dev.yml run --rm -e SEED_EMAIL=... -e SEED_PASSWORD=... app npm run db:seed`.
 
 ## Set by the image
 

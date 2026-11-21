@@ -6,6 +6,8 @@
  *     -e SEED_EMAIL=op@example.com -e SEED_PASSWORD='motdepasse-fort' \
  *     app npm run db:seed
  *
+ * Avec l'image publiée : docker compose run --rm -e SEED_EMAIL=... -e SEED_PASSWORD=... web node build/seed.js
+ *
  * SEED_ROLE vaut 'operator' par défaut ('superadmin' possible).
  */
 import { eq } from 'drizzle-orm';
