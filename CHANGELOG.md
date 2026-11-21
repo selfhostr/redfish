@@ -17,6 +17,7 @@ First complete version (target `0.1.0`).
 - Daily anonymisation of expired targets and optional Litestream backup.
 - Docker: dev and production images, `HEALTHCHECK` on `/health`, `restart: unless-stopped`.
 - Repository files: README, SECURITY, CONTRIBUTING, CODE_OF_CONDUCT, CODEOWNERS, Dependabot, CI (Prettier, svelte-check, Vitest, build, licences, CodeQL).
+- Permanent deletion of a campaign (with its recipients, events, authorizations and queued jobs) and of a client and everything it owns, each guarded by typing the entity name and run in a single transaction.
 
 ### Changed
 

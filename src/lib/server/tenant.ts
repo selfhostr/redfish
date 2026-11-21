@@ -1,8 +1,18 @@
 import { error } from '@sveltejs/kit';
 import { and, eq } from 'drizzle-orm';
 import { db } from '$lib/server/db';
-import { tenants, userTenants } from '$lib/server/db/schema';
+import {
+	authorizations,
+	campaignRecipients,
+	campaigns,
+	sendingProfiles,
+	targetLists,
+	targets,
+	tenants,
+	userTenants
+} from '$lib/server/db/schema';
 import { isValidLocale } from '$lib/server/targets';
+import { deleteJobsForRecipients } from '$lib/server/jobs/queue';
 import type { Tenant, User } from '$lib/server/db/schema';
 
 /** Tenants visibles : tous pour un superadmin, sinon ceux liés via `userTenants`. */
@@ -26,6 +36,40 @@ export async function assertTenantAccess(user: User, tenantId: string): Promise<
 		.where(and(eq(userTenants.userId, user.id), eq(userTenants.tenantId, tenantId)))
 		.get();
 	if (!link) throw error(403, 'Accès interdit à ce tenant');
+}
+
+/**
+ * Supprime DÉFINITIVEMENT un client et tout ce qui lui appartient. Réservé aux
+ * superadmins (403 sinon ; 404 si le client n'existe pas). Ordre imposé par les
+ * clés étrangères NO ACTION : jobs des destinataires du client -> autorisations
+ * du client -> campagnes (cascade destinataires + événements) AVANT listes et
+ * profils (référencés par les campagnes) -> listes (cascade cibles) -> cibles
+ * restantes -> profils d'envoi DU client (jamais les profils globaux, tenant
+ * NULL) -> client (cascade user_tenants). Le cookie de tenant actif pointant sur
+ * ce client est nettoyé automatiquement au prochain chargement par
+ * `resolveActiveTenant`, qui supprime un cookie dont le tenant a disparu.
+ */
+export async function deleteTenant(user: User, tenantId: string): Promise<void> {
+	if (user.role !== 'superadmin') throw error(403, 'Seul un superadmin peut supprimer un client');
+	const tenant = db.select().from(tenants).where(eq(tenants.id, tenantId)).get();
+	if (!tenant) throw error(404, 'Client introuvable');
+	db.transaction((tx) => {
+		const recipientIds = tx
+			.select({ id: campaignRecipients.id })
+			.from(campaignRecipients)
+			.innerJoin(campaigns, eq(campaignRecipients.campaignId, campaigns.id))
+			.where(eq(campaigns.tenantId, tenantId))
+			.all()
+			.map((r) => r.id);
+		deleteJobsForRecipients(tx, recipientIds);
+		tx.delete(authorizations).where(eq(authorizations.tenantId, tenantId)).run();
+		tx.delete(campaigns).where(eq(campaigns.tenantId, tenantId)).run();
+		tx.delete(targetLists).where(eq(targetLists.tenantId, tenantId)).run();
+		tx.delete(targets).where(eq(targets.tenantId, tenantId)).run();
+		// Comparaison à une valeur : les profils globaux (tenant NULL) ne matchent pas.
+		tx.delete(sendingProfiles).where(eq(sendingProfiles.tenantId, tenantId)).run();
+		tx.delete(tenants).where(eq(tenants.id, tenantId)).run();
+	});
 }
 
 /** Si `linkUserId` est fourni, le tenant et le lien `userTenants` sont créés dans une seule transaction. */

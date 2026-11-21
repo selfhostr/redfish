@@ -16,6 +16,10 @@
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
+	let showDelete = $state(false);
+	let confirmName = $state('');
+	const nameMatches = $derived(confirmName.trim() === data.campaign.name);
+
 	const funnelRows = $derived([
 		{ label: funnelLabels.recipients, raw: data.funnel.recipients, human: null },
 		{ label: funnelLabels.sent, raw: data.funnel.sent, human: null },
@@ -260,6 +264,57 @@
 					{/each}
 				</tbody>
 			</table>
+		</div>
+	</Panel>
+
+	<Panel>
+		{#snippet header()}
+			<h2 class="rf-eyebrow">Zone de danger</h2>
+		{/snippet}
+		<div class="flex flex-col gap-4">
+			{#if data.campaign.status === 'sending'}
+				<p class="text-ink-dim">
+					La suppression est indisponible pendant l'envoi. Attendez la fin de l'envoi avant de
+					supprimer cette campagne.
+				</p>
+			{:else}
+				<p class="text-ink-dim">
+					Supprimer définitivement cette campagne efface ses destinataires, ses événements de suivi
+					et ses autorisations. Cette action est irréversible.
+				</p>
+				{#if !showDelete}
+					<div>
+						<Button variant="danger" class="max-md:w-full" onclick={() => (showDelete = true)}>
+							Supprimer la campagne
+						</Button>
+					</div>
+				{:else}
+					<form method="POST" action="?/delete" use:enhance class="flex flex-col gap-3">
+						<Field
+							label="Confirmez en saisissant le nom de la campagne"
+							name="confirm"
+							bind:value={confirmName}
+							autocomplete="off"
+							help={`Saisissez exactement : ${data.campaign.name}`}
+						/>
+						<div class="flex gap-3 max-md:flex-col">
+							<Button type="submit" variant="danger" disabled={!nameMatches} class="max-md:w-full">
+								Supprimer définitivement
+							</Button>
+							<Button
+								variant="ghost"
+								class="max-md:w-full"
+								onclick={() => {
+									showDelete = false;
+									confirmName = '';
+								}}
+							>
+								Annuler
+							</Button>
+						</div>
+					</form>
+				{/if}
+			{/if}
 		</div>
 	</Panel>
 </main>

@@ -5,7 +5,7 @@ import {
 	listAuthorizations
 } from '$lib/server/authorization';
 import { parseUtcDateTime } from '$lib/server/datetime';
-import { getCampaign, scheduleCampaign } from '$lib/server/campaigns';
+import { deleteCampaign, getCampaign, scheduleCampaign } from '$lib/server/campaigns';
 import { LaunchError, launchCampaign } from '$lib/server/campaigns/launch';
 import { campaignFunnel } from '$lib/server/tracking/stats';
 import { assertTenantAccess } from '$lib/server/tenant';
@@ -88,5 +88,15 @@ export const actions: Actions = {
 			return fail(403, { error: e instanceof Error ? e.message : 'Envoi bloqué' });
 		}
 		return { success: true };
+	},
+	delete: async ({ request, locals, params }) => {
+		if (!locals.user) throw redirect(303, '/login');
+		const campaign = await loadCampaign(locals.user, params.id);
+		const confirm = String((await request.formData()).get('confirm') ?? '').trim();
+		// Vérification côté serveur : le nom saisi doit correspondre exactement.
+		if (confirm !== campaign.name)
+			return fail(400, { error: 'Le nom saisi ne correspond pas au nom de la campagne.' });
+		await deleteCampaign(locals.user, campaign.id);
+		throw redirect(303, '/campaigns');
 	}
 };
