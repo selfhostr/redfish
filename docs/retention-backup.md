@@ -1,25 +1,25 @@
-# Rétention et sauvegarde
+# Retention and backup
 
-## Rétention (anonymisation)
+## Retention (anonymisation)
 
-Le job `retention` s'exécute une fois par jour dans le worker (le worker l'amorce au démarrage, puis chaque exécution replanifie la suivante à +24 h). Pour chaque organisation, les cibles dont **toutes** les campagnes sont terminées et plus anciennes que `retentionDays` sont anonymisées : nom et prénom vidés, e-mail remplacé par `redacted-<id>@redacted.invalid`, `anonymizedAt` renseigné.
+The `retention` job runs once a day in the worker (the worker seeds it at startup, then each run schedules the next one 24 hours later). For each organization, targets whose campaigns are **all** finished and older than `retentionDays` are anonymised: first and last name cleared, email replaced by `redacted-<id>@redacted.invalid`, `anonymizedAt` set.
 
-Les `events` ne contiennent aucune donnée personnelle et les destinataires de campagne sont conservés : les statistiques (entonnoir) restent identiques après anonymisation.
+`events` hold no personal data and campaign recipients are kept, so the statistics (funnel) are identical after anonymisation.
 
-## Sauvegarde Litestream
+## Litestream backup
 
-SQLite fonctionne en mode WAL ; Litestream réplique `data/redfish.db` en continu vers un stockage compatible S3.
+SQLite runs in WAL mode. Litestream continuously replicates `data/redfish.db` to S3-compatible storage.
 
-1. Renseigner les variables `LITESTREAM_*` dans `.env` (voir `.env.example`). Les secrets ne sont jamais commités.
-2. Démarrer : `docker compose --profile backup up -d litestream`.
+1. Fill in the `LITESTREAM_*` variables in `.env` (see `.env.example`). Secrets are never committed.
+2. Start it: `docker compose --profile backup up -d litestream`.
 
-### Restauration
+### Restore
 
-Application arrêtée, base absente :
+With the app stopped and the database absent:
 
 ```sh
 docker compose --profile backup run --rm --entrypoint litestream litestream \
   restore -config /etc/litestream.yml -o /app/data/redfish.db /app/data/redfish.db
 ```
 
-Tester la restauration périodiquement : restaurer vers un chemin temporaire (`-o /app/data/restore-test.db`) et vérifier avec `sqlite3 ... "pragma integrity_check"`.
+Test the restore regularly: restore to a temporary path (`-o /app/data/restore-test.db`) and check it with `sqlite3 ... "pragma integrity_check"`.
