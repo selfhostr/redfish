@@ -6,6 +6,12 @@ The `retention` job runs once a day in the worker (the worker seeds it at startu
 
 `events` hold no personal data and campaign recipients are kept, so the statistics (funnel) are identical after anonymisation.
 
+Targets **never used in any campaign** are deleted by the same job once `retentionDays` have elapsed since their creation (they hold personal data but no statistics).
+
+## Individual rights (access, erasure)
+
+The "Données personnelles" tab of a client searches an email across all of that client's lists. It can export everything stored about the person as JSON (target rows, campaign participation, events with timestamps), or erase them: targets used in campaigns are anonymised (same as retention, statistics preserved), unused ones are deleted. On a list page, a single target can be edited, deleted (if unused) or anonymised (if used). Every export, anonymisation and deletion is written to the audit log with a salted hash of the email, never the email itself.
+
 ## Audit log retention
 
 The same job deletes audit log entries older than `REDFISH_AUDIT_RETENTION_DAYS` (365 days by default), as well as expired sessions and second login steps. The period is global, not per organization: the log traces operator actions (not targets) and must also cover entries with no organization (logins) or from a deleted organization. It holds no IP address and no email typed during a failed login, only the email of the operator account concerned. See [account-security.md](account-security.md).

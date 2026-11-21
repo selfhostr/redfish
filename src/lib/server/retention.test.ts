@@ -100,7 +100,7 @@ test('expired target is anonymized and the funnel is unchanged', async () => {
 	const before = await campaignFunnel(old.campaignId);
 	const eventsBefore = db.select().from(events).all().length;
 
-	expect(await anonymizeExpired()).toEqual({ anonymized: 1 });
+	expect(await anonymizeExpired()).toEqual({ anonymized: 1, deleted: 0 });
 
 	const t = db.select().from(targets).where(eq(targets.id, old.target.id)).get()!;
 	expect(t.firstName).toBe('');
@@ -153,4 +153,28 @@ test("respects each tenant's retentionDays", async () => {
 	await setup('old', 400);
 	expect((await anonymizeExpired()).anonymized).toBe(0);
 	expect((await anonymizeExpired(new Date(Date.now() + 200 * DAY))).anonymized).toBe(1);
+});
+
+test('unused targets are deleted after retentionDays since creation, not before', async () => {
+	const mk = (name: string, ageDays: number) =>
+		db
+			.insert(targets)
+			.values({
+				listId,
+				tenantId,
+				firstName: name,
+				lastName: name,
+				email: `${name}@x.test`,
+				createdAt: new Date(Date.now() - ageDays * DAY)
+			})
+			.returning()
+			.get();
+	const oldUnused = mk('oldunused', 400);
+	const freshUnused = mk('freshunused', 5);
+	const used = await setup('usedrecent', 10);
+
+	expect(await anonymizeExpired()).toEqual({ anonymized: 0, deleted: 1 });
+	expect(db.select().from(targets).where(eq(targets.id, oldUnused.id)).get()).toBeUndefined();
+	expect(db.select().from(targets).where(eq(targets.id, freshUnused.id)).get()).toBeDefined();
+	expect(db.select().from(targets).where(eq(targets.id, used.target.id)).get()).toBeDefined();
 });

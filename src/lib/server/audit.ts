@@ -35,7 +35,12 @@ export const AUDIT_ACTIONS = {
 	'campaign.delete': 'Campagne supprimée',
 	'targets.import': 'Cibles importées',
 	'targets.add': 'Cible ajoutée',
-	'targets.purge': 'Cibles anonymisées (rétention)'
+	'targets.update': 'Cible modifiée',
+	'targets.delete': 'Cible supprimée',
+	'targets.anonymize': 'Cible anonymisée',
+	'person.export': "Export des données d'une personne",
+	'person.erase': "Données d'une personne effacées",
+	'targets.purge': 'Cibles purgées (rétention)'
 } as const;
 
 export type AuditAction = keyof typeof AUDIT_ACTIONS;

@@ -21,6 +21,11 @@
 						href: '/sending-profiles',
 						label: "Profils d'envoi",
 						on: path === '/sending-profiles'
+					},
+					{
+						href: '/privacy',
+						label: 'Données personnelles',
+						on: path === '/privacy' || path.startsWith('/privacy/')
 					}
 				]
 			: []
