@@ -6,10 +6,10 @@ There is no host toolchain. From the repository root:
 
 ```sh
 cp .env.example .env
-docker compose run --rm app sh -c 'npm ci && npm run format:check && npm run check && npm test'
+docker compose -f docker-compose.dev.yml run --rm app sh -c 'npm ci && npm run format:check && npm run check && npm test'
 ```
 
-`docker compose up -d` starts the dev server on port 3000 and the worker. After changing dependencies, rebuild the image (`docker compose build && docker compose up -d --force-recreate`, or `docker compose down -v`), because the anonymous `node_modules` volume otherwise hides the new packages.
+`docker compose -f docker-compose.dev.yml up -d` starts the dev server on port 3000 and the worker. After changing dependencies, rebuild the image (`docker compose -f docker-compose.dev.yml build && docker compose -f docker-compose.dev.yml up -d --force-recreate`, or `docker compose -f docker-compose.dev.yml down -v`), because the anonymous `node_modules` volume otherwise hides the new packages.
 
 ## What CI checks
 
