@@ -1,8 +1,17 @@
+import { error } from '@sveltejs/kit';
 import { and, desc, eq, isNull, or, sql } from 'drizzle-orm';
 import { db } from '$lib/server/db';
-import { campaigns, sendingProfiles, targetLists } from '$lib/server/db/schema';
-import type { Campaign } from '$lib/server/db/schema';
+import {
+	authorizations,
+	campaignRecipients,
+	campaigns,
+	sendingProfiles,
+	targetLists
+} from '$lib/server/db/schema';
+import type { Campaign, User } from '$lib/server/db/schema';
 import { canSendCampaign } from './authorization';
+import { deleteJobsForRecipients } from './jobs/queue';
+import { assertTenantAccess } from './tenant';
 
 export type CampaignInput = {
 	tenantId: string;
@@ -79,6 +88,39 @@ export async function scheduleCampaign(
 		.where(and(eq(campaigns.id, campaignId), eq(campaigns.status, 'draft')))
 		.returning()
 		.get();
+}
+
+/**
+ * Supprime DÉFINITIVEMENT une campagne et tout ce qui en dépend : destinataires
+ * et événements (cascade FK), autorisations rattachées à la campagne et jobs
+ * `send-email` en file visant ses destinataires. Ne touche ni aux cibles, ni aux
+ * listes, ni aux profils d'envoi, ni au scénario. Refuse une campagne en cours
+ * d'envoi (il faut d'abord l'arrêter ou attendre la fin). 404 si absente, 403 si
+ * l'utilisateur n'a pas accès au tenant.
+ */
+export async function deleteCampaign(user: User, campaignId: string): Promise<void> {
+	const campaign = db.select().from(campaigns).where(eq(campaigns.id, campaignId)).get();
+	if (!campaign) throw error(404, 'Campagne introuvable');
+	await assertTenantAccess(user, campaign.tenantId);
+	if (campaign.status === 'sending')
+		throw error(
+			409,
+			"Impossible de supprimer une campagne en cours d'envoi : arrêtez l'envoi ou attendez sa fin."
+		);
+	db.transaction((tx) => {
+		const recipientIds = tx
+			.select({ id: campaignRecipients.id })
+			.from(campaignRecipients)
+			.where(eq(campaignRecipients.campaignId, campaignId))
+			.all()
+			.map((r) => r.id);
+		// Jobs d'abord (pas de FK, référence par payload), puis autorisations
+		// (FK NO ACTION sur campaign_id), enfin la campagne (cascade destinataires
+		// -> événements).
+		deleteJobsForRecipients(tx, recipientIds);
+		tx.delete(authorizations).where(eq(authorizations.campaignId, campaignId)).run();
+		tx.delete(campaigns).where(eq(campaigns.id, campaignId)).run();
+	});
 }
 
 /** Domaine de tracking de la campagne la plus récente du tenant (null si aucune). */

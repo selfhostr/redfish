@@ -1,4 +1,5 @@
 import { beforeEach, expect, test, vi } from 'vitest';
+import { eq } from 'drizzle-orm';
 
 vi.mock('$lib/server/db', async () => {
 	const { createTestDb } = await import('$lib/server/db/test-db');
@@ -30,7 +31,7 @@ import type { User } from '$lib/server/db/schema';
 import { createUser } from '$lib/server/auth';
 import { createCampaign } from '$lib/server/campaigns';
 import { createTenant } from '$lib/server/tenant';
-import { load } from './+page.server';
+import { actions, load } from './+page.server';
 
 let operator: User;
 let ownId: string;
@@ -112,4 +113,25 @@ test('la fiche expose le scénario de la campagne', async () => {
 test('campagne d’un autre tenant : 403 avant tout chargement de scénario', async () => {
 	await expect(run(foreignId)).rejects.toMatchObject({ status: 403 });
 	expect(spy.getScenarioById).not.toHaveBeenCalled();
+});
+
+const del = (id: string, confirm: string) => {
+	const body = new FormData();
+	body.set('confirm', confirm);
+	return actions.delete({
+		request: new Request('http://localhost', { method: 'POST', body }),
+		locals: { user: operator },
+		params: { id }
+	} as unknown as Parameters<typeof actions.delete>[0]);
+};
+
+test('action delete : nom saisi incorrect -> fail 400, rien supprimé', async () => {
+	const res = await del(ownId, 'mauvais nom');
+	expect(res).toMatchObject({ status: 400 });
+	expect(db.select().from(campaigns).where(eq(campaigns.id, ownId)).get()).toBeTruthy();
+});
+
+test('action delete : nom saisi correct -> redirect 303 vers /campaigns et campagne supprimée', async () => {
+	await expect(del(ownId, 'C')).rejects.toMatchObject({ status: 303, location: '/campaigns' });
+	expect(db.select().from(campaigns).where(eq(campaigns.id, ownId)).get()).toBeUndefined();
 });

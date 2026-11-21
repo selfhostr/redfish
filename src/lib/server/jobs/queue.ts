@@ -1,6 +1,28 @@
-import { and, asc, eq, inArray, lte, or } from 'drizzle-orm';
+import { and, asc, eq, inArray, lte, or, sql } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { jobs, type Job } from '$lib/server/db/schema';
+
+/** Transaction Drizzle passée aux callbacks de `db.transaction`. */
+export type DbTx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+/**
+ * Supprime les jobs en file qui visent l'un des destinataires donnés. Seuls les
+ * jobs `send-email` référencent un destinataire (via `payloadJson.recipientId`) ;
+ * `scheduled-launch` et `retention` sont globaux et ne sont pas concernés. À
+ * appeler dans la transaction qui supprime une campagne ou un client, avant que
+ * les destinataires eux-mêmes ne disparaissent.
+ */
+export function deleteJobsForRecipients(tx: DbTx, recipientIds: string[]): void {
+	if (recipientIds.length === 0) return;
+	tx.delete(jobs)
+		.where(
+			and(
+				eq(jobs.type, 'send-email'),
+				inArray(sql`json_extract(${jobs.payloadJson}, '$.recipientId')`, recipientIds)
+			)
+		)
+		.run();
+}
 
 export const MAX_ATTEMPTS = 5;
 /** Délai de base du backoff exponentiel : now + 2^attempts * BASE_MS. */
