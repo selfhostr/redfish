@@ -1,4 +1,5 @@
-import { beforeEach, expect, test, vi } from 'vitest';
+import { afterAll, beforeAll, beforeEach, expect, test, vi } from 'vitest';
+import { rm } from 'node:fs/promises';
 
 // Comme loader.test/render.test : base SQLite en mémoire partagée par tous les
 // modules (bundle → loader/render → db).
@@ -13,9 +14,16 @@ import { scenarios } from '$lib/server/db/schema';
 import type { Scenario } from '$lib/server/db/schema';
 import { BundleImportError, exportBundle, importBundle } from './bundle';
 import type { Bundle } from './bundle';
+import { makeScenarioRoot, writeScenarioPackage } from './fixtures';
 import { getScenario, loadScenarios } from './loader';
 import { renderAwareness, renderEmail, renderLanding } from './render';
 import type { RenderCtx } from './render';
+
+/**
+ * Le dépôt ne livre plus de scénario : on charge un paquet « builtin » FIXTURE
+ * depuis un dossier temporaire pour couvrir l'export et le conflit de clé.
+ */
+const BUILTIN_KEY = 'builtin-demo';
 
 /** Contenu BÉNIN et neutre : aucune imitation de marque réelle. */
 const EMAIL =
@@ -65,15 +73,26 @@ const ctx: RenderCtx = {
 	}
 };
 
+let root: string;
+
+beforeAll(async () => {
+	root = await makeScenarioRoot();
+	await writeScenarioPackage(root, { key: BUILTIN_KEY, title: 'Builtin démo' });
+});
+
+afterAll(async () => {
+	await rm(root, { recursive: true, force: true });
+});
+
 beforeEach(async () => {
 	db.delete(scenarios).run();
-	await loadScenarios('scenarios');
+	await loadScenarios(root);
 });
 
 test('exportBundle : exporte un scénario builtin avec son contenu', async () => {
-	const bundle = await exportBundle('microsoft365');
+	const bundle = await exportBundle(BUILTIN_KEY);
 	expect(bundle.schemaVersion).toBe(1);
-	expect(bundle.key).toBe('microsoft365');
+	expect(bundle.key).toBe(BUILTIN_KEY);
 	expect(bundle.subject).toBeTruthy();
 	expect(bundle.email.toLowerCase()).toContain('<mjml');
 	expect(bundle.landing.toLowerCase()).toContain('<form');
@@ -122,11 +141,11 @@ test('un scénario importé se rend (e-mail, landing, sensibilisation) depuis la
 });
 
 test('round-trip : export d’un builtin puis import sous une nouvelle clé', async () => {
-	const exported = await exportBundle('microsoft365');
-	const { key } = await importBundle({ ...exported, key: 'microsoft365-copie' });
-	expect(key).toBe('microsoft365-copie');
+	const exported = await exportBundle(BUILTIN_KEY);
+	const { key } = await importBundle({ ...exported, key: 'builtin-demo-copie' });
+	expect(key).toBe('builtin-demo-copie');
 
-	const row = getScenario('microsoft365-copie') as Scenario;
+	const row = getScenario('builtin-demo-copie') as Scenario;
 	expect(row.source).toBe('imported');
 	expect(row.emailTemplate).toBe(exported.email);
 	expect(row.landingTemplate).toBe(exported.landing);
@@ -165,7 +184,7 @@ test('import refusé : le MJML ne compile pas', async () => {
 });
 
 test('import refusé : clé en conflit avec un scénario builtin', async () => {
-	await expect(importBundle(makeBundle({ key: 'microsoft365' }))).rejects.toThrow(/livré/);
+	await expect(importBundle(makeBundle({ key: BUILTIN_KEY }))).rejects.toThrow(/livré/);
 });
 
 test('import refusé : version de schéma inconnue', async () => {

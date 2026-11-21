@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, test, vi } from 'vitest';
+import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -10,6 +10,7 @@ vi.mock('$lib/server/db', async () => {
 });
 
 import type { Scenario } from '$lib/server/db/schema';
+import { makeScenarioRoot, writeScenarioPackage } from './fixtures';
 import { getScenario, loadScenarios } from './loader';
 import {
 	PREVIEW_RECEIVED_AT,
@@ -21,8 +22,11 @@ import {
 } from './preview';
 import type { ScenarioPreview } from './preview';
 
-/** Les cinq paquets livrés. */
-const KEYS = ['admin-valais', 'banque-regionale', 'facture-qr', 'livraison-colis', 'microsoft365'];
+/**
+ * Le dépôt ne livre plus de scénario : on écrit des paquets FIXTURE neutres et
+ * représentatifs sur disque, puis on vérifie que leur aperçu reste inerte.
+ */
+const KEYS = ['fixture-un', 'fixture-deux'];
 
 /** Attributs qui déclenchent une requête ou une navigation. */
 const URL_ATTRS = 'href|xlink:href|src|srcset|action|formaction|poster|background|data|ping';
@@ -59,16 +63,23 @@ function expectInert(html: string, label: string): void {
 	expect(html.split(CSP_META_PREFIX), label).toHaveLength(2);
 }
 
-describe('aperçu des cinq scénarios livrés', () => {
+describe('aperçu de paquets fixture représentatifs', () => {
 	const previews = new Map<string, ScenarioPreview>();
+	let root: string;
 
 	beforeAll(async () => {
-		await loadScenarios();
+		root = await makeScenarioRoot();
+		for (const key of KEYS) await writeScenarioPackage(root, { key, title: key });
+		await loadScenarios(root);
 		for (const key of KEYS) {
 			const scenario = getScenario(key);
 			expect(scenario, key).toBeDefined();
 			previews.set(key, await renderScenarioPreview(scenario as Scenario));
 		}
+	});
+
+	afterAll(async () => {
+		await rm(root, { recursive: true, force: true });
 	});
 
 	test.each(KEYS)('%s : métadonnées fictives et non vides', (key) => {
@@ -119,15 +130,21 @@ describe('aperçu des cinq scénarios livrés', () => {
 });
 
 test('renderScenarioPreview : date de réception et note fournies', async () => {
-	await loadScenarios();
-	const scenario = getScenario('microsoft365') as Scenario;
-	const p = await renderScenarioPreview(scenario, {
-		receivedAt: new Date('2026-01-02T03:04:05.000Z'),
-		awarenessMessage: '<b>Note</b> & co'
-	});
-	expect(p.receivedAt).toBe('2026-01-02T03:04:05.000Z');
-	// Échappée par renderAwareness, puis conservée telle quelle par l'assainissement.
-	expect(p.awarenessHtml).toContain('&lt;b&gt;Note&lt;/b&gt; &amp; co');
+	const root = await makeScenarioRoot();
+	try {
+		await writeScenarioPackage(root, { key: 'fixture-note' });
+		await loadScenarios(root);
+		const scenario = getScenario('fixture-note') as Scenario;
+		const p = await renderScenarioPreview(scenario, {
+			receivedAt: new Date('2026-01-02T03:04:05.000Z'),
+			awarenessMessage: '<b>Note</b> & co'
+		});
+		expect(p.receivedAt).toBe('2026-01-02T03:04:05.000Z');
+		// Échappée par renderAwareness, puis conservée telle quelle par l'assainissement.
+		expect(p.awarenessHtml).toContain('&lt;b&gt;Note&lt;/b&gt; &amp; co');
+	} finally {
+		await rm(root, { recursive: true, force: true });
+	}
 });
 
 test('MJML : polices Google Fonts, icônes sociales et images externes neutralisées', async () => {

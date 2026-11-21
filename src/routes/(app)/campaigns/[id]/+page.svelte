@@ -122,7 +122,7 @@
 			{:else}
 				<ErrorNotice
 					title="Scénario introuvable"
-					message="Le scénario associé à cette campagne n'existe plus dans le catalogue."
+					message="Le scénario associé à cette campagne n'existe plus."
 				/>
 			{/if}
 		</div>

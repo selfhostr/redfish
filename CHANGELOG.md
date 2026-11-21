@@ -11,7 +11,7 @@ First complete version (target `0.1.0`).
 - Multi-organisation platform on SvelteKit 3 and SQLite: organisations, sending profiles with SMTP secrets encrypted at rest, CSV target import, campaigns with scheduled launch.
 - Job worker with a database-backed queue, SMTP sending of MJML e-mails, graceful shutdown on SIGTERM.
 - Tracking of opens, clicks and reports through unique links, with detection of mail scanners and bots. No credential is captured.
-- Five scenarios: `microsoft365` and four Swiss-themed scenarios, plus the awareness landing page.
+- Bring-your-own scenarios: the platform ships no scenario; a superadmin creates one in-app (editor pre-filled with neutral, valid skeletons) or imports a JSON bundle, each stored in the database and rendered like a built-in one.
 - Lists and sending profiles in the main navigation; list creation chains into CSV import, and campaign creation warns when the chosen list is empty.
 - Per-campaign funnel report with print and PDF output.
 - Hardening: rate limiting, strict CSP, host isolation between dashboard and tracking, strong secret key validation.

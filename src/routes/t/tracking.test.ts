@@ -27,6 +27,7 @@ import { POST as submitPost } from './s/[token]/+server';
 import { load as landingLoad } from './p/[token]/+page.server';
 import { load as awarenessLoad } from './a/[token]/+page.server';
 import { resetRateLimit } from '$lib/server/ratelimit';
+import { SKELETON_AWARENESS, SKELETON_EMAIL, SKELETON_LANDING } from '$lib/scenarios/skeletons';
 
 const TOKEN = 'rec-token-AAAA';
 
@@ -71,16 +72,21 @@ beforeEach(() => {
 		db.delete(table).run();
 
 	const tenant = db.insert(tenants).values({ name: 'Acme' }).returning().get();
-	// microsoft365 est le scénario livré avec le dépôt (dossier scenarios/).
+	// Scénario importé (contenu en base) : le dépôt ne livre plus aucun scénario.
 	const scenario = db
 		.insert(scenarios)
 		.values({
-			key: 'microsoft365',
-			title: 'M365',
+			key: 'fixture-tracking',
+			title: 'Fixture tracking',
 			category: 'c',
 			locale: 'fr',
 			difficulty: 'easy',
-			path: 'scenarios/microsoft365'
+			source: 'imported',
+			path: null,
+			subject: 'Message de test {{firstName}}',
+			emailTemplate: SKELETON_EMAIL,
+			landingTemplate: SKELETON_LANDING,
+			awarenessTemplate: SKELETON_AWARENESS
 		})
 		.returning()
 		.get();

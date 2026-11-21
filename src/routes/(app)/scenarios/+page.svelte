@@ -26,33 +26,36 @@
 	<div class="flex flex-wrap items-center justify-between gap-3">
 		<h1 class="text-2xl font-semibold text-ink">Scénarios</h1>
 		{#if isSuperadmin}
-			<form
-				method="POST"
-				action="?/import"
-				enctype="multipart/form-data"
-				use:enhance={() => {
-					importing = true;
-					return async ({ update }) => {
-						await update();
-						if (fileInput) fileInput.value = '';
-						importing = false;
-					};
-				}}
-			>
-				<input
-					bind:this={fileInput}
-					id="import-file"
-					class="sr-only"
-					type="file"
-					name="file"
-					accept="application/json,.json"
-					disabled={importing}
-					onchange={(e) => e.currentTarget.form?.requestSubmit()}
-				/>
-				<label for="import-file" class="btn-import" aria-disabled={importing || undefined}>
-					{importing ? 'Import en cours...' : 'Importer un scénario'}
-				</label>
-			</form>
+			<div class="flex flex-wrap items-center gap-2">
+				<Button href="/scenarios/new" variant="primary">Créer un scénario</Button>
+				<form
+					method="POST"
+					action="?/import"
+					enctype="multipart/form-data"
+					use:enhance={() => {
+						importing = true;
+						return async ({ update }) => {
+							await update();
+							if (fileInput) fileInput.value = '';
+							importing = false;
+						};
+					}}
+				>
+					<input
+						bind:this={fileInput}
+						id="import-file"
+						class="sr-only"
+						type="file"
+						name="file"
+						accept="application/json,.json"
+						disabled={importing}
+						onchange={(e) => e.currentTarget.form?.requestSubmit()}
+					/>
+					<label for="import-file" class="btn-import" aria-disabled={importing || undefined}>
+						{importing ? 'Import en cours...' : 'Importer un scénario'}
+					</label>
+				</form>
+			</div>
 		{/if}
 	</div>
 
@@ -65,8 +68,8 @@
 	{/if}
 
 	<p class="text-ink-dim">
-		Catalogue global des scénarios livrés avec la plateforme, en lecture seule. Ouvrez un scénario
-		pour en voir l'aperçu.
+		Vos scénarios, créés ou importés. La plateforme ne livre aucun scénario : vous fournissez les
+		vôtres. Ouvrez un scénario pour en voir l'aperçu.
 	</p>
 
 	<Panel>
@@ -118,7 +121,17 @@
 	<p class="text-ink-dim">{data.scenarios.length} sur {data.total}</p>
 
 	{#if data.total === 0}
-		<EmptyState title="Catalogue vide" message="Aucun scénario n'est chargé pour le moment." />
+		<EmptyState
+			title="Aucun scénario"
+			message="La plateforme ne livre aucun scénario. Créez-en un ou importez un scénario existant pour commencer."
+		>
+			{#if isSuperadmin}
+				<div class="flex flex-wrap items-center gap-2">
+					<Button href="/scenarios/new" variant="primary" size="sm">Créer un scénario</Button>
+					<label for="import-file" class="btn-import">Importer un scénario</label>
+				</div>
+			{/if}
+		</EmptyState>
 	{:else if data.scenarios.length === 0}
 		<EmptyState title="Aucun résultat" message="Aucun scénario ne correspond à ces filtres.">
 			{#if hasFilters}

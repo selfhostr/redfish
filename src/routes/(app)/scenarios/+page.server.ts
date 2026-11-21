@@ -9,9 +9,11 @@ import {
 import type { Actions, PageServerLoad } from './$types';
 
 /**
- * Catalogue en lecture seule. Les scénarios sont globaux (pas de tenantId) ;
- * aucune donnée de campagne n'est lue ici (pas de compteur d'utilisation).
- * Authentification : garde de `(app)/+layout.server.ts`, doublée ici.
+ * Vos scénarios (créés ou importés). Le dépôt ne livre aucun scénario : cette
+ * liste est vide tant que le superadmin n'en a pas créé ou importé. Les scénarios
+ * sont globaux (pas de tenantId) ; aucune donnée de campagne n'est lue ici (pas
+ * de compteur d'utilisation). Authentification : garde de
+ * `(app)/+layout.server.ts`, doublée ici.
  */
 export const load: PageServerLoad = async ({ locals, url }) => {
 	if (!locals.user) throw redirect(303, '/login');
