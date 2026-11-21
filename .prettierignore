@@ -1,0 +1,10 @@
+.worktrees/
+.svelte-kit/
+.superpowers/
+.claude/
+build/
+data/
+drizzle/
+node_modules/
+package-lock.json
+docs/superpowers/

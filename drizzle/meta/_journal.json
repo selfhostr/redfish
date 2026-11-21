@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1795167269520,
+      "tag": "0000_furry_mongu",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1795176589742,
+      "tag": "0001_wild_machine_man",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1795177669249,
+      "tag": "0002_lucky_prima",
+      "breakpoints": true
+    }
+  ]
+}

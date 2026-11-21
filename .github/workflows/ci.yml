@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    name: Build and test
+    runs-on: ubuntu-latest
+    container: node:24-bookworm@sha256:9d266751ca3d7fdbe651c878ffd5ad0a42fed49a18c283509267c97f025b7496
+    env:
+      REDFISH_SECRET_KEY: 3f9a1c7e5b2d48a0c6e1f7b39d5a2c84e0b7d1f6a3c9582e4b0d7a1f6c3e9852
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: npm ci
+      - run: npm run format:check
+      - run: npm run check
+      - run: npm test
+      - run: mkdir -p data && npm run build
+
+  licences:
+    name: Licences and advisories
+    runs-on: ubuntu-latest
+    container: node:24-bookworm@sha256:9d266751ca3d7fdbe651c878ffd5ad0a42fed49a18c283509267c97f025b7496
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: npm ci
+      - run: npm audit --omit=dev --audit-level=high
+      - name: Only OSI-approved licences in production dependencies
+        run: >
+          npx --yes license-checker-rseidelsohn@4.4.2 --production
+          --onlyAllow 'MIT;ISC;BSD-2-Clause;BSD-3-Clause;Apache-2.0;0BSD;BlueOak-1.0.0;CC0-1.0;Python-2.0;MPL-2.0;Unlicense;CC-BY-4.0'
+          --excludePrivatePackages
+
+  docker:
+    name: Docker image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: docker build --target runtime -t redfish:ci .
