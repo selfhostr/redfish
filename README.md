@@ -36,7 +36,7 @@ The app answers on <http://localhost:3000>, and `GET /health` returns `{"status"
 - **Tracking.** Opens, clicks and reports through unique links, with detection of mail scanners and bots.
 - **Awareness, not traps.** A click lands on an awareness page, and no credential is captured by design.
 - **Reports.** A funnel report per campaign, viewable in the browser or as PDF.
-- **Scenarios.** Five scenarios shipped as YAML plus MJML templates in `scenarios/`.
+- **Scenarios.** Ready-to-use scenarios as YAML plus MJML templates in `scenarios/`.
 - **Retention.** Daily anonymization of expired targets, with configurable retention.
 - **Isolation.** A strict CSP and host isolation between the operator dashboard and the public tracking links.
 
@@ -49,7 +49,7 @@ SvelteKit 2 (Svelte 5, TypeScript) with Tailwind CSS 4, Drizzle ORM on SQLite (b
 - Authorized use only: written agreement from the target organization is required. Running simulated campaigns against people without their organization's agreement is illegal in most places, and you are responsible for your engagements.
 - No credentials are ever captured, by design. A change that stores what a target typed will not be merged.
 - A single SQLite database and a single worker: redfish targets one team, not a horizontally scaled service.
-- Scenario content is limited to the five shipped scenarios until you write your own.
+- Scenario content is limited to the shipped scenarios until you write your own.
 - Status: alpha. Releases are 0.x: anything may change between minor versions.
 
 ## Contributing
