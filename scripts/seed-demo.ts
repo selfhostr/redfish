@@ -3,7 +3,7 @@
  * opérateur, liste de cibles, profil d'envoi, une campagne terminée avec un
  * entonnoir réaliste et une campagne brouillon autorisée (non lancée).
  *
- *   docker compose run --rm app npm run db:seed:demo
+ *   docker compose -f docker-compose.dev.yml run --rm app npm run db:seed:demo
  */
 import { randomBytes } from 'node:crypto';
 import { eq } from 'drizzle-orm';

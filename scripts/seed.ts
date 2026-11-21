@@ -2,7 +2,7 @@
  * Crée le premier opérateur (ou superadmin) à partir de variables
  * d'environnement. À lancer dans le conteneur, après les migrations :
  *
- *   docker compose run --rm \
+ *   docker compose -f docker-compose.dev.yml run --rm \
  *     -e SEED_EMAIL=op@example.com -e SEED_PASSWORD='motdepasse-fort' \
  *     app npm run db:seed
  *

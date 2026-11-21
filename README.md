@@ -24,7 +24,7 @@ Needs Docker with Compose.
 git clone https://github.com/selfhostr/redfish.git
 cd redfish
 cp .env.example .env     # set REDFISH_SECRET_KEY: openssl rand -base64 32
-docker compose up -d
+docker compose up -d      # pulls the signed image from GHCR
 ```
 
 The app answers on <http://localhost:3000>, and `GET /health` returns `{"status":"ok"}`. Create the first operator account with `npm run db:seed` (see [configuration](docs/configuration.md)). The SQLite database lives in `data/`: back that folder up, or enable the Litestream profile. See [docs/](docs/README.md) for production setup, including host isolation and continuous backup, and [docs/deployment.md](docs/deployment.md) for running behind a reverse proxy.
