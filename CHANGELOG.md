@@ -4,7 +4,9 @@ Format based on Keep a Changelog. Versions follow `0.MINOR.PATCH` until 1.0.
 
 ## [Unreleased]
 
-First complete version (target `0.1.0`).
+## [0.1.0] - 2026-11-21
+
+First complete version.
 
 ### Added
 
@@ -23,6 +25,17 @@ First complete version (target `0.1.0`).
 - Audit log of sensitive actions (logins, account security, clients, scenarios, sending profiles, campaigns, targets), with a filterable, paginated read-only page for superadmins and its own retention period.
 - Permanent deletion of a campaign (with its recipients, events, authorizations and queued jobs) and of a client and everything it owns, each guarded by typing the entity name and run in a single transaction.
 
+- Editable client contact details (contact name, e-mail and phone).
+- Live preview of scenarios in the editor, with inline errors and a placeholder toolbar.
+- SMTP connection test and test e-mail for sending profiles.
+- Worker heartbeat and a queue health warning when the worker is not running.
+- Automatic database snapshot before pending migrations are applied.
+- Pre-launch checks for campaigns, enforced again at launch.
+- Per-target CSV export of results and a client progression (trends) chart.
+- Signed multi-arch (amd64, arm64) image published to GHCR on each release, with SBOM and provenance, and a production Docker Compose file; verification steps in `docs/verify-image.md`.
+- ESLint and Playwright end-to-end tests in CI.
+- Documentation in English, with configuration, first-scenario and reverse proxy (client IP) guides.
+
 ### Changed
 
 - The whole repository is formatted with Prettier (tabs, single quotes).
@@ -34,4 +47,5 @@ First complete version (target `0.1.0`).
 
 ### Security
 
+- The full user record is no longer exposed to the client; only the fields the interface needs are sent.
 - Upgraded dependencies to patch advisories: `@sveltejs/kit` to 3.4.0 (open redirect, cache-control XSS, form-data DoS, and the bundled `cookie` out-of-bounds characters) and `csv-parse` to 7.0.3 (prototype pollution via the `columns` path).
