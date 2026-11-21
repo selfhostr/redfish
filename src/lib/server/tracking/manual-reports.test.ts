@@ -70,13 +70,19 @@ function setup(name: string, email: string) {
 		})
 		.returning()
 		.get();
-	db.insert(campaignRecipients)
+	const recipient = db
+		.insert(campaignRecipients)
 		.values({
 			campaignId: campaign.id,
 			targetId: target.id,
 			token: `tok-${name}`,
 			sendStatus: 'sent'
 		})
+		.returning()
+		.get();
+	// Envoi réussi : les taux du rapport portent sur les envois réussis.
+	db.insert(events)
+		.values({ campaignRecipientId: recipient.id, type: 'sent', createdAt: new Date() })
 		.run();
 	return campaign.id;
 }

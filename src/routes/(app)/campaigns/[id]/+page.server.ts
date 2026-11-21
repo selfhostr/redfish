@@ -8,6 +8,7 @@ import { audit } from '$lib/server/audit';
 import { parseUtcDateTime } from '$lib/server/datetime';
 import { deleteCampaign, getCampaign, scheduleCampaign } from '$lib/server/campaigns';
 import { LaunchError, launchCampaign } from '$lib/server/campaigns/launch';
+import { listFailedRecipients, retryFailedSends } from '$lib/server/campaigns/retry';
 import { runPreflight } from '$lib/server/campaigns/preflight';
 import { recordManualReports } from '$lib/server/tracking/events';
 import { campaignFunnel } from '$lib/server/tracking/stats';
@@ -39,7 +40,8 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 		authorizations: await listAuthorizations(campaign.id),
 		canSend: await canSendCampaign(campaign.id),
 		preflight: await runPreflight(campaign.id),
-		funnel: await campaignFunnel(campaign.id)
+		funnel: await campaignFunnel(campaign.id),
+		failedRecipients: listFailedRecipients(campaign.id)
 	};
 };
 
@@ -66,6 +68,19 @@ export const actions: Actions = {
 			throw e;
 		}
 		audit(locals.user, 'campaign.launch', campaignRef(campaign));
+		return { success: true };
+	},
+	retryFailed: async ({ locals, params }) => {
+		if (!locals.user) throw redirect(303, '/login');
+		const campaign = await loadCampaign(locals.user, params.id);
+		// Réessai possible uniquement pendant l'envoi (jamais après la clôture).
+		if (campaign.status !== 'sending')
+			return fail(409, { error: "Seule une campagne en cours d'envoi peut réessayer ses envois." });
+		const n = retryFailedSends(campaign.id);
+		audit(locals.user, 'campaign.retry_failed', {
+			...campaignRef(campaign),
+			details: { count: n }
+		});
 		return { success: true };
 	},
 	authorize: async ({ request, locals, params }) => {

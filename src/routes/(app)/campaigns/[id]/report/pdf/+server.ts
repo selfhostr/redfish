@@ -24,6 +24,7 @@ table{border-collapse:collapse;width:100%}td,th{border:1px solid #ccc;padding:4p
 <p>Généré le ${esc(r.generatedAt)}${r.anonymized ? ', données anonymisées' : ''}</p>
 <h2>Indicateurs</h2><table>
 <tr><th>Destinataires</th><td>${r.counts.recipients}</td></tr>
+<tr><th>Envoyés</th><td>${r.counts.sent}</td></tr>${r.counts.failed > 0 ? `\n<tr><th>Échecs</th><td>${r.counts.failed} envois en échec</td></tr>` : ''}
 <tr><th>Ouvertures</th><td>${r.counts.opened} (${pct(r.rates.open)})</td></tr>
 <tr><th>Clics</th><td>${r.counts.clicked} (${pct(r.rates.click)})</td></tr>
 <tr><th>Soumissions</th><td>${r.counts.formSubmitted} (${pct(r.rates.submission)})</td></tr>

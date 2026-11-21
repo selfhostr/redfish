@@ -39,6 +39,25 @@ export function registerHandler<T = any>(type: string, fn: (payload: T) => Promi
 	handlers.set(type, fn as Handler);
 }
 
+type FailureHandler = (payload: unknown, err: unknown) => void;
+const failureHandlers = new Map<string, FailureHandler>();
+
+/** Hook appelé quand un job d'un type passe définitivement 'failed'. */
+export function registerFailureHandler<T = any>(
+	type: string,
+	fn: (payload: T, err: unknown) => void
+) {
+	failureHandlers.set(type, fn as FailureHandler);
+}
+
+function notifyFailed(type: string, payloadJson: string, err: unknown) {
+	try {
+		failureHandlers.get(type)?.(JSON.parse(payloadJson), err);
+	} catch (e) {
+		console.error(`failure hook for ${type} failed:`, e);
+	}
+}
+
 export async function enqueue(type: string, payload: unknown, runAt = new Date()): Promise<Job> {
 	return db
 		.insert(jobs)
@@ -88,6 +107,7 @@ export function claimDueJobs(limit: number, now: Date): Job[] {
 						.set({ status: 'failed', attempts, lockedAt: null })
 						.where(eq(jobs.id, j.id))
 						.run();
+					notifyFailed(j.type, j.payloadJson, new Error('Envoi interrompu (délai dépassé)'));
 					continue;
 				}
 				claimed.push(
@@ -140,6 +160,7 @@ export async function runDueJobs(now = new Date()): Promise<{ ran: number; faile
 				)
 				.where(fence)
 				.run();
+			if (attempts >= MAX_ATTEMPTS) notifyFailed(job.type, job.payloadJson, err);
 			failed++;
 		}
 	}

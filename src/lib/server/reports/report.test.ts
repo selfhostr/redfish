@@ -1,4 +1,5 @@
 import { beforeEach, expect, test, vi } from 'vitest';
+import { eq } from 'drizzle-orm';
 
 vi.mock('$lib/server/db', async () => {
 	const { createTestDb } = await import('../db/test-db');
@@ -121,6 +122,23 @@ test('anonymisé : aucune donnée individuelle', async () => {
 	expect(r.anonymized).toBe(true);
 	const full = JSON.stringify(await buildReport(campaignId, { anonymize: false }));
 	expect(full).toMatch(/a@x\.test/);
+});
+
+test('taux calculés sur les envois réussis, échecs comptés à part', async () => {
+	ev(0, 'sent');
+	ev(1, 'sent');
+	db.update(campaignRecipients)
+		.set({ sendStatus: 'failed', sendError: 'boom' })
+		.where(eq(campaignRecipients.id, recs[2]))
+		.run();
+	ev(0, 'opened');
+	ev(0, 'clicked');
+	const r = await buildReport(campaignId, { anonymize: false });
+	expect(r.counts).toMatchObject({ recipients: 3, sent: 2, failed: 1 });
+	expect(r.rates.open).toBeCloseTo(1 / 2);
+	expect(r.rates.click).toBeCloseTo(1 / 2);
+	expect(r.attentionPoints.join(' ')).toContain('1 envoi(s) en échec');
+	expect(r.details?.filter((d) => d.stage === 'Envoi en échec').length).toBe(1);
 });
 
 test('campagne sans destinataire : taux à 0', async () => {

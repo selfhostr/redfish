@@ -98,6 +98,7 @@ test('funnel counts distinct recipients per stage; human excludes automated', as
 	expect(await campaignFunnel(campaignId)).toEqual({
 		recipients: 3,
 		sent: 3,
+		failed: 0,
 		opened: 2,
 		clicked: 2,
 		pageInteraction: 1,

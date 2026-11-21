@@ -245,7 +245,9 @@ export const campaignRecipients = sqliteTable(
 		sendStatus: text('send_status', { enum: ['pending', 'sent', 'skipped', 'failed'] })
 			.notNull()
 			.default('pending'),
-		sentAt: integer('sent_at', { mode: 'timestamp' })
+		sentAt: integer('sent_at', { mode: 'timestamp' }),
+		/** Motif court (sans secret) d'un échec d'envoi définitif. */
+		sendError: text('send_error')
 	},
 	(t) => [
 		index('campaign_recipients_campaign_idx').on(t.campaignId),

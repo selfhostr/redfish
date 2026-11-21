@@ -263,7 +263,8 @@
 			<h2 class="rf-eyebrow">Entonnoir</h2>
 		{/snippet}
 		<p class="px-4 pt-4 text-ink-dim">
-			Progression des destinataires, en valeurs brutes et en interactions probablement humaines.
+			Progression des destinataires, en valeurs brutes et en interactions probablement humaines. Les
+			taux se calculent sur les envois réussis.
 		</p>
 		<div class="overflow-x-auto">
 			<table class="mt-3 w-full text-left text-sm">
@@ -288,6 +289,41 @@
 			</table>
 		</div>
 	</Panel>
+
+	{#if data.funnel.failed > 0}
+		<Panel flush>
+			{#snippet header()}
+				<h2 class="rf-eyebrow">{data.funnel.failed} envois en échec</h2>
+			{/snippet}
+			<p class="px-4 pt-4 text-ink-dim">
+				Ces destinataires n'ont pas reçu l'e-mail ; ils sont exclus des taux (calculés sur les
+				envois réussis).
+			</p>
+			<div class="overflow-x-auto">
+				<table class="mt-3 w-full text-left text-sm">
+					<thead class="border-y border-line bg-surface-2">
+						<tr>
+							<th class="rf-label px-4 py-3 font-medium">Destinataire</th>
+							<th class="rf-label px-4 py-3 font-medium">Motif</th>
+						</tr>
+					</thead>
+					<tbody class="divide-y divide-line">
+						{#each data.failedRecipients as r (r.id)}
+							<tr>
+								<td class="px-4 py-3 text-ink">{r.name ? `${r.name} · ` : ''}{r.email}</td>
+								<td class="px-4 py-3 break-words text-ink-dim">{r.reason}</td>
+							</tr>
+						{/each}
+					</tbody>
+				</table>
+			</div>
+			{#if data.campaign.status === 'sending'}
+				<form method="POST" action="?/retryFailed" use:enhance class="p-4">
+					<Button type="submit" variant="secondary">Réessayer les envois en échec</Button>
+				</form>
+			{/if}
+		</Panel>
+	{/if}
 
 	<Panel>
 		{#snippet header()}

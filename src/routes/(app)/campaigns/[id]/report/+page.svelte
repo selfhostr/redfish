@@ -31,6 +31,10 @@
 	<table>
 		<tbody>
 			<tr><th>{funnelLabels.recipients}</th><td>{r.counts.recipients}</td></tr>
+			<tr><th>{funnelLabels.sent}</th><td>{r.counts.sent}</td></tr>
+			{#if r.counts.failed > 0}
+				<tr><th>Échecs</th><td>{r.counts.failed} envois en échec</td></tr>
+			{/if}
 			<tr><th>{funnelLabels.opened}</th><td>{r.counts.opened} ({pct(r.rates.open)})</td></tr>
 			<tr><th>{funnelLabels.clicked}</th><td>{r.counts.clicked} ({pct(r.rates.click)})</td></tr>
 			<tr>
