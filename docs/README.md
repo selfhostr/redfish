@@ -1,0 +1,10 @@
+# redfish documentation
+
+All pages are in English.
+
+- [Configuration](configuration.md): every environment variable.
+- [Your first scenario](first-scenario.md): create, import and export scenarios.
+- [Deployment](deployment.md): reverse proxy and Cloudflare Tunnel.
+- [CSP and host isolation](csp-hosts.md)
+- [Retention and backup](retention-backup.md)
+- [Design system](design-system.md): for contributors.
