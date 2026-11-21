@@ -235,13 +235,21 @@ function writeOutput() {
 	const index = join(OUT, 'index.html');
 	let html = readFileSync(index, 'utf8');
 	// The bootstrap script becomes a file: the demo's CSP allows no inline script.
-	const m = /<script\b[^>]*>([\s\S]*?)<\/script\s*>/i.exec(html);
-	if (!m) throw new Error('bootstrap script not found in index.html');
-	const boot = m[1].trim() + '\n';
+	// SvelteKit's own output, not arbitrary HTML: exactly one inline script, found by position.
+	const open = html.indexOf('<script');
+	const body = html.indexOf('>', open) + 1;
+	const close = html.indexOf('</script>', body);
+	if (open < 0 || close < 0) throw new Error('bootstrap script not found in index.html');
+	const boot = html.slice(body, close).trim() + '\n';
 	const bootName = `_app/boot.${createHash('sha256').update(boot).digest('hex').slice(0, 8)}.js`;
 	writeFileSync(join(OUT, bootName), boot);
-	html = html.replace(m[0], `<script src="${BASE}/${bootName}"></script>`);
-	if (/<script\b(?![^>]*\ssrc=)/i.test(html)) throw new Error('inline script left in index.html');
+	html =
+		html.slice(0, open) +
+		`<script src="${BASE}/${bootName}"></script>` +
+		html.slice(close + '</script>'.length);
+	if (html.split('<script').length !== 2 || !html.includes(`<script src="${BASE}/${bootName}">`)) {
+		throw new Error('unexpected scripts in index.html');
+	}
 	writeFileSync(index, html);
 	// The same shell for every recorded page (static hosts serve /x from x.html) and for 404s.
 	writeFileSync(join(OUT, '404.html'), html);
