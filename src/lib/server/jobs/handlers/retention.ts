@@ -1,5 +1,7 @@
 import { enqueue, registerHandler } from '$lib/server/jobs/queue';
 import { anonymizeExpired } from '$lib/server/retention';
+import { audit, purgeAuditLog } from '$lib/server/audit';
+import { purgeExpiredAuth } from '$lib/server/account';
 import { db } from '$lib/server/db';
 import { jobs } from '$lib/server/db/schema';
 import { and, eq, inArray } from 'drizzle-orm';
@@ -23,6 +25,12 @@ export async function scheduleRetention(runAt = new Date()): Promise<void> {
 // occurrence au démarrage via scheduleRetention(new Date()).
 registerHandler('retention', async () => {
 	const { anonymized } = await anonymizeExpired();
-	console.log(`retention: ${anonymized} cible(s) anonymisée(s)`);
+	if (anonymized > 0) audit(null, 'targets.purge', { details: { anonymized } });
+	// Le journal d'audit a sa propre durée (REDFISH_AUDIT_RETENTION_DAYS, 365 j par défaut).
+	const auditPurged = purgeAuditLog();
+	purgeExpiredAuth();
+	console.log(
+		`retention: ${anonymized} cible(s) anonymisée(s), ${auditPurged} entrée(s) d'audit purgée(s)`
+	);
 	await scheduleRetention(new Date(Date.now() + DAY_MS));
 });

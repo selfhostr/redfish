@@ -7,4 +7,5 @@ All pages are in English.
 - [Deployment](deployment.md): reverse proxy and Cloudflare Tunnel.
 - [CSP and host isolation](csp-hosts.md)
 - [Retention and backup](retention-backup.md)
+- [Account security and audit log](account-security.md)
 - [Design system](design-system.md): for contributors.

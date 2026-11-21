@@ -1,5 +1,6 @@
 import { fail, redirect } from '@sveltejs/kit';
 import { switchTenant } from '$lib/server/active-tenant';
+import { audit } from '$lib/server/audit';
 import { createTenant } from '$lib/server/tenant';
 import { tenantOverviews } from '$lib/server/tenant-overview';
 import type { Actions, PageServerLoad } from './$types';
@@ -41,6 +42,7 @@ export const actions: Actions = {
 				linkUserId: user.role !== 'superadmin' ? user.id : undefined
 			});
 			id = tenant.id;
+			audit(user, 'client.create', { tenantId: id, targetType: 'tenant', targetId: id });
 			// Le tenant vient d'être créé (et lié à l'utilisateur) : switchTenant revérifie l'accès.
 			await switchTenant(user, cookies, id);
 		} catch (e) {

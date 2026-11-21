@@ -8,6 +8,8 @@ import {
 	createSession,
 	verifyPassword
 } from '$lib/server/auth';
+import { CHALLENGE_COOKIE, createLoginChallenge } from '$lib/server/account';
+import { audit } from '$lib/server/audit';
 import { db } from '$lib/server/db';
 import { users } from '$lib/server/db/schema';
 import { rateLimit } from '$lib/server/ratelimit';
@@ -49,15 +51,34 @@ export const actions: Actions = {
 		// puis on renvoie l'erreur générique.
 		if (!user) {
 			await verifyPassword(DUMMY_PASSWORD_HASH, password);
+			// L'e-mail saisi n'est pas journalisé (saisie libre, parfois un mot de passe).
+			audit(null, 'auth.login.failure', { details: { reason: 'unknown_user' } });
 			return fail(400, { error: GENERIC_LOGIN_ERROR });
 		}
 
 		const ok = await verifyPassword(user.passwordHash, password);
 		if (!ok) {
+			audit(user, 'auth.login.failure', { details: { reason: 'bad_password' } });
 			return fail(400, { error: GENERIC_LOGIN_ERROR });
 		}
 
-		const { token, expiresAt } = await createSession(user.id);
+		// 2FA active : le mot de passe ne suffit pas, on passe à la seconde étape.
+		if (user.totpEnabled) {
+			const challenge = createLoginChallenge(user.id);
+			cookies.set(CHALLENGE_COOKIE, challenge.token, {
+				path: '/login',
+				httpOnly: true,
+				sameSite: 'strict',
+				secure: !dev,
+				expires: challenge.expiresAt
+			});
+			throw redirect(303, '/login/2fa');
+		}
+
+		const { token, expiresAt } = await createSession(user.id, {
+			userAgent: request.headers.get('user-agent')
+		});
+		audit(user, 'auth.login.success', { details: { method: 'password' } });
 		cookies.set(SESSION_COOKIE, token, {
 			path: '/',
 			httpOnly: true,

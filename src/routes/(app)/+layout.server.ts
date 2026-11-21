@@ -8,5 +8,6 @@ export const load: LayoutServerLoad = async ({ locals, cookies }) => {
 	if (!locals.user) throw redirect(303, '/login');
 	const user = locals.user;
 	const { tenants, activeTenant } = await resolveActiveTenant(user, cookies);
+	// Projection explicite (liste blanche) : jamais l'empreinte du mot de passe ni le secret TOTP côté client.
 	return { user: toPublicUser(user), tenants, activeTenant };
 };

@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, test, vi } from 'vitest';
 vi.mock('$lib/server/env', () => ({ validateEnv: vi.fn() }));
 vi.mock('$lib/server/auth', () => ({
 	SESSION_COOKIE: 'sid',
+	hashToken: (t: string) => t,
 	validateSession: vi.fn(async () => null)
 }));
 

@@ -18,7 +18,13 @@
 				]
 			: []),
 		{ href: '/tenants', label: 'Clients' },
-		{ href: '/scenarios', label: 'Scénarios' }
+		{ href: '/scenarios', label: 'Scénarios' },
+		...(data.user.role === 'superadmin'
+			? [
+					{ href: '/users', label: 'Utilisateurs' },
+					{ href: '/audit', label: 'Audit' }
+				]
+			: [])
 	]);
 
 	// Squelette affiché seulement après un court délai (évite le clignotement) ;
@@ -164,7 +170,7 @@
 
 			<div class="nav-end">
 				{@render tenantForm('nav')}
-				<span class="user-email">{data.user.email}</span>
+				<a href="/account" class="user-email" title="Mon compte">{data.user.email}</a>
 				<form method="POST" action="/logout">
 					<Button type="submit" variant="ghost" size="sm">Déconnexion</Button>
 				</form>
@@ -198,7 +204,7 @@
 				</ul>
 				<div class="sheet-account">
 					{@render tenantForm('sheet')}
-					<span class="user-email">{data.user.email}</span>
+					<a href="/account" class="user-email" title="Mon compte">{data.user.email}</a>
 					<form method="POST" action="/logout">
 						<Button type="submit" variant="ghost" class="sheet-logout">Déconnexion</Button>
 					</form>

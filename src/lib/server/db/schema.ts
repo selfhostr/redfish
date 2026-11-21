@@ -38,6 +38,12 @@ export const users = sqliteTable(
 		email: text('email').notNull().unique(),
 		passwordHash: text('password_hash').notNull(),
 		role: text('role', { enum: ['superadmin', 'operator'] }).notNull(),
+		/** Secret TOTP chiffré (AES-256-GCM via `REDFISH_SECRET_KEY`) ; NULL sans 2FA. */
+		totpSecretEnc: text('totp_secret_enc'),
+		/** 2FA active : posé seulement après confirmation d'un premier code. */
+		totpEnabled: integer('totp_enabled', { mode: 'boolean' }).notNull().default(false),
+		/** Dernier pas TOTP accepté : un code ne peut pas être rejoué. */
+		totpLastStep: integer('totp_last_step'),
 		createdAt: createdAt()
 	},
 	(t) => [check('users_role_check', sql`${t.role} in ('superadmin', 'operator')`)]
@@ -49,6 +55,38 @@ export const sessions = sqliteTable('sessions', {
 	userId: text('user_id')
 		.notNull()
 		.references(() => users.id, { onDelete: 'cascade' }),
+	expiresAt: integer('expires_at', { mode: 'timestamp' }).notNull(),
+	/** Défaut côté application (SQLite refuse un défaut non constant en ALTER TABLE). */
+	createdAt: integer('created_at', { mode: 'timestamp' }).$defaultFn(() => new Date()),
+	lastUsedAt: integer('last_used_at', { mode: 'timestamp' }),
+	/** User-Agent tronqué, pour reconnaître la session dans la page Compte. L'IP n'est jamais stockée. */
+	userAgent: text('user_agent')
+});
+
+/** Codes de secours 2FA : à usage unique, seule l'empreinte SHA-256 est stockée. */
+export const recoveryCodes = sqliteTable(
+	'recovery_codes',
+	{
+		id: id(),
+		userId: text('user_id')
+			.notNull()
+			.references(() => users.id, { onDelete: 'cascade' }),
+		codeHash: text('code_hash').notNull(),
+		usedAt: integer('used_at', { mode: 'timestamp' })
+	},
+	(t) => [index('recovery_codes_user_idx').on(t.userId)]
+);
+
+/**
+ * Seconde étape de connexion (2FA) : créée après un mot de passe valide,
+ * consommée par un code TOTP ou de secours. `id` = SHA-256 du jeton du cookie.
+ */
+export const loginChallenges = sqliteTable('login_challenges', {
+	id: text('id').primaryKey(),
+	userId: text('user_id')
+		.notNull()
+		.references(() => users.id, { onDelete: 'cascade' }),
+	attempts: integer('attempts').notNull().default(0),
 	expiresAt: integer('expires_at', { mode: 'timestamp' }).notNull()
 });
 
@@ -275,6 +313,32 @@ export const workerHeartbeat = sqliteTable('worker_heartbeat', {
 	beatAt: integer('beat_at', { mode: 'timestamp' }).notNull()
 });
 
+/**
+ * Journal d'audit des actions sensibles. Pas de clé étrangère sur `tenant_id`
+ * ni `actor_user_id` : une entrée survit à la suppression du client ou du
+ * compte (l'e-mail de l'acteur est figé dans `actor_email`). Aucune IP stockée.
+ */
+export const auditLog = sqliteTable(
+	'audit_log',
+	{
+		id: id(),
+		createdAt: integer('created_at', { mode: 'timestamp_ms' })
+			.notNull()
+			.$defaultFn(() => new Date()),
+		actorUserId: text('actor_user_id'),
+		actorEmail: text('actor_email'),
+		tenantId: text('tenant_id'),
+		action: text('action').notNull(),
+		targetType: text('target_type'),
+		targetId: text('target_id'),
+		detailsJson: text('details_json')
+	},
+	(t) => [
+		index('audit_log_created_idx').on(t.createdAt),
+		index('audit_log_tenant_idx').on(t.tenantId, t.createdAt)
+	]
+);
+
 export type Tenant = typeof tenants.$inferSelect;
 export type NewTenant = typeof tenants.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -289,3 +353,5 @@ export type Authorization = typeof authorizations.$inferSelect;
 export type CampaignRecipient = typeof campaignRecipients.$inferSelect;
 export type CampaignEvent = typeof events.$inferSelect;
 export type Job = typeof jobs.$inferSelect;
+export type RecoveryCode = typeof recoveryCodes.$inferSelect;
+export type AuditEntry = typeof auditLog.$inferSelect;

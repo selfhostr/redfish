@@ -3,6 +3,7 @@ import { parseUtcDateTime } from '$lib/server/datetime';
 import { db } from '$lib/server/db';
 import { scenarios } from '$lib/server/db/schema';
 import { activeTenantId } from '$lib/server/active-tenant';
+import { audit } from '$lib/server/audit';
 import { createAuthorization, latestValidAuthorization } from '$lib/server/authorization';
 import { createCampaign, latestTrackingDomain } from '$lib/server/campaigns';
 import { listSendingProfiles } from '$lib/server/sending-profiles';
@@ -102,6 +103,12 @@ export const actions: Actions = {
 		} catch (e) {
 			return fail(400, { error: e instanceof Error ? e.message : 'Création impossible' });
 		}
+		audit(locals.user, 'campaign.create', {
+			tenantId,
+			targetType: 'campaign',
+			targetId: campaignId,
+			details: { name, reference }
+		});
 		throw redirect(303, `/campaigns/${campaignId}`);
 	}
 };

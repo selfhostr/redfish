@@ -4,6 +4,7 @@ import {
 	createAuthorization,
 	listAuthorizations
 } from '$lib/server/authorization';
+import { audit } from '$lib/server/audit';
 import { parseUtcDateTime } from '$lib/server/datetime';
 import { deleteCampaign, getCampaign, scheduleCampaign } from '$lib/server/campaigns';
 import { LaunchError, launchCampaign } from '$lib/server/campaigns/launch';
@@ -12,6 +13,12 @@ import { campaignFunnel } from '$lib/server/tracking/stats';
 import { assertTenantAccess } from '$lib/server/tenant';
 import { getScenarioById, toSummary } from '$lib/server/scenarios/listing';
 import type { Actions, PageServerLoad } from './$types';
+
+const campaignRef = (c: { id: string; tenantId: string }) => ({
+	tenantId: c.tenantId,
+	targetType: 'campaign',
+	targetId: c.id
+});
 
 async function loadCampaign(user: NonNullable<App.Locals['user']>, id: string) {
 	const campaign = await getCampaign(id);
@@ -57,6 +64,7 @@ export const actions: Actions = {
 			}
 			throw e;
 		}
+		audit(locals.user, 'campaign.launch', campaignRef(campaign));
 		return { success: true };
 	},
 	authorize: async ({ request, locals, params }) => {
@@ -76,6 +84,10 @@ export const actions: Actions = {
 		} catch (e) {
 			return fail(400, { error: e instanceof Error ? e.message : 'Autorisation invalide' });
 		}
+		audit(locals.user, 'campaign.authorize', {
+			...campaignRef(campaign),
+			details: { reference: str('reference') }
+		});
 		return { success: true };
 	},
 	schedule: async ({ request, locals, params }) => {
@@ -90,6 +102,10 @@ export const actions: Actions = {
 		} catch (e) {
 			return fail(403, { error: e instanceof Error ? e.message : 'Envoi bloqué' });
 		}
+		audit(locals.user, 'campaign.schedule', {
+			...campaignRef(campaign),
+			details: { scheduledAt: scheduledAt.toISOString() }
+		});
 		return { success: true };
 	},
 	delete: async ({ request, locals, params }) => {
@@ -100,6 +116,10 @@ export const actions: Actions = {
 		if (confirm !== campaign.name)
 			return fail(400, { error: 'Le nom saisi ne correspond pas au nom de la campagne.' });
 		await deleteCampaign(locals.user, campaign.id);
+		audit(locals.user, 'campaign.delete', {
+			...campaignRef(campaign),
+			details: { name: campaign.name, status: campaign.status }
+		});
 		throw redirect(303, '/campaigns');
 	}
 };
