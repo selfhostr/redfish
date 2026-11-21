@@ -1,0 +1,11 @@
+# Réplication continue de la base SQLite vers un stockage compatible S3.
+# Les secrets viennent de l'environnement (.env), jamais de ce fichier.
+dbs:
+  - path: /app/data/redfish.db
+    replicas:
+      - type: s3
+        bucket: ${LITESTREAM_BUCKET}
+        path: ${LITESTREAM_PATH}
+        endpoint: ${LITESTREAM_ENDPOINT}
+        access-key-id: ${LITESTREAM_ACCESS_KEY_ID}
+        secret-access-key: ${LITESTREAM_SECRET_ACCESS_KEY}

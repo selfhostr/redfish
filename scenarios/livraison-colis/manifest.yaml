@@ -1,0 +1,20 @@
+# Paquet de scénario d'entraînement — redfish (sensibilisation).
+# Leurre simulé : « colis en attente, frais de dédouanement à régler ». La cible
+# est poussée vers une fausse page de paiement. Aucune valeur saisie n'est jamais
+# lue ni stockée.
+key: livraison-colis
+title: 'Livraison de colis : frais de dédouanement'
+category: payment-fraud
+locale: fr
+difficulty: easy
+tags:
+  - livraison
+  - colis
+  - poste
+  - payment-fraud
+subject: 'Votre colis est en attente : frais de dédouanement de CHF 2.95 à régler'
+fromName: La Poste Suisse - Suivi des envois
+templates:
+  email: email.mjml
+  landing: landing.html
+  awareness: awareness.html

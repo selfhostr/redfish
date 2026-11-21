@@ -1,0 +1,172 @@
+<!doctype html>
+<!--
+  redfish — page de sensibilisation (le « débrief » pédagogique de l'exercice).
+  On révèle les signaux d'alerte que le collaborateur aurait dû repérer, puis les
+  bons réflexes. {{awarenessMessage}} reçoit une note propre à la campagne.
+  Aucune ressource externe / CDN.
+-->
+<html lang="fr">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta name="robots" content="noindex, nofollow" />
+		<title>Ceci était un exercice de sensibilisation</title>
+		<style>
+			:root {
+				color-scheme: light;
+			}
+			* {
+				box-sizing: border-box;
+			}
+			body {
+				margin: 0;
+				background: #f4f4f2;
+				color: #1c1c1c;
+				font-family: Helvetica, Arial, sans-serif;
+				line-height: 1.55;
+			}
+			.wrap {
+				max-width: 640px;
+				margin: 40px auto;
+				padding: 0 16px;
+			}
+			.card {
+				background: #ffffff;
+				padding: 32px;
+				border-radius: 6px;
+				box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+			}
+			.banner {
+				display: flex;
+				align-items: center;
+				gap: 12px;
+				padding: 16px 20px;
+				margin-bottom: 24px;
+				background: #e8f3e8;
+				border-left: 4px solid #107c10;
+				border-radius: 4px;
+			}
+			.banner strong {
+				font-size: 17px;
+			}
+			h1 {
+				margin: 0 0 8px;
+				font-size: 23px;
+			}
+			h2 {
+				margin: 28px 0 10px;
+				font-size: 17px;
+			}
+			p {
+				margin: 0 0 12px;
+			}
+			ul {
+				margin: 0 0 8px;
+				padding-left: 0;
+				list-style: none;
+			}
+			li {
+				position: relative;
+				padding: 6px 0 6px 30px;
+			}
+			li::before {
+				position: absolute;
+				left: 0;
+				top: 6px;
+			}
+			.flags li::before {
+				content: '\26A0';
+				color: #a80000;
+			}
+			.reflex li::before {
+				content: '\2714';
+				color: #107c10;
+			}
+			.note {
+				margin-top: 28px;
+				padding: 16px 20px;
+				background: #fff6d6;
+				border-left: 4px solid #ffcc00;
+				border-radius: 4px;
+				font-size: 14px;
+			}
+			.foot {
+				margin-top: 28px;
+				font-size: 12px;
+				color: #6b6b6b;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="wrap">
+			<div class="card">
+				<div class="banner">
+					<svg
+						width="24"
+						height="24"
+						viewBox="0 0 24 24"
+						xmlns="http://www.w3.org/2000/svg"
+						aria-hidden="true"
+					>
+						<circle cx="12" cy="12" r="11" fill="#107c10" />
+						<path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke="#ffffff" stroke-width="2.2" />
+					</svg>
+					<strong>Pas d'inquiétude : c'était un exercice de sensibilisation.</strong>
+				</div>
+
+				<h1>Vous venez de cliquer sur un faux e-mail</h1>
+				<p>
+					Cet e-mail n'a pas été envoyé par La Poste Suisse. Il a été diffusé par votre
+					organisation, avec autorisation, pour vous entraîner à reconnaître ce type de piège.
+					Aucune donnée que vous auriez saisie n'a été lue, enregistrée ni transmise.
+				</p>
+
+				<h2>Les signaux d'alerte que vous auriez pu repérer</h2>
+				<ul class="flags">
+					<li>
+						<strong>Un micro-paiement pour débloquer un colis :</strong> demander CHF&nbsp;2.95 par
+						carte est l'appât le plus courant. Le vrai but est de capturer vos données de carte, pas
+						d'encaisser 3 francs.
+					</li>
+					<li>
+						<strong>Un colis que vous n'attendiez pas forcément :</strong> le message mise sur le
+						fait que « tout le monde attend un colis ».
+					</li>
+					<li>
+						<strong>L'urgence :</strong> « 48 heures, sinon retour à l'expéditeur » pousse à payer
+						sans réfléchir.
+					</li>
+					<li>
+						<strong>L'adresse réelle du lien :</strong> le bouton ne menait pas vers le site
+						officiel post.ch. Survolez toujours un lien avant de cliquer.
+					</li>
+					<li>
+						<strong>Une page qui réclame vos données de carte</strong> pour un montant dérisoire :
+						incohérence majeure.
+					</li>
+				</ul>
+
+				<h2>Les bons réflexes</h2>
+				<ul class="reflex">
+					<li>
+						Ne saisissez jamais vos données de carte sur une page atteinte via un lien d'e-mail.
+					</li>
+					<li>
+						Suivez vos envois en tapant vous-même l'adresse officielle (post.ch) ou via
+						l'application officielle, avec votre numéro de suivi.
+					</li>
+					<li>Vérifiez l'adresse réelle de l'expéditeur et survolez les liens avant de cliquer.</li>
+					<li>Méfiez-vous de tout « petit montant » à régler en urgence pour un colis.</li>
+					<li>Au moindre doute, signalez l'e-mail à votre service informatique.</li>
+				</ul>
+
+				<div class="note">{{awarenessMessage}}</div>
+
+				<p class="foot">
+					redfish — plateforme de sensibilisation à la sécurité. Exercice réalisé avec
+					l'autorisation de votre organisation.
+				</p>
+			</div>
+		</div>
+	</body>
+</html>
