@@ -12,3 +12,4 @@ docs/superpowers/
 .worktrees/
 test-results/
 playwright-report/
+screenshots/out/
