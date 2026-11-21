@@ -18,6 +18,8 @@
 
 	const next = $derived(localNext(page.url.searchParams.get('next')));
 
+	let editing = $state<string | null>(null);
+
 	const fields: [string, string, string][] = [
 		['email', 'E-mail', 'email'],
 		['firstName', 'Prénom', 'text'],
@@ -26,6 +28,79 @@
 		['locale', 'Langue', 'text']
 	];
 </script>
+
+{#snippet actions(t: PageData['targets'][number])}
+	{#if editing === t.id}
+		<form
+			method="POST"
+			action="?/update"
+			use:enhance={() =>
+				async ({ update }) => {
+					await update();
+					editing = null;
+				}}
+			class="flex flex-col gap-2"
+		>
+			<input type="hidden" name="id" value={t.id} />
+			<input
+				name="email"
+				type="email"
+				required
+				value={t.email}
+				aria-label="E-mail"
+				class="rf-input"
+			/>
+			<input name="firstName" value={t.firstName} aria-label="Prénom" class="rf-input" />
+			<input name="lastName" value={t.lastName} aria-label="Nom" class="rf-input" />
+			<input name="department" value={t.department ?? ''} aria-label="Service" class="rf-input" />
+			<input name="locale" value={t.locale ?? ''} aria-label="Langue" class="rf-input" />
+			<span class="flex gap-2">
+				<Button type="submit" variant="primary" size="sm">Enregistrer</Button>
+				<Button type="button" variant="ghost" size="sm" onclick={() => (editing = null)}>
+					Annuler
+				</Button>
+			</span>
+		</form>
+	{:else if t.anonymizedAt}
+		<span class="text-xs text-ink-dim">Anonymisée</span>
+	{:else}
+		<span class="flex flex-wrap gap-2">
+			<Button type="button" variant="ghost" size="sm" onclick={() => (editing = t.id)}>
+				Modifier
+			</Button>
+			{#if t.used}
+				<form
+					method="POST"
+					action="?/anonymize"
+					use:enhance
+					onsubmit={(e) => {
+						if (
+							!confirm(
+								'Anonymiser définitivement cette personne ? Les statistiques sont conservées.'
+							)
+						)
+							e.preventDefault();
+					}}
+				>
+					<input type="hidden" name="id" value={t.id} />
+					<Button type="submit" variant="ghost" size="sm">Anonymiser</Button>
+				</form>
+			{:else}
+				<form
+					method="POST"
+					action="?/delete"
+					use:enhance
+					onsubmit={(e) => {
+						if (!confirm('Supprimer définitivement ce destinataire ?')) e.preventDefault();
+					}}
+				>
+					<input type="hidden" name="id" value={t.id} />
+					<Button type="submit" variant="ghost" size="sm">Supprimer</Button>
+				</form>
+			{/if}
+		</span>
+	{/if}
+{/snippet}
 
 <main class="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-6 md:px-6 md:py-8">
 	<ClientHeader />
@@ -95,6 +170,7 @@
 							{t.firstName}
 							{t.lastName} · {t.department ?? 'n/d'} · {t.locale ?? 'n/d'}
 						</span>
+						{@render actions(t)}
 					</li>
 				{/each}
 			</ul>
@@ -107,6 +183,7 @@
 							<th class="rf-label px-4 py-3 font-medium">Nom</th>
 							<th class="rf-label px-4 py-3 font-medium">Service</th>
 							<th class="rf-label px-4 py-3 font-medium">Langue</th>
+							<th class="rf-label px-4 py-3 font-medium">Actions</th>
 						</tr>
 					</thead>
 					<tbody class="divide-y divide-line">
@@ -122,6 +199,7 @@
 								<td class="px-4 py-3 text-ink-dim">{t.lastName}</td>
 								<td class="px-4 py-3 text-ink-dim">{t.department ?? 'n/d'}</td>
 								<td class="px-4 py-3 text-ink-dim">{t.locale ?? 'n/d'}</td>
+								<td class="px-4 py-3">{@render actions(t)}</td>
 							</tr>
 						{/each}
 					</tbody>
