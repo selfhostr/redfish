@@ -37,6 +37,8 @@ export function escapeHtml(value: string): string {
  * Remplace chaque `{{clé}}` par la chaîne fournie telle quelle ; une clé absente
  * de `values` devient une chaîne vide. L'insertion est brute : c'est à l'appelant
  * d'échapper le texte (via {@link escapeHtml}) et de laisser les URLs intactes.
+ * Les clés reconnues par gabarit sont recensées dans
+ * `$lib/scenarios/placeholders` (à tenir synchronisé).
  */
 function substitute(src: string, values: Record<string, string>): string {
 	return src.replace(/\{\{\s*(\w+)\s*\}\}/g, (_match, key: string) =>
@@ -61,7 +63,8 @@ export function renderTemplate(src: string, vars: Record<string, string>): strin
  * gabarits (e-mail, landing, sensibilisation). Un scénario `builtin` le lit
  * depuis son paquet sur disque ; un scénario `imported` le lit depuis les
  * colonnes de la base (l'image Docker est figée et le worker ne partage pas le
- * disque du web : le contenu importé doit vivre en base).
+ * disque du web : le contenu importé doit vivre en base). L'éditeur de création
+ * en fournit un en mémoire, non enregistré, pour l'aperçu en direct.
  */
 export type ScenarioContent = {
 	subject: string;
@@ -105,18 +108,45 @@ export async function loadScenarioContent(scenario: Scenario): Promise<ScenarioC
 }
 
 /**
- * Rend l'e-mail d'un scénario. Interpole `{{firstName}}` (échappé en HTML) et
- * les URLs de tracking `{{clickUrl}}`/`{{openUrl}}` (brutes : ce sont nos propres
- * URLs, le jeton est en base64url), puis compile le MJML en HTML. Lève si MJML
- * renvoie des erreurs. Le sujet provient du manifeste et est interpolé BRUT
- * (en-tête de mail en texte, pas de HTML).
+ * Erreur de compilation MJML. `details` liste les messages de MJML un par un
+ * (affichage détaillé dans l'éditeur) ; `message` les concatène.
  */
-export async function renderEmail(
-	scenario: Scenario,
+export class MjmlCompileError extends Error {
+	readonly details: string[];
+	constructor(details: string[]) {
+		super(`Compilation MJML échouée : ${details.join(' ; ')}`);
+		this.name = 'MjmlCompileError';
+		this.details = details;
+	}
+}
+
+/**
+ * Rend le sujet. C'est un en-tête de mail en TEXTE BRUT : substitution non
+ * échappée (sinon un prénom « A&B » deviendrait « A&amp;B » dans le sujet reçu).
+ * On retire néanmoins les CR/LF : un en-tête ne tient que sur une ligne, et les
+ * laisser passer permettrait une injection d'en-têtes (Bcc, etc.).
+ */
+export function renderSubjectContent(
+	content: Pick<ScenarioContent, 'subject'>,
+	ctx: RenderCtx
+): string {
+	return substitute(content.subject, {
+		firstName: ctx.firstName,
+		lastName: ctx.lastName,
+		email: ctx.email
+	}).replace(/[\r\n]+/g, ' ');
+}
+
+/**
+ * Rend l'e-mail à partir d'un contenu en mémoire. Interpole `{{firstName}}`
+ * (échappé en HTML) et les URLs de tracking `{{clickUrl}}`/`{{openUrl}}`
+ * (brutes : ce sont nos propres URLs, le jeton est en base64url), puis compile
+ * le MJML en HTML. Lève {@link MjmlCompileError} si MJML renvoie des erreurs.
+ */
+export async function renderEmailContent(
+	content: Pick<ScenarioContent, 'subject' | 'email'>,
 	ctx: RenderCtx
 ): Promise<{ subject: string; html: string }> {
-	const content = await loadScenarioContent(scenario);
-
 	const mjmlSource = substitute(content.email, {
 		firstName: escapeHtml(ctx.firstName),
 		clickUrl: ctx.urls.click,
@@ -125,31 +155,23 @@ export async function renderEmail(
 
 	const { html, errors } = await mjml2html(mjmlSource, { validationLevel: 'soft' });
 	if (errors.length > 0) {
-		const details = errors.map((error) => error.formattedMessage).join(' ; ');
-		throw new Error(`Compilation MJML échouée : ${details}`);
+		throw new MjmlCompileError(errors.map((error) => error.formattedMessage));
 	}
 
-	// Le sujet est un en-tête de mail en TEXTE BRUT : substitution non échappée
-	// (sinon un prénom « A&B » deviendrait « A&amp;B » dans le sujet reçu).
-	// On retire néanmoins les CR/LF : un en-tête ne tient que sur une ligne, et
-	// les laisser passer permettrait une injection d'en-têtes (Bcc, etc.).
-	const subject = substitute(content.subject, {
-		firstName: ctx.firstName,
-		lastName: ctx.lastName,
-		email: ctx.email
-	}).replace(/[\r\n]+/g, ' ');
-
-	return { subject, html };
+	return { subject: renderSubjectContent(content, ctx), html };
 }
 
 /**
- * Rend la page d'atterrissage. `{{submitUrl}}`/`{{beaconUrl}}` sont insérées
- * brutes, `{{firstName}}` est échappé. Les propriétés « zéro capture » du gabarit
- * sont conservées (action du formulaire = URL de soumission, aucun champ nommé,
- * beacon sans corps) : cette fonction ne fait que de l'interpolation.
+ * Rend la page d'atterrissage à partir d'un contenu en mémoire.
+ * `{{submitUrl}}`/`{{beaconUrl}}` sont insérées brutes, `{{firstName}}` est
+ * échappé. Les propriétés « zéro capture » du gabarit sont conservées (action du
+ * formulaire = URL de soumission, aucun champ nommé, beacon sans corps) : cette
+ * fonction ne fait que de l'interpolation.
  */
-export async function renderLanding(scenario: Scenario, ctx: RenderCtx): Promise<string> {
-	const content = await loadScenarioContent(scenario);
+export function renderLandingContent(
+	content: Pick<ScenarioContent, 'landing'>,
+	ctx: RenderCtx
+): string {
 	return substitute(content.landing, {
 		firstName: escapeHtml(ctx.firstName),
 		awarenessMessage: escapeHtml(ctx.awarenessMessage ?? ''),
@@ -159,15 +181,35 @@ export async function renderLanding(scenario: Scenario, ctx: RenderCtx): Promise
 }
 
 /**
- * Rend la page de sensibilisation (le débrief pédagogique). Affiche
- * `ctx.awarenessMessage` quand il est défini (vide sinon) ; `{{firstName}}` est
- * échappé.
+ * Rend la page de sensibilisation (le débrief pédagogique) à partir d'un contenu
+ * en mémoire. Affiche `ctx.awarenessMessage` quand il est défini (vide sinon) ;
+ * `{{firstName}}` est échappé.
  */
-export async function renderAwareness(scenario: Scenario, ctx: RenderCtx): Promise<string> {
-	const content = await loadScenarioContent(scenario);
+export function renderAwarenessContent(
+	content: Pick<ScenarioContent, 'awareness'>,
+	ctx: RenderCtx
+): string {
 	return substitute(content.awareness, {
 		firstName: escapeHtml(ctx.firstName),
 		awarenessMessage: escapeHtml(ctx.awarenessMessage ?? ''),
 		beaconUrl: ctx.urls.beacon
 	});
+}
+
+/** Rend l'e-mail d'un scénario (voir {@link renderEmailContent}). */
+export async function renderEmail(
+	scenario: Scenario,
+	ctx: RenderCtx
+): Promise<{ subject: string; html: string }> {
+	return renderEmailContent(await loadScenarioContent(scenario), ctx);
+}
+
+/** Rend la page d'atterrissage d'un scénario (voir {@link renderLandingContent}). */
+export async function renderLanding(scenario: Scenario, ctx: RenderCtx): Promise<string> {
+	return renderLandingContent(await loadScenarioContent(scenario), ctx);
+}
+
+/** Rend la page de sensibilisation d'un scénario (voir {@link renderAwarenessContent}). */
+export async function renderAwareness(scenario: Scenario, ctx: RenderCtx): Promise<string> {
+	return renderAwarenessContent(await loadScenarioContent(scenario), ctx);
 }

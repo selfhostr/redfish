@@ -1,7 +1,19 @@
 import type { Scenario } from '$lib/server/db/schema';
 import { isSubmitControl, PREVIEW_MARKER_ATTR, PREVIEW_MARKERS } from '$lib/preview-nav';
-import { loadScenarioContent, renderAwareness, renderEmail, renderLanding } from './render';
-import type { RenderCtx } from './render';
+import {
+	findUnknownPlaceholders,
+	TEMPLATE_LABELS,
+	type TemplateField
+} from '$lib/scenarios/placeholders';
+import {
+	loadScenarioContent,
+	MjmlCompileError,
+	renderAwarenessContent,
+	renderEmailContent,
+	renderLandingContent,
+	renderSubjectContent
+} from './render';
+import type { RenderCtx, ScenarioContent } from './render';
 
 /**
  * Aperçu « maquette » d'un scénario pour le dashboard (faux webmail : boîte de
@@ -104,18 +116,12 @@ function domainLabel(key: string): string {
 	return label || 'expediteur';
 }
 
-/**
- * Rend l'aperçu complet d'un scénario à partir de son paquet sur disque, avec un
- * destinataire fictif et des URLs sentinelles. Fonction pure : ne lit que les
- * fichiers du paquet, n'écrit rien et ne crée aucun jeton ni événement.
- */
-export async function renderScenarioPreview(
-	scenario: Scenario,
-	options: ScenarioPreviewOptions = {}
-): Promise<ScenarioPreview> {
-	const content = await loadScenarioContent(scenario);
+/** Identité affichée de l'expéditeur : clé (domaine fictif) et titre de repli. */
+export type PreviewIdentity = { key: string; title?: string | null };
 
-	const ctx: RenderCtx = {
+/** Contexte de rendu de l'aperçu : destinataire fictif, URLs sentinelles. */
+function previewCtx(options: ScenarioPreviewOptions): RenderCtx {
+	return {
 		...PREVIEW_RECIPIENT,
 		awarenessMessage: options.awarenessMessage ?? PREVIEW_AWARENESS_MESSAGE,
 		urls: {
@@ -126,27 +132,117 @@ export async function renderScenarioPreview(
 			awareness: PREVIEW_SENTINELS.awareness
 		}
 	};
+}
 
-	const [email, landing, awareness] = await Promise.all([
-		renderEmail(scenario, ctx),
-		renderLanding(scenario, ctx),
-		renderAwareness(scenario, ctx)
-	]);
-
+/**
+ * Assemble l'aperçu. POINT DE PASSAGE UNIQUE vers le client : chaque document
+ * HTML y passe par {@link sanitizePreviewHtml} (CSP comprise), quelle que soit
+ * l'origine du contenu (paquet, base ou brouillon de l'éditeur).
+ */
+function assemblePreview(
+	identity: PreviewIdentity,
+	content: ScenarioContent,
+	ctx: RenderCtx,
+	email: { subject: string; html: string },
+	options: ScenarioPreviewOptions
+): ScenarioPreview {
+	const key = identity.key;
 	const fromName =
-		(content.fromName ?? scenario.title ?? scenario.key).replace(/[\r\n]+/g, ' ').trim() ||
-		scenario.key;
+		(content.fromName ?? identity.title ?? key).replace(/[\r\n]+/g, ' ').trim() ||
+		key ||
+		'Expéditeur';
 
 	return {
 		subject: email.subject,
 		fromName,
-		fromAddress: `ne-pas-repondre@${domainLabel(scenario.key)}.invalid`,
+		fromAddress: `ne-pas-repondre@${domainLabel(key)}.invalid`,
 		recipient: { ...PREVIEW_RECIPIENT },
 		receivedAt: options.receivedAt ? options.receivedAt.toISOString() : PREVIEW_RECEIVED_AT,
 		emailHtml: sanitizePreviewHtml(email.html),
-		landingHtml: sanitizePreviewHtml(landing),
-		awarenessHtml: sanitizePreviewHtml(awareness)
+		landingHtml: sanitizePreviewHtml(renderLandingContent(content, ctx)),
+		awarenessHtml: sanitizePreviewHtml(renderAwarenessContent(content, ctx))
 	};
+}
+
+/**
+ * Rend l'aperçu complet d'un contenu en mémoire, avec un destinataire fictif et
+ * des URLs sentinelles. Fonction pure : n'écrit rien et ne crée aucun jeton ni
+ * événement. Lève si le MJML de l'e-mail ne compile pas.
+ */
+export async function renderContentPreview(
+	identity: PreviewIdentity,
+	content: ScenarioContent,
+	options: ScenarioPreviewOptions = {}
+): Promise<ScenarioPreview> {
+	const ctx = previewCtx(options);
+	const email = await renderEmailContent(content, ctx);
+	return assemblePreview(identity, content, ctx, email, options);
+}
+
+/**
+ * Rend l'aperçu complet d'un scénario persisté (paquet sur disque ou base).
+ * Fonction pure : ne lit que le contenu du scénario, n'écrit rien et ne crée
+ * aucun jeton ni événement.
+ */
+export async function renderScenarioPreview(
+	scenario: Scenario,
+	options: ScenarioPreviewOptions = {}
+): Promise<ScenarioPreview> {
+	const content = await loadScenarioContent(scenario);
+	return renderContentPreview({ key: scenario.key, title: scenario.title }, content, options);
+}
+
+/** Problème détecté dans un brouillon, rattaché au gabarit concerné. */
+export type DraftIssue = {
+	field: TemplateField;
+	/** Message court, en français, affichable tel quel. */
+	message: string;
+	/** Détails éventuels (une ligne par erreur MJML). */
+	details?: string[];
+};
+
+/** Document affiché à la place de l'e-mail quand son MJML ne compile pas. */
+const EMAIL_ERROR_HTML =
+	'<!doctype html><html><body style="font-family:sans-serif;padding:16px">' +
+	'<p>L’e-mail ne compile pas : corrigez les erreurs MJML signalées.</p></body></html>';
+
+/**
+ * Aperçu d'un BROUILLON (éditeur de création) : comme {@link renderContentPreview},
+ * mais ne lève jamais pour un contenu invalide. Les erreurs MJML et les variables
+ * inconnues sont renvoyées dans `issues` ; l'e-mail non compilable est remplacé
+ * par un document d'information, le reste de l'aperçu reste rendu. Mêmes
+ * garanties d'assainissement et de CSP que l'aperçu d'un scénario enregistré.
+ */
+export async function renderDraftPreview(
+	identity: PreviewIdentity,
+	content: ScenarioContent,
+	options: ScenarioPreviewOptions = {}
+): Promise<{ preview: ScenarioPreview; issues: DraftIssue[] }> {
+	const issues: DraftIssue[] = [];
+	const fields: TemplateField[] = ['subject', 'email', 'landing', 'awareness'];
+	for (const field of fields) {
+		const unknown = findUnknownPlaceholders(content[field], field);
+		if (unknown.length > 0) {
+			const list = unknown.map((k) => `{{${k}}}`).join(', ');
+			issues.push({
+				field,
+				message: `${TEMPLATE_LABELS[field]} : variable${unknown.length > 1 ? 's' : ''} inconnue${unknown.length > 1 ? 's' : ''} ${list} (rendue${unknown.length > 1 ? 's' : ''} vide${unknown.length > 1 ? 's' : ''}).`
+			});
+		}
+	}
+
+	const ctx = previewCtx(options);
+	let email: { subject: string; html: string };
+	try {
+		email = await renderEmailContent(content, ctx);
+	} catch (e) {
+		const details =
+			e instanceof MjmlCompileError ? e.details : [e instanceof Error ? e.message : String(e)];
+		issues.push({ field: 'email', message: 'E-mail : le MJML ne compile pas.', details });
+		email = { subject: renderSubjectContent(content, ctx), html: EMAIL_ERROR_HTML };
+	}
+
+	return { preview: assemblePreview(identity, content, ctx, email, options), issues };
 }
 
 // ---------------------------------------------------------------------------
