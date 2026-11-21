@@ -1,5 +1,5 @@
 import { fail, redirect } from '@sveltejs/kit';
-import { dev } from '$app/environment';
+import { dev } from '$app/env';
 import { eq } from 'drizzle-orm';
 import {
 	DUMMY_PASSWORD_HASH,

@@ -1,4 +1,4 @@
-import type { Handle } from '@sveltejs/kit';
+import type { Handle } from '@sveltejs/kit/hooks';
 import { SESSION_COOKIE, validateSession } from '$lib/server/auth';
 import { validateEnv } from '$lib/server/env';
 import { scenariosReady } from '$lib/server/startup';

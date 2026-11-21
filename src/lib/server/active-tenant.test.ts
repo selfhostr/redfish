@@ -1,10 +1,13 @@
+import type { Cookies } from '@sveltejs/kit';
 import { beforeEach, expect, test, vi } from 'vitest';
+
+type CookieSetOptions = Parameters<Cookies['set']>[2];
 
 vi.mock('$lib/server/db', async () => {
 	const { createTestDb } = await import('./db/test-db');
 	return { db: createTestDb() };
 });
-vi.mock('$app/environment', () => ({ dev: false }));
+vi.mock('$app/env', () => ({ dev: false }));
 
 import { db } from '$lib/server/db';
 import { tenants, userTenants, users } from '$lib/server/db/schema';
@@ -20,13 +23,13 @@ let forbidden: Tenant;
 
 function fakeCookies(initial: Record<string, string> = {}) {
 	const jar = new Map(Object.entries(initial));
-	const setCalls: { name: string; value: string; opts: object }[] = [];
+	const setCalls: { name: string; value: string; opts: CookieSetOptions }[] = [];
 	return {
 		jar,
 		setCalls,
 		get: (n: string) => jar.get(n),
 		delete: (n: string) => void jar.delete(n),
-		set: (n: string, v: string, opts: object) => {
+		set: (n: string, v: string, opts?: CookieSetOptions) => {
 			jar.set(n, v);
 			setCalls.push({ name: n, value: v, opts });
 		}
