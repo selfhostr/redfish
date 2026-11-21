@@ -267,6 +267,12 @@ export const jobs = sqliteTable(
 	]
 );
 
+/** Battement de cœur du worker : une ligne par worker (id fixe 'worker'), mise à jour à chaque boucle. */
+export const workerHeartbeat = sqliteTable('worker_heartbeat', {
+	id: text('id').primaryKey(),
+	beatAt: integer('beat_at', { mode: 'timestamp' }).notNull()
+});
+
 export type Tenant = typeof tenants.$inferSelect;
 export type NewTenant = typeof tenants.$inferInsert;
 export type User = typeof users.$inferSelect;

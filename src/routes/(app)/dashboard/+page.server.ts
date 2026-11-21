@@ -7,6 +7,7 @@ import { campaignFunnel, type Funnel } from '$lib/server/tracking/stats';
 import { listLists } from '$lib/server/targets';
 import { assertTenantAccess } from '$lib/server/tenant';
 import { toMeta, type ScenarioMeta } from '$lib/server/scenarios/listing';
+import { getQueueHealth } from '$lib/server/jobs/health';
 import type { PageServerLoad } from './$types';
 
 /** Cumul des compteurs d'entonnoir sur l'ensemble des campagnes du tenant. */
@@ -43,11 +44,26 @@ const addFunnel = (a: Aggregate, f: Funnel): Aggregate => ({
 	reported: a.reported + f.reported
 });
 
+/** Alerte discrète sur la file (agrégats seulement, aucun détail de job), null si tout va bien. */
+function queueAlert() {
+	const h = getQueueHealth();
+	if (!h.needsAttention) return null;
+	return {
+		workerDown: h.workerDown,
+		neverSeen: h.lastHeartbeat === null,
+		failedJobs: h.failedJobs,
+		oldestDueMinutes: h.oldestDueAgeMs === null ? null : Math.floor(h.oldestDueAgeMs / 60_000)
+	};
+}
+
 export const load: PageServerLoad = async ({ locals, cookies }) => {
 	if (!locals.user) throw redirect(303, '/login');
+	// Les jobs ne sont pas rattachés à un tenant : alerte réservée aux superadmins.
+	const queue = locals.user.role === 'superadmin' ? queueAlert() : null;
 	const tenantId = await activeTenantId(locals.user, cookies);
 	if (!tenantId) {
 		return {
+			queue,
 			hasTenant: false,
 			listCount: 0,
 			campaignCount: 0,
@@ -88,6 +104,7 @@ export const load: PageServerLoad = async ({ locals, cookies }) => {
 	const featured = featuredIndex >= 0 ? rows[featuredIndex] : null;
 
 	return {
+		queue,
 		hasTenant: true,
 		listCount: lists.length,
 		campaignCount: campaigns.length,
