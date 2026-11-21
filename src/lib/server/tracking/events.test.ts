@@ -42,12 +42,13 @@ beforeEach(() => {
 	const scenario = db
 		.insert(scenarios)
 		.values({
-			key: 'microsoft365',
+			key: 'fixture-events',
 			title: 'M',
 			category: 'c',
 			locale: 'fr',
 			difficulty: 'easy',
-			path: 'scenarios/microsoft365'
+			source: 'imported',
+			path: null
 		})
 		.returning()
 		.get();

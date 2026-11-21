@@ -4,7 +4,7 @@ import { scenarios } from '$lib/server/db/schema';
 import type { Scenario } from '$lib/server/db/schema';
 import { parseTags } from '$lib/scenario-labels';
 
-/** Scénario tel qu'exposé aux écrans (catalogue global, sans chemin disque). */
+/** Scénario tel qu'exposé aux écrans (liste globale, sans chemin disque). */
 export type ScenarioSummary = {
 	id: string;
 	key: string;

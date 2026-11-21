@@ -6,20 +6,24 @@ vi.mock('$lib/server/db', async () => {
 });
 
 import type { User } from '$lib/server/db/schema';
-import { loadScenarios } from '$lib/server/scenarios/loader';
+import { importBundle } from '$lib/server/scenarios/bundle';
+import { makeScenarioBundle } from '$lib/server/scenarios/fixtures';
 import { load } from './+page.server';
 
 const user = { id: 'u1', email: 'op@example.test', role: 'operator' } as unknown as User;
 
+// Le dépôt ne livre plus de scénario : on crée un scénario FIXTURE en base.
+const KEY = 'fixture-preview';
+
 beforeAll(async () => {
-	await loadScenarios('scenarios');
+	await importBundle(makeScenarioBundle({ key: KEY, title: 'Fixture aperçu' }));
 });
 
 const run = (key: string, u: User | null = user) =>
 	load({ locals: { user: u }, params: { key } } as unknown as Parameters<typeof load>[0]);
 
 test('non authentifié : redirigé vers /login', async () => {
-	await expect(run('facture-qr', null)).rejects.toMatchObject({ status: 303, location: '/login' });
+	await expect(run(KEY, null)).rejects.toMatchObject({ status: 303, location: '/login' });
 });
 
 test('clé inconnue : 404', async () => {
@@ -27,11 +31,11 @@ test('clé inconnue : 404', async () => {
 });
 
 test('clé connue : aperçu présent, sans chemin ni URL de tracking', async () => {
-	const data = (await run('facture-qr')) as {
+	const data = (await run(KEY)) as {
 		scenario: Record<string, unknown>;
 		preview: { subject: string; emailHtml: string; landingHtml: string; awarenessHtml: string };
 	};
-	expect(data.scenario).toMatchObject({ key: 'facture-qr', enabled: true });
+	expect(data.scenario).toMatchObject({ key: KEY, enabled: true });
 	expect(Object.keys(data.scenario)).not.toContain('path');
 	expect(data.preview.subject).toBeTruthy();
 	// Lien de clic converti en élément marqué, sans aucun href.

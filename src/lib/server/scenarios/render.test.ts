@@ -1,4 +1,4 @@
-import { beforeEach, expect, test, vi } from 'vitest';
+import { afterAll, beforeAll, beforeEach, expect, test, vi } from 'vitest';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -11,9 +11,13 @@ vi.mock('$lib/server/db', async () => {
 });
 
 import type { Scenario } from '$lib/server/db/schema';
+import { makeScenarioRoot, writeScenarioPackage } from './fixtures';
 import { getScenario, loadScenarios } from './loader';
 import { renderAwareness, renderEmail, renderLanding, renderTemplate } from './render';
 import type { RenderCtx } from './render';
+
+/** Le dépôt ne livre plus de scénario : on charge un paquet FIXTURE sur disque. */
+const FIXTURE_KEY = 'fixture-render';
 
 const ctx: RenderCtx = {
 	// Caractères spéciaux pour vérifier l'échappement HTML du texte.
@@ -31,10 +35,24 @@ const ctx: RenderCtx = {
 };
 
 let scenario: Scenario;
+let root: string;
+
+beforeAll(async () => {
+	root = await makeScenarioRoot();
+	await writeScenarioPackage(root, {
+		key: FIXTURE_KEY,
+		title: 'Fixture rendu',
+		subject: 'Test de rendu {{firstName}}'
+	});
+});
+
+afterAll(async () => {
+	await rm(root, { recursive: true, force: true });
+});
 
 beforeEach(async () => {
-	await loadScenarios();
-	const s = getScenario('microsoft365');
+	await loadScenarios(root);
+	const s = getScenario(FIXTURE_KEY);
 	expect(s).toBeDefined();
 	scenario = s as Scenario;
 });
@@ -55,8 +73,8 @@ test('renderEmail insère les URLs brutes + firstName échappé et compile le MJ
 	// MJML a bien produit un document HTML, sans placeholder résiduel.
 	expect(html.toLowerCase()).toContain('<html');
 	expect(html).not.toContain('{{');
-	// Sujet issu du manifeste.
-	expect(subject).toContain('Microsoft 365');
+	// Sujet issu du manifeste (interpolé brut).
+	expect(subject).toContain('Test de rendu');
 });
 
 test("renderEmail : le sujet est interpolé BRUT (pas d'échappement HTML)", async () => {

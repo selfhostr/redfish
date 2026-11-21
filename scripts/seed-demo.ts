@@ -19,7 +19,13 @@ import {
 } from '../src/lib/server/db/schema';
 import { createAuthorization } from '../src/lib/server/authorization';
 import { createCampaign } from '../src/lib/server/campaigns';
-import { loadScenarios, getScenario } from '../src/lib/server/scenarios/loader';
+import { importBundle } from '../src/lib/server/scenarios/bundle';
+import { getScenario } from '../src/lib/server/scenarios/loader';
+import {
+	SKELETON_AWARENESS,
+	SKELETON_EMAIL,
+	SKELETON_LANDING
+} from '../src/lib/scenarios/skeletons';
 import { createSendingProfile } from '../src/lib/server/sending-profiles';
 import { addTarget, createList } from '../src/lib/server/targets';
 import { createTenant } from '../src/lib/server/tenant';
@@ -31,7 +37,27 @@ if (db.select().from(tenants).where(eq(tenants.name, TENANT_NAME)).get()) {
 	process.exit(0);
 }
 
-await loadScenarios();
+// Le dépôt ne livre aucun scénario : la démo en crée deux, NEUTRES, en base
+// (comme le ferait l'éditeur de création), via importBundle (validation incluse).
+async function ensureDemoScenario(key: string, title: string, subject: string) {
+	const existing = getScenario(key);
+	if (existing) return existing;
+	await importBundle({
+		schemaVersion: 1,
+		key,
+		title,
+		category: 'other',
+		locale: 'fr',
+		difficulty: 'easy',
+		tags: ['demo'],
+		subject,
+		fromName: 'Support IT',
+		email: SKELETON_EMAIL,
+		landing: SKELETON_LANDING,
+		awareness: SKELETON_AWARENESS
+	});
+	return getScenario(key)!;
+}
 
 const operator =
 	db.select().from(users).where(eq(users.email, 'op@alpina.ch')).get() ??
@@ -80,15 +106,22 @@ const profile = await createSendingProfile({
 	fromAddress: 'support@alpina-sa.ch'
 });
 
-const ms365 = getScenario('microsoft365');
-const factureQr = getScenario('facture-qr');
-if (!ms365 || !factureQr) throw new Error('Scénarios microsoft365 / facture-qr introuvables');
+const demoScenario = await ensureDemoScenario(
+	'demo-sensibilisation',
+	'Exemple de sensibilisation',
+	'Message de test {{firstName}}'
+);
+const demoScenario2 = await ensureDemoScenario(
+	'demo-rappel',
+	'Exemple de rappel',
+	'Rappel de test {{firstName}}'
+);
 
 // Campagne 1 : terminée, avec un entonnoir monotone.
 const c1 = await createCampaign({
 	tenantId: tenant.id,
-	name: 'Sensibilisation Q4 : Microsoft 365',
-	scenarioId: ms365.id,
+	name: 'Sensibilisation Q4 : exemple',
+	scenarioId: demoScenario.id,
 	sendingProfileId: profile.id,
 	targetListId: list.id,
 	trackingDomain: 'http://192.168.0.11:9999'
@@ -140,8 +173,8 @@ db.update(campaigns).set({ status: 'completed' }).where(eq(campaigns.id, c1.id))
 // Campagne 2 : brouillon autorisé, jamais lancé.
 const c2 = await createCampaign({
 	tenantId: tenant.id,
-	name: 'Rappel facture QR : facturation',
-	scenarioId: factureQr.id,
+	name: 'Rappel : exemple',
+	scenarioId: demoScenario2.id,
 	sendingProfileId: profile.id,
 	targetListId: list.id,
 	trackingDomain: 'http://192.168.0.11:9999'
