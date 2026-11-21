@@ -1,0 +1,240 @@
+@import 'tailwindcss';
+
+/* Polices auto-hébergées (fontsource) — uniquement les poids utilisés.
+   Les fichiers d'index exposent plusieurs sous-ensembles via unicode-range :
+   le navigateur ne télécharge que ceux réellement rendus. Aucune ressource
+   Google Fonts ni CDN : tout est servi depuis node_modules. */
+@import '@fontsource/inter/400.css';
+@import '@fontsource/inter/500.css';
+@import '@fontsource/inter/600.css';
+@import '@fontsource/jetbrains-mono/400.css';
+@import '@fontsource/jetbrains-mono/500.css';
+
+/* ===========================================================================
+   Design system selfhostr — section « App UI », thème SOMBRE unique.
+   La couleur ne sert qu'au SENS (jamais décorative). Le bouton primaire est
+   NEUTRE (clair sur fond sombre), pas de couleur de marque. Un statut n'est
+   jamais porté par la couleur seule. Le rouge (--c-warning) est rare.
+   =========================================================================== */
+:root {
+	color-scheme: dark;
+
+	--c-canvas: #07080a; /* fond de l'app */
+	--c-surface-1: #0b0d10; /* panneaux / cartes */
+	--c-surface-2: #111419; /* champs / éléments surélevés */
+	--c-line: #16191e; /* bordures discrètes */
+	--c-line-strong: #23272e; /* bordures marquées */
+	--c-ink: #eceef1; /* texte principal */
+	--c-ink-dim: #8a919c; /* texte secondaire */
+	--c-signal: #2fd17c; /* succès / positif */
+	--c-advisory: #f2b033; /* attention */
+	--c-warning: #ff5c5c; /* danger — RARE, pire cas uniquement */
+	--c-info: #7da9ff; /* info */
+
+	--r-flat: 6px;
+	--r-btn: 8px;
+	--r-card: 12px;
+	--r-box: 16px;
+
+	/* Teintes de fond faibles par sens (pastilles, toasts) */
+	--c-signal-bg: color-mix(in srgb, var(--c-signal) 12%, transparent);
+	--c-advisory-bg: color-mix(in srgb, var(--c-advisory) 12%, transparent);
+	--c-warning-bg: color-mix(in srgb, var(--c-warning) 12%, transparent);
+	--c-info-bg: color-mix(in srgb, var(--c-info) 12%, transparent);
+
+	--c-on-ink: #07080a; /* texte sur fond --c-ink (bouton primaire) */
+	--c-ink-hover: #ffffff; /* survol du bouton primaire */
+}
+
+/* Utilitaires Tailwind (bg-*, text-*, border-*, font-*) branchés sur les tokens. */
+@theme inline {
+	--color-canvas: var(--c-canvas);
+	--color-surface-1: var(--c-surface-1);
+	--color-surface-2: var(--c-surface-2);
+	--color-line: var(--c-line);
+	--color-line-strong: var(--c-line-strong);
+	--color-ink: var(--c-ink);
+	--color-ink-dim: var(--c-ink-dim);
+	--color-signal: var(--c-signal);
+	--color-advisory: var(--c-advisory);
+	--color-warning: var(--c-warning);
+	--color-info: var(--c-info);
+	--color-signal-bg: var(--c-signal-bg);
+	--color-advisory-bg: var(--c-advisory-bg);
+	--color-warning-bg: var(--c-warning-bg);
+	--color-info-bg: var(--c-info-bg);
+	--color-on-ink: var(--c-on-ink);
+	--radius-flat: var(--r-flat);
+	--radius-btn: var(--r-btn);
+	--radius-card: var(--r-card);
+	--radius-box: var(--r-box);
+	--text-base: 0.8125rem;
+}
+
+@theme {
+	--font-ui: 'Inter', system-ui, sans-serif;
+	--font-mono: 'JetBrains Mono', ui-monospace, monospace;
+}
+
+@layer base {
+	body {
+		background: var(--c-canvas);
+		color: var(--c-ink);
+		font-family: var(--font-ui);
+		font-size: 13px;
+		line-height: 1.5;
+		font-variant-numeric: tabular-nums;
+		-webkit-font-smoothing: antialiased;
+		text-rendering: optimizeLegibility;
+	}
+
+	/* Titres sobres */
+	h1,
+	h2,
+	h3,
+	h4 {
+		font-weight: 600;
+		letter-spacing: -0.02em;
+		line-height: 1.2;
+		color: var(--c-ink);
+	}
+
+	/* Chiffres tabulaires pour tableaux et nombres */
+	table,
+	.tabular {
+		font-feature-settings: 'tnum' 1;
+	}
+
+	a {
+		color: inherit;
+	}
+
+	/* Focus visible partout */
+	:focus-visible {
+		outline: 2px solid var(--c-ink);
+		outline-offset: 2px;
+	}
+}
+
+/* ---------------------------------------------------------------------------
+   Classes utilitaires maison (rf-*), redéfinies sur les tokens sombres.
+   Elles font basculer les écrans existants sans les réécrire un par un.
+   --------------------------------------------------------------------------- */
+@layer components {
+	.rf-card {
+		background: var(--c-surface-1);
+		border: 1px solid var(--c-line);
+		border-radius: var(--r-card);
+	}
+
+	/* Étiquette / eyebrow : mono, majuscules, discret */
+	.rf-label,
+	.rf-eyebrow {
+		font-family: var(--font-mono);
+		text-transform: uppercase;
+		font-size: 0.6875rem;
+		letter-spacing: 0.04em;
+		color: var(--c-ink-dim);
+	}
+
+	.rf-input {
+		width: 100%;
+		background: var(--c-surface-2);
+		border: 1px solid var(--c-line-strong);
+		border-radius: var(--r-btn);
+		padding: 0.5rem 0.75rem;
+		font-size: 0.8125rem;
+		line-height: 1.4;
+		color: var(--c-ink);
+		transition: border-color 0.12s ease;
+	}
+	.rf-input::placeholder {
+		color: var(--c-ink-dim);
+	}
+	.rf-input:focus {
+		outline: none;
+		border-color: var(--c-ink-dim);
+	}
+	.rf-input:focus-visible {
+		outline: 2px solid var(--c-ink);
+		outline-offset: 2px;
+	}
+
+	.rf-btn {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		gap: 0.5rem;
+		border-radius: var(--r-btn);
+		border: 1px solid transparent;
+		padding: 0.5rem 0.875rem;
+		font-size: 0.8125rem;
+		font-weight: 500;
+		line-height: 1.2;
+		cursor: pointer;
+		transition:
+			background-color 0.12s ease,
+			border-color 0.12s ease,
+			color 0.12s ease;
+	}
+	.rf-btn:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
+	}
+
+	/* Bouton primaire NEUTRE : clair sur fond sombre, pas de couleur de marque. */
+	.rf-btn-primary {
+		background: var(--c-ink);
+		color: var(--c-on-ink);
+		border-color: var(--c-ink);
+	}
+	.rf-btn-primary:hover:not(:disabled) {
+		background: var(--c-ink-hover);
+		border-color: var(--c-ink-hover);
+	}
+
+	.rf-btn-ghost {
+		background: transparent;
+		color: var(--c-ink);
+		border-color: var(--c-line-strong);
+	}
+	.rf-btn-ghost:hover:not(:disabled) {
+		background: var(--c-surface-2);
+		border-color: var(--c-ink-dim);
+	}
+
+	.rf-link {
+		color: var(--c-info);
+		text-underline-offset: 2px;
+	}
+	.rf-link:hover {
+		text-decoration: underline;
+	}
+}
+
+/* ---------------------------------------------------------------------------
+   Mobile (< 768px) : pas de défilement horizontal, champs à 16px (évite le
+   zoom iOS), cibles tactiles confortables. Bureau inchangé.
+   --------------------------------------------------------------------------- */
+@media (max-width: 767px) {
+	html,
+	body {
+		max-width: 100%;
+		overflow-x: clip;
+	}
+	input:not([type='checkbox']):not([type='radio']),
+	select,
+	textarea {
+		font-size: 16px !important;
+	}
+}
+
+@media (pointer: coarse) {
+	button,
+	select,
+	input:not([type='checkbox']):not([type='radio']):not([type='hidden']),
+	.rf-btn,
+	.btn {
+		min-height: 40px;
+	}
+}
