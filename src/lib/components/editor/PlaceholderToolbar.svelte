@@ -34,10 +34,10 @@
 			type="button"
 			class="chip"
 			title={p.hint}
-			aria-label="Insérer {'{{'}{p.key}{'}}'} : {p.hint}"
+			aria-label={`Insérer {{${p.key}}} : ${p.hint}`}
 			onclick={() => insert(p.key)}
 		>
-			{'{{'}{p.key}{'}}'}
+			{`{{${p.key}}}`}
 		</button>
 	{/each}
 	{#if onreset}
