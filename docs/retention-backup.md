@@ -22,4 +22,10 @@ docker compose --profile backup run --rm --entrypoint litestream litestream \
   restore -config /etc/litestream.yml -o /app/data/redfish.db /app/data/redfish.db
 ```
 
+### Snapshot before migrations
+
+At startup, `migrate.js` takes a consistent snapshot (`VACUUM INTO`) of the database **only** if it exists and has pending migrations. It is written to `data/snapshots/redfish.db.pre-migrate-<timestamp>.db` (persistent volume; the subfolder is ignored by Litestream, which only tracks `redfish.db`). The 3 most recent snapshots are kept: set `MIGRATE_SNAPSHOT_KEEP=N` to change that, `0` to disable; set `MIGRATE_SNAPSHOT_DIR` to use another folder.
+
+Rolling back after a bad migration: stop web and worker, then `cp data/snapshots/<snapshot>.db data/redfish.db` and delete `data/redfish.db-wal` and `data/redfish.db-shm`. Restart the previous image.
+
 Test the restore regularly: restore to a temporary path (`-o /app/data/restore-test.db`) and check it with `sqlite3 ... "pragma integrity_check"`.
