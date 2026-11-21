@@ -7,7 +7,7 @@ vi.mock('$lib/server/db', async () => {
 
 import { db } from '$lib/server/db';
 import { targetLists, targets, tenants } from '$lib/server/db/schema';
-import { addTarget, createList, importCsv, listTargets } from './targets';
+import { addTarget, countTargetsByList, createList, importCsv, listTargets } from './targets';
 import { createTenant } from './tenant';
 
 let tenantId: string;
@@ -71,4 +71,13 @@ test('importCsv skips rows with an invalid locale and reports them', async () =>
 	expect(r.imported).toBe(2);
 	expect(r.skipped).toBe(1);
 	expect(r.errors[0]).toMatch(/locale/i);
+});
+
+test('countTargetsByList returns the target count of every list of the tenant', async () => {
+	const emptyId = (await createList(tenantId, 'Vide')).id;
+	await addTarget(listId, tenantId, { email: 'a@a.ch' });
+	await addTarget(listId, tenantId, { email: 'b@a.ch' });
+	const counts = await countTargetsByList(tenantId);
+	expect(counts.get(listId)).toBe(2);
+	expect(counts.get(emptyId) ?? 0).toBe(0);
 });

@@ -255,6 +255,17 @@
 							{/snippet}
 						</Field>
 					{/if}
+					{#if list && list.targetCount === 0}
+						<div
+							class="rounded-lg border border-line-strong border-l-signal bg-signal-bg px-4 py-3 text-ink"
+							role="alert"
+						>
+							La liste « {list.name} » ne contient aucun destinataire : la campagne n'enverra rien.
+							<a href="/lists/{list.id}?next=/campaigns/new" class="rf-link">
+								Ajouter des destinataires
+							</a>
+						</div>
+					{/if}
 				</div>
 
 				{#if !hasTrackingDefault}

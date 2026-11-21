@@ -6,13 +6,18 @@ import { activeTenantId } from '$lib/server/active-tenant';
 import { createAuthorization, latestValidAuthorization } from '$lib/server/authorization';
 import { createCampaign, latestTrackingDomain } from '$lib/server/campaigns';
 import { listSendingProfiles } from '$lib/server/sending-profiles';
-import { listLists } from '$lib/server/targets';
+import { countTargetsByList, listLists } from '$lib/server/targets';
 import { assertTenantAccess } from '$lib/server/tenant';
 import type { Actions, PageServerLoad } from './$types';
 
 /** Valeur `datetime-local` (UTC, sans fuseau) : l'inverse de parseUtcDateTime. */
 const toLocalInput = (d: Date) => d.toISOString().slice(0, 16);
 const emptyDefaults = { trackingDomain: '', authorization: null };
+
+async function withTargetCounts(tenantId: string) {
+	const counts = await countTargetsByList(tenantId);
+	return (await listLists(tenantId)).map((l) => ({ ...l, targetCount: counts.get(l.id) ?? 0 }));
+}
 
 export const load: PageServerLoad = async ({ locals, cookies }) => {
 	if (!locals.user) throw redirect(303, '/login');
@@ -48,7 +53,7 @@ export const load: PageServerLoad = async ({ locals, cookies }) => {
 				locale: s.locale
 			})),
 		profiles: await listSendingProfiles(tenantId),
-		lists: await listLists(tenantId)
+		lists: await withTargetCounts(tenantId)
 	};
 };
 
