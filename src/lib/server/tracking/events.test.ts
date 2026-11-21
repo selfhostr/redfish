@@ -124,6 +124,22 @@ test('recordEvent with an unknown token returns false and inserts nothing', asyn
 	expect(db.select().from(events).all().length).toBe(before);
 });
 
+test('recordEvent keeps one row per recipient, type and automation class', async () => {
+	for (let i = 0; i < 5; i++) {
+		await recordEvent(TOKEN, 'opened', {
+			now: new Date(now.getTime() + 120_000),
+			ua: 'Mozilla/5.0'
+		});
+	}
+	expect(db.select().from(events).where(eq(events.type, 'opened')).all()).toHaveLength(1);
+	// Une ouverture automatisée (clic < 1 s) garde sa propre ligne : le funnel humain reste exact.
+	await recordEvent(TOKEN, 'opened', { now: new Date(now.getTime() + 100) });
+	await recordEvent(TOKEN, 'opened', { now: new Date(now.getTime() + 200) });
+	const rows = db.select().from(events).where(eq(events.type, 'opened')).all();
+	expect(rows).toHaveLength(2);
+	expect(rows.filter((r) => r.isAutomated)).toHaveLength(1);
+});
+
 test('qualifyScanner flags a Safe Links UA as automated', () => {
 	const r = qualifyScanner(
 		'Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.1; SafeLinks)',

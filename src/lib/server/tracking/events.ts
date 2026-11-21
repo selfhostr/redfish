@@ -47,6 +47,23 @@ export async function recordEvent(
 
 	const { uaCategory, isAutomated } = qualifyScanner(opts.ua ?? null, msSinceSent);
 
+	// Plafond anti-croissance : au plus UNE ligne par (destinataire, type,
+	// isAutomated). Les entonnoirs comptent des destinataires distincts, donc la
+	// première occurrence (humaine et automatisée séparément) suffit ; les
+	// répétitions (jeton divulgué, rechargements) n'insèrent rien.
+	const duplicate = db
+		.select({ id: events.id })
+		.from(events)
+		.where(
+			and(
+				eq(events.campaignRecipientId, recipient.id),
+				eq(events.type, type),
+				eq(events.isAutomated, isAutomated)
+			)
+		)
+		.get();
+	if (duplicate) return true;
+
 	db.insert(events)
 		.values({ campaignRecipientId: recipient.id, type, uaCategory, isAutomated, createdAt: now })
 		.run();

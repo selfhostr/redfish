@@ -5,6 +5,7 @@ import { campaignRecipients, campaigns, scenarios, targets } from '$lib/server/d
 import { renderAwareness } from '$lib/server/scenarios/render';
 import type { RenderCtx } from '$lib/server/scenarios/render';
 import { recordEvent } from '$lib/server/tracking/events';
+import { isTrackingLimited } from '$lib/server/tracking/guard';
 import type { PageServerLoad } from './$types';
 
 // Rendu entièrement côté serveur, aucun JS client (CSP-friendly).
@@ -16,7 +17,8 @@ export const csr = false;
  * scénario → cible et rend `renderAwareness` avec le message de la campagne.
  * Jeton inconnu → 404 (rien enregistré).
  */
-export const load: PageServerLoad = async ({ params, request }) => {
+export const load: PageServerLoad = async ({ params, request, getClientAddress }) => {
+	if (isTrackingLimited(getClientAddress)) throw error(429, 'Trop de requêtes');
 	const { token } = params;
 
 	const recorded = await recordEvent(token, 'awareness_viewed', {
