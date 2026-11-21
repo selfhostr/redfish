@@ -60,6 +60,7 @@ function upsert(manifest: Manifest, path: string): void {
 		locale: manifest.locale,
 		difficulty: manifest.difficulty,
 		tagsJson: JSON.stringify(manifest.tags),
+		source: 'builtin' as const,
 		path,
 		enabled: true
 	};
@@ -73,6 +74,7 @@ function upsert(manifest: Manifest, path: string): void {
 				locale: values.locale,
 				difficulty: values.difficulty,
 				tagsJson: values.tagsJson,
+				source: 'builtin',
 				path: values.path,
 				enabled: true
 			}

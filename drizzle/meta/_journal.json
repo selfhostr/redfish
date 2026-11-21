@@ -22,6 +22,13 @@
       "when": 1795177669249,
       "tag": "0002_lucky_prima",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1795247289667,
+      "tag": "0003_aspiring_brood",
+      "breakpoints": true
     }
   ]
 }

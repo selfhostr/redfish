@@ -76,20 +76,35 @@ export const sendingProfiles = sqliteTable('sending_profiles', {
 	createdAt: createdAt()
 });
 
-export const scenarios = sqliteTable('scenarios', {
-	id: id(),
-	key: text('key').notNull().unique(),
-	title: text('title').notNull(),
-	category: text('category').notNull(),
-	locale: text('locale').notNull(),
-	difficulty: text('difficulty').notNull(),
-	tagsJson: text('tags_json'),
-	path: text('path').notNull(),
-	enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
-	registeredAt: integer('registered_at', { mode: 'timestamp' })
-		.notNull()
-		.default(sql`(unixepoch())`)
-});
+export const scenarios = sqliteTable(
+	'scenarios',
+	{
+		id: id(),
+		key: text('key').notNull().unique(),
+		title: text('title').notNull(),
+		category: text('category').notNull(),
+		locale: text('locale').notNull(),
+		difficulty: text('difficulty').notNull(),
+		tagsJson: text('tags_json'),
+		/** Origine du contenu : `builtin` lu sur disque, `imported` stocké en base. */
+		source: text('source', { enum: ['builtin', 'imported'] })
+			.notNull()
+			.default('builtin'),
+		/** Dossier du paquet sur disque (builtin) ; NULL pour un scénario importé. */
+		path: text('path'),
+		/** Contenu en base d'un scénario importé (NULL pour un builtin). */
+		subject: text('subject'),
+		fromName: text('from_name'),
+		emailTemplate: text('email_template'),
+		landingTemplate: text('landing_template'),
+		awarenessTemplate: text('awareness_template'),
+		enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
+		registeredAt: integer('registered_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`)
+	},
+	(t) => [check('scenarios_source_check', sql`${t.source} in ('builtin', 'imported')`)]
+);
 
 export const targetLists = sqliteTable('target_lists', {
 	id: id(),

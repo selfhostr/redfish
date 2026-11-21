@@ -13,7 +13,15 @@ import { scenarios } from '$lib/server/db/schema';
 import { getScenario, loadScenarios } from './loader';
 
 /** Les quatre paquets du catalogue Suisse/Valais livrés par cette tâche. */
-const KEYS = ['admin-valais', 'livraison-colis', 'facture-qr', 'banque-regionale', 'groupe-mutuel', 'swisscom', 'microsoft-teams'];
+const KEYS = [
+	'admin-valais',
+	'livraison-colis',
+	'facture-qr',
+	'banque-regionale',
+	'groupe-mutuel',
+	'swisscom',
+	'microsoft-teams'
+];
 
 beforeEach(() => {
 	db.delete(scenarios).run();
@@ -36,7 +44,7 @@ test('zéro capture : chaque page poste vers {{submitUrl}}, sans champ nommé', 
 	for (const key of KEYS) {
 		const s = getScenario(key);
 		expect(s, key).toBeDefined();
-		const landing = await readFile(join(s!.path, 'landing.html'), 'utf8');
+		const landing = await readFile(join(s!.path!, 'landing.html'), 'utf8');
 
 		// Le <form> poste vers l'URL de soumission de l'opérateur (aucune capture).
 		const action = landing.match(/<form[^>]*action="([^"]*)"/i);
@@ -55,7 +63,7 @@ test('chaque page de sensibilisation contient {{awarenessMessage}}', async () =>
 	for (const key of KEYS) {
 		const s = getScenario(key);
 		expect(s, key).toBeDefined();
-		const awareness = await readFile(join(s!.path, 'awareness.html'), 'utf8');
+		const awareness = await readFile(join(s!.path!, 'awareness.html'), 'utf8');
 		expect(awareness, key).toContain('{{awarenessMessage}}');
 	}
 });

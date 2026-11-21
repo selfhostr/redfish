@@ -1,6 +1,6 @@
 <script lang="ts">
 	import WebmailPreview from '$lib/components/preview/WebmailPreview.svelte';
-	import { CopyButton, Panel, Plate } from '$lib/components/ui';
+	import { Button, CopyButton, Panel, Plate } from '$lib/components/ui';
 	import { categoryLabel, difficultyLabel, localeLabel } from '$lib/scenario-labels';
 	import type { PageData } from './$types';
 
@@ -11,7 +11,12 @@
 <main class="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-6 md:px-6 md:py-8">
 	<a href="/scenarios" class="text-ink-dim hover:text-ink">Retour aux scénarios</a>
 
-	<h1 class="text-2xl font-semibold [overflow-wrap:anywhere] text-ink">{s.title}</h1>
+	<div class="flex flex-wrap items-center justify-between gap-3">
+		<h1 class="text-2xl font-semibold [overflow-wrap:anywhere] text-ink">{s.title}</h1>
+		<Button href="/scenarios/{encodeURIComponent(s.key)}/export" download variant="secondary">
+			Exporter
+		</Button>
+	</div>
 
 	<p class="text-ink-dim">
 		Fiche du scénario et parcours simulé tel que le vivrait un destinataire, de l'e-mail à la page

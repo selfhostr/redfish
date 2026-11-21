@@ -1,9 +1,6 @@
-import { readFile } from 'node:fs/promises';
-import { join } from 'node:path';
 import type { Scenario } from '$lib/server/db/schema';
 import { isSubmitControl, PREVIEW_MARKER_ATTR, PREVIEW_MARKERS } from '$lib/preview-nav';
-import { parseManifest } from './loader';
-import { renderAwareness, renderEmail, renderLanding } from './render';
+import { loadScenarioContent, renderAwareness, renderEmail, renderLanding } from './render';
 import type { RenderCtx } from './render';
 
 /**
@@ -116,7 +113,7 @@ export async function renderScenarioPreview(
 	scenario: Scenario,
 	options: ScenarioPreviewOptions = {}
 ): Promise<ScenarioPreview> {
-	const manifest = parseManifest(await readFile(join(scenario.path, 'manifest.yaml'), 'utf8'));
+	const content = await loadScenarioContent(scenario);
 
 	const ctx: RenderCtx = {
 		...PREVIEW_RECIPIENT,
@@ -137,12 +134,13 @@ export async function renderScenarioPreview(
 	]);
 
 	const fromName =
-		(manifest.fromName ?? manifest.title).replace(/[\r\n]+/g, ' ').trim() || manifest.key;
+		(content.fromName ?? scenario.title ?? scenario.key).replace(/[\r\n]+/g, ' ').trim() ||
+		scenario.key;
 
 	return {
 		subject: email.subject,
 		fromName,
-		fromAddress: `ne-pas-repondre@${domainLabel(manifest.key)}.invalid`,
+		fromAddress: `ne-pas-repondre@${domainLabel(scenario.key)}.invalid`,
 		recipient: { ...PREVIEW_RECIPIENT },
 		receivedAt: options.receivedAt ? options.receivedAt.toISOString() : PREVIEW_RECEIVED_AT,
 		emailHtml: sanitizePreviewHtml(email.html),
