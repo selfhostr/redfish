@@ -5,7 +5,7 @@ import {
 	listAuthorizations
 } from '$lib/server/authorization';
 import { audit } from '$lib/server/audit';
-import { parseUtcDateTime } from '$lib/server/datetime';
+import { parseZonedDateTime } from '$lib/server/datetime';
 import { deleteCampaign, getCampaign, scheduleCampaign } from '$lib/server/campaigns';
 import { completeCampaign } from '$lib/server/campaigns/completion';
 import { LaunchError, launchCampaign } from '$lib/server/campaigns/launch';
@@ -13,7 +13,7 @@ import { listFailedRecipients, retryFailedSends } from '$lib/server/campaigns/re
 import { runPreflight } from '$lib/server/campaigns/preflight';
 import { recordManualReports } from '$lib/server/tracking/events';
 import { campaignFunnel } from '$lib/server/tracking/stats';
-import { assertTenantAccess } from '$lib/server/tenant';
+import { assertTenantAccess, tenantTimezone } from '$lib/server/tenant';
 import { getScenarioById, toSummary } from '$lib/server/scenarios/listing';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -37,6 +37,7 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 	const scenarioRow = getScenarioById(campaign.scenarioId);
 	return {
 		campaign,
+		timezone: tenantTimezone(campaign.tenantId),
 		scenario: scenarioRow ? toSummary(scenarioRow) : null,
 		authorizations: await listAuthorizations(campaign.id),
 		canSend: await canSendCampaign(campaign.id),
@@ -88,6 +89,7 @@ export const actions: Actions = {
 		if (!locals.user) throw redirect(303, '/login');
 		const campaign = await loadCampaign(locals.user, params.id);
 		const data = await request.formData();
+		const tz = tenantTimezone(campaign.tenantId);
 		const str = (k: string) => String(data.get(k) ?? '').trim();
 		try {
 			await createAuthorization({
@@ -95,8 +97,8 @@ export const actions: Actions = {
 				campaignId: campaign.id,
 				reference: str('reference'),
 				approvedBy: str('approvedBy'),
-				validFrom: parseUtcDateTime(str('validFrom')) ?? new Date(NaN),
-				validUntil: parseUtcDateTime(str('validUntil')) ?? new Date(NaN)
+				validFrom: parseZonedDateTime(str('validFrom'), tz) ?? new Date(NaN),
+				validUntil: parseZonedDateTime(str('validUntil'), tz) ?? new Date(NaN)
 			});
 		} catch (e) {
 			return fail(400, { error: e instanceof Error ? e.message : 'Autorisation invalide' });
@@ -110,8 +112,9 @@ export const actions: Actions = {
 	schedule: async ({ request, locals, params }) => {
 		if (!locals.user) throw redirect(303, '/login');
 		const campaign = await loadCampaign(locals.user, params.id);
-		const scheduledAt = parseUtcDateTime(
-			String((await request.formData()).get('scheduledAt') ?? '')
+		const scheduledAt = parseZonedDateTime(
+			String((await request.formData()).get('scheduledAt') ?? ''),
+			tenantTimezone(campaign.tenantId)
 		);
 		if (!scheduledAt) return fail(400, { error: 'Date invalide' });
 		try {

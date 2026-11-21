@@ -2,6 +2,7 @@ import { eq } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { campaignRecipients, events, targets } from '$lib/server/db/schema';
 import { getCampaign } from '$lib/server/campaigns';
+import { tenantTimezone } from '$lib/server/tenant';
 import { campaignFunnel, type HumanFunnel } from '$lib/server/tracking/stats';
 
 export type ReportDetail = { name: string; email: string; stage: string };
@@ -9,7 +10,10 @@ export type ReportData = {
 	campaignId: string;
 	campaignName: string;
 	anonymized: boolean;
+	/** Instant de génération, ISO 8601 UTC (affiché dans `timezone`). */
 	generatedAt: string;
+	/** Fuseau IANA du client, pour l'affichage. */
+	timezone: string;
 	/** Comptes humains (scanners automatiques exclus). */
 	counts: HumanFunnel & { recipients: number; sent: number; failed: number };
 	rates: { open: number; click: number; submission: number; awareness: number; report: number };
@@ -101,6 +105,7 @@ export async function buildReport(
 		campaignName: campaign.name,
 		anonymized: opts.anonymize,
 		generatedAt: new Date().toISOString(),
+		timezone: tenantTimezone(campaign.tenantId),
 		counts: {
 			recipients: f.recipients,
 			sent: f.sent,

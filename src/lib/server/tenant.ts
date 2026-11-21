@@ -13,6 +13,7 @@ import {
 } from '$lib/server/db/schema';
 import { isValidLocale } from '$lib/server/targets';
 import { deleteJobsForRecipients } from '$lib/server/jobs/queue';
+import { DEFAULT_TIMEZONE, isValidTimeZone } from '$lib/timezone';
 import type { Tenant, User } from '$lib/server/db/schema';
 
 /** Tenants visibles : tous pour un superadmin, sinon ceux liés via `userTenants`. */
@@ -74,7 +75,32 @@ export async function deleteTenant(user: User, tenantId: string): Promise<void> 
 
 export const CONTACT_LIMITS = { name: 120, email: 254, notes: 2000 } as const;
 
+/** Fuseau par défaut d'un nouveau client : variable TZ du serveur si valide, sinon Europe/Zurich. */
+export function defaultTimezone(): string {
+	const env = process.env.TZ?.trim();
+	return env && isValidTimeZone(env) ? env : DEFAULT_TIMEZONE;
+}
+
+/** Fuseau IANA du client (défaut Europe/Zurich si introuvable). */
+export function tenantTimezone(tenantId: string): string {
+	const row = db
+		.select({ tz: tenants.timezone })
+		.from(tenants)
+		.where(eq(tenants.id, tenantId))
+		.get();
+	return row?.tz ?? DEFAULT_TIMEZONE;
+}
+
+/** Valide un nom de fuseau IANA (vide -> défaut). Lève une Error en français. */
+export function validateTimezone(tz: string | null | undefined): string {
+	const t = (tz ?? '').trim();
+	if (!t) return defaultTimezone();
+	if (!isValidTimeZone(t)) throw new Error(`Fuseau horaire invalide : ${t}`);
+	return t;
+}
+
 export type TenantContactInput = {
+	timezone?: string | null;
 	contactName?: string | null;
 	contactEmail?: string | null;
 	notes?: string | null;
@@ -101,7 +127,8 @@ export function validateContact(input: TenantContactInput) {
 
 /** Met à jour les champs de contact d'un client (l'appelant vérifie l'accès). */
 export async function updateTenant(id: string, input: TenantContactInput): Promise<Tenant> {
-	const values = validateContact(input);
+	const values: ReturnType<typeof validateContact> & { timezone?: string } = validateContact(input);
+	if (input.timezone !== undefined) values.timezone = validateTimezone(input.timezone);
 	const row = db.update(tenants).set(values).where(eq(tenants.id, id)).returning().get();
 	if (!row) throw error(404, 'Client introuvable');
 	return row;
@@ -118,10 +145,11 @@ export async function createTenant(
 	const locale = (input.locale?.trim() || 'fr').toLowerCase();
 	if (!isValidLocale(locale)) throw new Error(`Locale invalide : ${locale}`);
 	const contact = validateContact(input);
+	const timezone = validateTimezone(input.timezone);
 	return db.transaction((tx) => {
 		const tenant = tx
 			.insert(tenants)
-			.values({ name: input.name, locale, ...contact })
+			.values({ name: input.name, locale, timezone, ...contact })
 			.returning()
 			.get();
 		if (input.linkUserId) {

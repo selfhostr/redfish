@@ -79,6 +79,25 @@
 						value={form?.contactEmail ?? data.contact.contactEmail ?? ''}
 					/>
 				</div>
+				<Field
+					label="Fuseau horaire"
+					name="timezone"
+					help="Fuseau IANA utilisé pour saisir et afficher les dates des campagnes."
+				>
+					{#snippet input()}
+						<input
+							id="field-timezone"
+							name="timezone"
+							list="tz-list"
+							autocomplete="off"
+							class="rf-input"
+							value={form?.timezone || data.contact.timezone}
+						/>
+						<datalist id="tz-list">
+							{#each data.timezones as tz (tz)}<option value={tz}></option>{/each}
+						</datalist>
+					{/snippet}
+				</Field>
 				<Field label="Notes" name="notes">
 					{#snippet input()}
 						<textarea id="field-notes" name="notes" rows="4" maxlength="2000" class="rf-input"
@@ -166,7 +185,12 @@
 								<span class="min-w-0 font-medium break-words text-ink">{c.name}</span>
 								<span class="shrink-0"><StatusPill status={c.status} /></span>
 							</span>
-							<span class="text-ink-dim">Créée le <LocalTime value={c.createdAt} /></span>
+							<span class="text-ink-dim">
+								Créée le <LocalTime
+									value={c.createdAt}
+									timeZone={data.isActive ? data.contact.timezone : undefined}
+								/>
+							</span>
 						</a>
 					</li>
 				{/each}

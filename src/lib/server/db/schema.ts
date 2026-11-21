@@ -27,6 +27,8 @@ export const tenants = sqliteTable('tenants', {
 	retentionDays: integer('retention_days').notNull().default(365),
 	contactName: text('contact_name'),
 	contactEmail: text('contact_email'),
+	/** Fuseau IANA du client : saisie et affichage des dates. */
+	timezone: text('timezone').notNull().default('Europe/Zurich'),
 	notes: text('notes'),
 	createdAt: createdAt()
 });

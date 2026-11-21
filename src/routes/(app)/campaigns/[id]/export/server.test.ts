@@ -122,7 +122,7 @@ test('CSV : colonnes, horodatages et échappement des formules', async () => {
 	expect(lines[0]).toContain('email,nom,prenom');
 	const a = lines.find((l) => l.startsWith('a@x.test'))!;
 	expect(a).toContain(',oui,non,oui,non,non,');
-	expect(a).toContain('1970-01-01T00:33:20.000Z');
+	expect(a).toContain('1970-01-01T01:33:20+01:00');
 	// clic automatisé ignoré ; e-mail commençant par = neutralisé
 	const f = lines.find((l) => l.includes("'=cmd@x.test"))!;
 	expect(f).toContain(',oui,non,non,non,non,');

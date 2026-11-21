@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { Field, Panel } from '$lib/components/ui';
+	import { zonedToUtc } from '$lib/timezone';
 
 	let {
 		reference = $bindable(''),
@@ -7,7 +8,8 @@
 		validFrom = $bindable(''),
 		validUntil = $bindable(''),
 		editAuth = $bindable(false),
-		hasAuthDefault
+		hasAuthDefault,
+		timezone = 'UTC'
 	}: {
 		reference: string;
 		approvedBy: string;
@@ -15,12 +17,13 @@
 		validUntil: string;
 		editAuth: boolean;
 		hasAuthDefault: boolean;
+		timezone?: string;
 	} = $props();
 
 	const authUntil = $derived(
 		validUntil
-			? new Date(`${validUntil}Z`).toLocaleDateString('fr-CH', {
-					timeZone: 'UTC',
+			? (zonedToUtc(validUntil, timezone) ?? new Date(NaN)).toLocaleDateString('fr-CH', {
+					timeZone: timezone,
 					day: 'numeric',
 					month: 'long',
 					year: 'numeric'
@@ -60,7 +63,7 @@
 					placeholder="Nom du responsable"
 					bind:value={approvedBy}
 				/>
-				<Field label="Valide du (UTC)" id="field-validFrom">
+				<Field label={`Valide du (${timezone})`} id="field-validFrom">
 					{#snippet input()}
 						<input
 							id="field-validFrom"
@@ -72,7 +75,7 @@
 						/>
 					{/snippet}
 				</Field>
-				<Field label="Jusqu'au (UTC)" id="field-validUntil">
+				<Field label={`Jusqu'au (${timezone})`} id="field-validUntil">
 					{#snippet input()}
 						<input
 							id="field-validUntil"

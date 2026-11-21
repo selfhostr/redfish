@@ -1,3 +1,5 @@
+import { zonedToUtc } from '$lib/timezone';
+
 /**
  * Les champs `datetime-local` n'ont pas de fuseau. Convention : la valeur saisie
  * est toujours interprétée en UTC (les champs sont libellés « UTC »).
@@ -8,4 +10,12 @@ export function parseUtcDateTime(value: string): Date | null {
 	if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d{1,3})?)?$/.test(v)) return null;
 	const d = new Date(`${v}Z`);
 	return Number.isNaN(d.getTime()) ? null : d;
+}
+
+/**
+ * Valeur `datetime-local` interprétée dans le fuseau IANA du client puis convertie
+ * en instant UTC (DST géré via Intl). Null si vide, invalide ou fuseau inconnu.
+ */
+export function parseZonedDateTime(value: string, timeZone: string): Date | null {
+	return zonedToUtc(value, timeZone);
 }

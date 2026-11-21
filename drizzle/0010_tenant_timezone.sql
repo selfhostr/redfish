@@ -1,0 +1,1 @@
+ALTER TABLE `tenants` ADD `timezone` text DEFAULT 'Europe/Zurich' NOT NULL;

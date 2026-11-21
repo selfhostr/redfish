@@ -71,6 +71,13 @@
       "when": 1795284084511,
       "tag": "0009_campaign_completed_at",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1795284367286,
+      "tag": "0010_tenant_timezone",
+      "breakpoints": true
     }
   ]
 }
