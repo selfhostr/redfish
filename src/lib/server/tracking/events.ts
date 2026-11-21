@@ -1,6 +1,6 @@
 import { and, eq } from 'drizzle-orm';
 import { db } from '$lib/server/db';
-import { campaignRecipients, events } from '$lib/server/db/schema';
+import { campaignRecipients, events, targets } from '$lib/server/db/schema';
 import { qualifyScanner } from './scanner';
 
 /** Types d'événements enregistrables depuis les endpoints publics `/t`. */
@@ -50,7 +50,8 @@ export async function recordEvent(
 	// Plafond anti-croissance : au plus UNE ligne par (destinataire, type,
 	// isAutomated). Les entonnoirs comptent des destinataires distincts, donc la
 	// première occurrence (humaine et automatisée séparément) suffit ; les
-	// répétitions (jeton divulgué, rechargements) n'insèrent rien.
+	// répétitions (jeton divulgué, rechargements) n'insèrent rien. Vaut aussi
+	// pour `reported` : un signalement automate ne masque pas un vrai signalement.
 	const duplicate = db
 		.select({ id: events.id })
 		.from(events)
@@ -69,4 +70,59 @@ export async function recordEvent(
 		.run();
 
 	return true;
+}
+
+/**
+ * Saisie manuelle par l'opérateur : enregistre `reported` pour les destinataires
+ * de la campagne dont l'adresse figure dans `emails` (comparaison insensible à la
+ * casse). Idempotent (pas de doublon si déjà signalé par un humain). Renvoie les
+ * adresses reconnues et celles qui ne correspondent à aucun destinataire.
+ */
+export function recordManualReports(
+	campaignId: string,
+	emails: string[]
+): { matched: string[]; unmatched: string[] } {
+	const rows = db
+		.select({ id: campaignRecipients.id, email: targets.email })
+		.from(campaignRecipients)
+		.innerJoin(targets, eq(campaignRecipients.targetId, targets.id))
+		.where(eq(campaignRecipients.campaignId, campaignId))
+		.all();
+	const byEmail = new Map(rows.map((r) => [r.email.trim().toLowerCase(), r.id]));
+	const matched: string[] = [];
+	const unmatched: string[] = [];
+	const seen = new Set<string>();
+	for (const raw of emails) {
+		const email = raw.trim().toLowerCase();
+		if (!email || seen.has(email)) continue;
+		seen.add(email);
+		const rid = byEmail.get(email);
+		if (!rid) {
+			unmatched.push(email);
+			continue;
+		}
+		matched.push(email);
+		const already = db
+			.select({ id: events.id })
+			.from(events)
+			.where(
+				and(
+					eq(events.campaignRecipientId, rid),
+					eq(events.type, 'reported'),
+					eq(events.isAutomated, false)
+				)
+			)
+			.get();
+		if (!already)
+			db.insert(events)
+				.values({
+					campaignRecipientId: rid,
+					type: 'reported',
+					uaCategory: 'operator',
+					isAutomated: false,
+					createdAt: new Date()
+				})
+				.run();
+	}
+	return { matched, unmatched };
 }

@@ -4,6 +4,10 @@ Format based on Keep a Changelog. Versions follow `0.MINOR.PATCH` until 1.0.
 
 ## [Unreleased]
 
+### Added
+
+- Report tracking: `{{reportUrl}}` placeholder with a `/t/r` thank-you page, and manual entry of reports from pasted e-mail addresses.
+
 ### Fixed
 
 - Tracking routes share one per-IP rate limit and keep at most one event per recipient, type and automation class.

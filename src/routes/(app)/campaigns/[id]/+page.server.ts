@@ -9,6 +9,7 @@ import { parseUtcDateTime } from '$lib/server/datetime';
 import { deleteCampaign, getCampaign, scheduleCampaign } from '$lib/server/campaigns';
 import { LaunchError, launchCampaign } from '$lib/server/campaigns/launch';
 import { runPreflight } from '$lib/server/campaigns/preflight';
+import { recordManualReports } from '$lib/server/tracking/events';
 import { campaignFunnel } from '$lib/server/tracking/stats';
 import { assertTenantAccess } from '$lib/server/tenant';
 import { getScenarioById, toSummary } from '$lib/server/scenarios/listing';
@@ -107,6 +108,23 @@ export const actions: Actions = {
 			details: { scheduledAt: scheduledAt.toISOString() }
 		});
 		return { success: true };
+	},
+	report: async ({ request, locals, params }) => {
+		if (!locals.user) throw redirect(303, '/login');
+		const campaign = await loadCampaign(locals.user, params.id);
+		const raw = String((await request.formData()).get('emails') ?? '');
+		const emails = raw
+			.split(/[\r\n,;]+/)
+			.map((e) => e.trim())
+			.filter(Boolean);
+		if (emails.length === 0) return fail(400, { error: 'Aucune adresse e-mail saisie.' });
+		if (emails.length > 5000) return fail(400, { error: 'Trop d’adresses (5000 maximum).' });
+		const { matched, unmatched } = recordManualReports(campaign.id, emails);
+		audit(locals.user, 'campaign.report', {
+			...campaignRef(campaign),
+			details: { matched: matched.length, unmatched: unmatched.length }
+		});
+		return { reported: { matched: matched.length, unmatched } };
 	},
 	delete: async ({ request, locals, params }) => {
 		if (!locals.user) throw redirect(303, '/login');

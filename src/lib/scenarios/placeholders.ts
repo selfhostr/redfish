@@ -33,7 +33,8 @@ export const TEMPLATE_PLACEHOLDERS: Record<TemplateField, readonly PlaceholderIn
 	email: [
 		FIRST_NAME,
 		{ key: 'clickUrl', hint: 'Lien suivi vers la page de destination' },
-		{ key: 'openUrl', hint: "URL du pixel d'ouverture" }
+		{ key: 'openUrl', hint: "URL du pixel d'ouverture" },
+		{ key: 'reportUrl', hint: 'Lien « Signaler ce message » (enregistre un signalement)' }
 	],
 	landing: [
 		FIRST_NAME,

@@ -72,7 +72,8 @@ const sampleCtx: RenderCtx = {
 		click: 'https://track.example.test/t/c/x',
 		submit: 'https://track.example.test/t/s/x',
 		beacon: 'https://track.example.test/t/b/x',
-		awareness: 'https://track.example.test/t/a/x'
+		awareness: 'https://track.example.test/t/a/x',
+		report: 'https://track.example.test/t/r/x'
 	}
 };
 
