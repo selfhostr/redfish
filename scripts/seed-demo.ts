@@ -62,7 +62,14 @@ async function ensureDemoScenario(key: string, title: string, subject: string) {
 const operator =
 	db.select().from(users).where(eq(users.email, 'op@alpina.ch')).get() ??
 	(await createUser('op@alpina.ch', 'demo-operator-1234', 'operator'));
-const tenant = await createTenant({ name: TENANT_NAME, locale: 'fr', linkUserId: operator.id });
+const tenant = await createTenant({
+	name: TENANT_NAME,
+	locale: 'fr',
+	linkUserId: operator.id,
+	contactName: 'Claire Morel',
+	contactEmail: 'claire.morel@alpina.example',
+	notes: 'Contact côté direction. Démo uniquement.'
+});
 
 const admin = db.select().from(users).where(eq(users.email, 'admin@redfish.local')).get();
 if (admin) db.insert(userTenants).values({ userId: admin.id, tenantId: tenant.id }).run();

@@ -10,7 +10,7 @@ import { db } from '$lib/server/db';
 import { tenants, userTenants, users } from '$lib/server/db/schema';
 import type { Tenant, User } from '$lib/server/db/schema';
 import { createUser } from './auth';
-import { assertTenantAccess, createTenant, tenantsForUser } from './tenant';
+import { assertTenantAccess, createTenant, tenantsForUser, updateTenant } from './tenant';
 
 let admin: User;
 let operator: User;
@@ -64,4 +64,38 @@ test('createTenant rolls back the tenant when the link fails', async () => {
 test('createTenant rejects an invalid locale and normalizes case', async () => {
 	await expect(createTenant({ name: 'Bad', locale: 'xx' })).rejects.toThrow(/locale/i);
 	expect((await createTenant({ name: 'Up', locale: 'DE' })).locale).toBe('de');
+});
+
+test('createTenant stores trimmed contact fields, empty becomes null', async () => {
+	const t = await createTenant({
+		name: 'C',
+		contactName: '  Claire  ',
+		contactEmail: ' c@example.test ',
+		notes: '   '
+	});
+	expect(t.contactName).toBe('Claire');
+	expect(t.contactEmail).toBe('c@example.test');
+	expect(t.notes).toBeNull();
+	expect(linked.contactEmail).toBeNull();
+});
+
+test('createTenant rejects invalid email and over-long values', async () => {
+	await expect(createTenant({ name: 'X', contactEmail: 'pas-un-email' })).rejects.toThrow(
+		/invalide/
+	);
+	await expect(createTenant({ name: 'X', contactName: 'a'.repeat(121) })).rejects.toThrow(/120/);
+	await expect(createTenant({ name: 'X', notes: 'a'.repeat(2001) })).rejects.toThrow(/2000/);
+});
+
+test('updateTenant updates, clears and validates contact fields', async () => {
+	const u = await updateTenant(linked.id, {
+		contactName: 'Jean',
+		contactEmail: 'j@example.test',
+		notes: 'note'
+	});
+	expect(u).toMatchObject({ contactName: 'Jean', contactEmail: 'j@example.test', notes: 'note' });
+	const c = await updateTenant(linked.id, { contactName: '', contactEmail: '', notes: '' });
+	expect(c).toMatchObject({ contactName: null, contactEmail: null, notes: null });
+	await expect(updateTenant(linked.id, { contactEmail: 'x@y' })).rejects.toThrow(/invalide/);
+	await expect(updateTenant('absent', {})).rejects.toMatchObject({ status: 404 });
 });

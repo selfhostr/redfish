@@ -58,3 +58,44 @@ test('action delete : nom saisi correct -> redirect 303 vers /tenants et client 
 	});
 	expect(db.select().from(tenants).where(eq(tenants.id, tenantId)).get()).toBeUndefined();
 });
+
+const upd = (user: User, id: string, fields: Record<string, string>) => {
+	const body = new FormData();
+	for (const [k, v] of Object.entries(fields)) body.set(k, v);
+	return actions.update({
+		request: new Request('http://localhost', { method: 'POST', body }),
+		locals: { user },
+		params: { id }
+	} as unknown as Parameters<typeof actions.update>[0]);
+};
+
+test('action update : operator lié peut enregistrer le contact', async () => {
+	const res = await upd(operator, tenantId, {
+		contactName: ' Claire ',
+		contactEmail: 'claire@example.test',
+		notes: 'RAS'
+	});
+	expect(res).toEqual({ saved: true });
+	expect(db.select().from(tenants).where(eq(tenants.id, tenantId)).get()).toMatchObject({
+		contactName: 'Claire',
+		contactEmail: 'claire@example.test',
+		notes: 'RAS'
+	});
+});
+
+test('action update : e-mail invalide -> fail 400, valeurs renvoyées, rien modifié', async () => {
+	const res = await upd(superadmin, tenantId, {
+		contactName: 'X',
+		contactEmail: 'nope',
+		notes: ''
+	});
+	expect(res).toMatchObject({ status: 400, data: { contactEmail: 'nope' } });
+	expect(db.select().from(tenants).where(eq(tenants.id, tenantId)).get()?.contactName).toBeNull();
+});
+
+test('action update : operator non lié -> 403', async () => {
+	const other = await createTenant({ name: 'Autre' });
+	await expect(upd(operator, other.id, { contactName: 'X' })).rejects.toMatchObject({
+		status: 403
+	});
+});

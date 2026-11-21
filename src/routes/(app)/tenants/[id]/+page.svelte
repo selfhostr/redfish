@@ -57,6 +57,46 @@
 	{:else if o}
 		<ClientHeader />
 
+		<Panel>
+			{#snippet header()}
+				<h2 class="rf-label">Contact</h2>
+			{/snippet}
+			<form method="POST" action="?/update" use:enhance class="flex flex-col gap-4">
+				<div class="grid gap-4 sm:grid-cols-2">
+					<Field
+						label="Nom du contact"
+						name="contactName"
+						maxlength={120}
+						autocomplete="off"
+						value={form?.contactName ?? data.contact.contactName ?? ''}
+					/>
+					<Field
+						label="E-mail du contact"
+						name="contactEmail"
+						type="email"
+						maxlength={254}
+						autocomplete="off"
+						value={form?.contactEmail ?? data.contact.contactEmail ?? ''}
+					/>
+				</div>
+				<Field label="Notes" name="notes">
+					{#snippet input()}
+						<textarea id="field-notes" name="notes" rows="4" maxlength="2000" class="rf-input"
+							>{form?.notes ?? data.contact.notes ?? ''}</textarea
+						>
+					{/snippet}
+				</Field>
+				{#if form?.contactError}
+					<ErrorNotice message={form.contactError} />
+				{:else if form?.saved}
+					<p class="text-signal" role="status">Contact enregistré.</p>
+				{/if}
+				<div>
+					<Button type="submit" variant="primary" class="max-md:w-full">Enregistrer</Button>
+				</div>
+			</form>
+		</Panel>
+
 		{#if !complete}
 			<Panel>
 				{#snippet header()}

@@ -59,6 +59,30 @@
 					{/snippet}
 				</Field>
 			</div>
+			<div class="grid gap-4 sm:grid-cols-2">
+				<Field
+					label="Contact (nom)"
+					name="contactName"
+					maxlength={120}
+					autocomplete="off"
+					value={form?.contactName ?? ''}
+				/>
+				<Field
+					label="Contact (e-mail)"
+					name="contactEmail"
+					type="email"
+					maxlength={254}
+					autocomplete="off"
+					value={form?.contactEmail ?? ''}
+				/>
+			</div>
+			<Field label="Notes" name="notes">
+				{#snippet input()}
+					<textarea id="field-notes" name="notes" rows="3" maxlength="2000" class="rf-input"
+						>{form?.notes ?? ''}</textarea
+					>
+				{/snippet}
+			</Field>
 			{#if form?.error}
 				<ErrorNotice message={form.error} />
 			{/if}

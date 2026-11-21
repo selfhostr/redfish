@@ -13,16 +13,31 @@ export const load: PageServerLoad = async ({ locals }) => {
 export const actions: Actions = {
 	default: async ({ request, locals, cookies }) => {
 		const user = locals.user;
-		if (!user) return fail(401, { error: 'Non authentifié', name: '', locale: 'fr' });
+		if (!user)
+			return fail(401, {
+				error: 'Non authentifié',
+				name: '',
+				locale: 'fr',
+				contactName: '',
+				contactEmail: '',
+				notes: ''
+			});
 		const data = await request.formData();
 		const name = String(data.get('name') ?? '').trim();
 		const locale = String(data.get('locale') ?? 'fr').trim() || 'fr';
-		if (!name) return fail(400, { error: 'Nom requis', name, locale });
+		const contactName = String(data.get('contactName') ?? '');
+		const contactEmail = String(data.get('contactEmail') ?? '');
+		const notes = String(data.get('notes') ?? '');
+		if (!name)
+			return fail(400, { error: 'Nom requis', name, locale, contactName, contactEmail, notes });
 		let id: string;
 		try {
 			const tenant = await createTenant({
 				name,
 				locale,
+				contactName,
+				contactEmail,
+				notes,
 				linkUserId: user.role !== 'superadmin' ? user.id : undefined
 			});
 			id = tenant.id;
@@ -32,7 +47,10 @@ export const actions: Actions = {
 			return fail(400, {
 				error: e instanceof Error ? e.message : 'Création impossible',
 				name,
-				locale
+				locale,
+				contactName,
+				contactEmail,
+				notes
 			});
 		}
 		throw redirect(303, `/tenants/${id}`);

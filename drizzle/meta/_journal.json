@@ -29,6 +29,13 @@
       "when": 1795247289667,
       "tag": "0003_aspiring_brood",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1795271721397,
+      "tag": "0004_gray_thor",
+      "breakpoints": true
     }
   ]
 }

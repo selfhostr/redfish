@@ -72,16 +72,58 @@ export async function deleteTenant(user: User, tenantId: string): Promise<void> 
 	});
 }
 
+export const CONTACT_LIMITS = { name: 120, email: 254, notes: 2000 } as const;
+
+export type TenantContactInput = {
+	contactName?: string | null;
+	contactEmail?: string | null;
+	notes?: string | null;
+};
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function clean(v: string | null | undefined, max: number, label: string): string | null {
+	const t = (v ?? '').trim();
+	if (!t) return null;
+	if (t.length > max) throw new Error(`${label} : ${max} caractères maximum`);
+	return t;
+}
+
+/** Normalise et valide les champs de contact (trim, vide -> null). Lève une Error en français. */
+export function validateContact(input: TenantContactInput) {
+	const contactName = clean(input.contactName, CONTACT_LIMITS.name, 'Nom du contact');
+	const contactEmail = clean(input.contactEmail, CONTACT_LIMITS.email, 'E-mail du contact');
+	if (contactEmail && !EMAIL_RE.test(contactEmail))
+		throw new Error("L'e-mail du contact est invalide");
+	const notes = clean(input.notes, CONTACT_LIMITS.notes, 'Notes');
+	return { contactName, contactEmail, notes };
+}
+
+/** Met à jour les champs de contact d'un client (l'appelant vérifie l'accès). */
+export async function updateTenant(id: string, input: TenantContactInput): Promise<Tenant> {
+	const values = validateContact(input);
+	const row = db.update(tenants).set(values).where(eq(tenants.id, id)).returning().get();
+	if (!row) throw error(404, 'Client introuvable');
+	return row;
+}
+
 /** Si `linkUserId` est fourni, le tenant et le lien `userTenants` sont créés dans une seule transaction. */
-export async function createTenant(input: {
-	name: string;
-	locale?: string;
-	linkUserId?: string;
-}): Promise<Tenant> {
+export async function createTenant(
+	input: {
+		name: string;
+		locale?: string;
+		linkUserId?: string;
+	} & TenantContactInput
+): Promise<Tenant> {
 	const locale = (input.locale?.trim() || 'fr').toLowerCase();
 	if (!isValidLocale(locale)) throw new Error(`Locale invalide : ${locale}`);
+	const contact = validateContact(input);
 	return db.transaction((tx) => {
-		const tenant = tx.insert(tenants).values({ name: input.name, locale }).returning().get();
+		const tenant = tx
+			.insert(tenants)
+			.values({ name: input.name, locale, ...contact })
+			.returning()
+			.get();
 		if (input.linkUserId) {
 			tx.insert(userTenants).values({ userId: input.linkUserId, tenantId: tenant.id }).run();
 		}

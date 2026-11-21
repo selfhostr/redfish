@@ -25,6 +25,9 @@ export const tenants = sqliteTable('tenants', {
 	locale: text('locale').notNull().default('fr'),
 	brandingJson: text('branding_json'),
 	retentionDays: integer('retention_days').notNull().default(365),
+	contactName: text('contact_name'),
+	contactEmail: text('contact_email'),
+	notes: text('notes'),
 	createdAt: createdAt()
 });
 
