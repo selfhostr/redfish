@@ -21,11 +21,13 @@
 		"db:seed:prod": "node build/seed.js",
 		"db:seed": "tsx scripts/seed.ts",
 		"db:seed:demo": "tsx scripts/seed-demo.ts",
+		"db:seed:screenshots": "tsx scripts/seed-screenshots.ts",
 		"worker": "tsx scripts/worker.ts",
 		"format": "prettier --write .",
 		"format:check": "prettier --check .",
 		"lint": "eslint .",
-		"test:e2e": "playwright test"
+		"test:e2e": "playwright test",
+		"screenshots": "playwright test -c playwright.screenshots.config.ts"
 	},
 	"dependencies": {
 		"@fontsource/inter": "5.3.0",
@@ -57,6 +59,7 @@
 		"globals": "17.14.0",
 		"prettier": "3.10.1",
 		"prettier-plugin-svelte": "4.2.0",
+		"sharp": "0.35.5",
 		"svelte": "5.58.0",
 		"svelte-check": "4.7.8",
 		"tailwindcss": "4.3.5",
