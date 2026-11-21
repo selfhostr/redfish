@@ -4,6 +4,7 @@ import { scenarios } from '$lib/server/db/schema';
 import { activeTenantId } from '$lib/server/active-tenant';
 import { listCampaigns } from '$lib/server/campaigns';
 import { campaignFunnel, type Funnel } from '$lib/server/tracking/stats';
+import { tenantTrend, type TrendPoint } from '$lib/server/tracking/trends';
 import { listLists } from '$lib/server/targets';
 import { assertTenantAccess } from '$lib/server/tenant';
 import { toMeta, type ScenarioMeta } from '$lib/server/scenarios/listing';
@@ -69,6 +70,7 @@ export const load: PageServerLoad = async ({ locals, cookies }) => {
 			campaignCount: 0,
 			aggregate: emptyAggregate(),
 			rows: [] as DashboardRow[],
+			trend: [] as TrendPoint[],
 			featured: null as DashboardRow | null
 		};
 	}
@@ -109,6 +111,7 @@ export const load: PageServerLoad = async ({ locals, cookies }) => {
 		listCount: lists.length,
 		campaignCount: campaigns.length,
 		aggregate,
+		trend: await tenantTrend(tenantId),
 		rows,
 		featured
 	};
