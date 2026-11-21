@@ -8,6 +8,7 @@ export default ts.config(
 	{
 		ignores: [
 			'build/',
+			'build-demo/',
 			'.svelte-kit/',
 			'node_modules/',
 			'data/',

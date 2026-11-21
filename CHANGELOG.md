@@ -9,6 +9,7 @@ Format based on Keep a Changelog. Versions follow `0.MINOR.PATCH` until 1.0.
 - Report tracking: `{{reportUrl}}` placeholder with a `/t/r` thank-you page, and manual entry of reports from pasted e-mail addresses.
 - Person data rights: edit, delete, anonymise and export one person's data, and retention of targets never used in a campaign.
 - Per-client timezone for scheduling, date display and CSV exports.
+- Static demo (`npm run build:demo`): the real interface with recorded fictional data, served under `/demo/` without a server.
 
 ### Fixed
 
