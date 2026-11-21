@@ -1,6 +1,6 @@
 import { and, eq } from 'drizzle-orm';
 import { db } from '$lib/server/db';
-import { campaignRecipients, events, targets } from '$lib/server/db/schema';
+import { campaignRecipients, campaigns, events, targets } from '$lib/server/db/schema';
 import { qualifyScanner } from './scanner';
 
 /** Types d'événements enregistrables depuis les endpoints publics `/t`. */
@@ -32,6 +32,16 @@ export async function recordEvent(
 		.where(eq(campaignRecipients.token, token))
 		.get();
 	if (!recipient) return false;
+
+	// Campagne clôturée : ses statistiques sont figées (elles alimentent tendances
+	// et rapports). Le jeton reste valide (la page de sensibilisation s'affiche),
+	// mais plus aucun événement n'est enregistré.
+	const campaign = db
+		.select({ status: campaigns.status })
+		.from(campaigns)
+		.where(eq(campaigns.id, recipient.campaignId))
+		.get();
+	if (campaign?.status === 'completed') return true;
 
 	const now = opts.now ?? new Date();
 

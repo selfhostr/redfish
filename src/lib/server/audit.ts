@@ -31,6 +31,7 @@ export const AUDIT_ACTIONS = {
 	'campaign.schedule': 'Campagne planifiée',
 	'campaign.retry_failed': 'Envois en échec relancés',
 	'campaign.launch': 'Campagne lancée',
+	'campaign.complete': 'Campagne clôturée',
 	'campaign.cancel': 'Campagne annulée',
 	'campaign.report': 'Signalements saisis manuellement',
 	'campaign.delete': 'Campagne supprimée',

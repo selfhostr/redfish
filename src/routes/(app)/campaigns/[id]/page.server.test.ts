@@ -19,6 +19,7 @@ vi.mock('$lib/server/scenarios/listing', async (orig) => {
 
 import { db } from '$lib/server/db';
 import {
+	auditLog,
 	campaigns,
 	scenarios,
 	sendingProfiles,
@@ -134,4 +135,48 @@ test('action delete : nom saisi incorrect -> fail 400, rien supprimé', async ()
 test('action delete : nom saisi correct -> redirect 303 vers /campaigns et campagne supprimée', async () => {
 	await expect(del(ownId, 'C')).rejects.toMatchObject({ status: 303, location: '/campaigns' });
 	expect(db.select().from(campaigns).where(eq(campaigns.id, ownId)).get()).toBeUndefined();
+});
+
+const complete = (id: string, user: User = operator) =>
+	actions.complete({
+		request: new Request('http://localhost', { method: 'POST' }),
+		locals: { user },
+		params: { id }
+	} as unknown as Parameters<typeof actions.complete>[0]);
+
+test('action complete : campagne en cours d envoi -> clôturée et auditée', async () => {
+	db.update(campaigns).set({ status: 'sending' }).where(eq(campaigns.id, ownId)).run();
+	expect(await complete(ownId)).toEqual({ success: true });
+	const c = db.select().from(campaigns).where(eq(campaigns.id, ownId)).get();
+	expect(c?.status).toBe('completed');
+	expect(c?.completedAt).toBeInstanceOf(Date);
+	const row = db.select().from(auditLog).where(eq(auditLog.action, 'campaign.complete')).get();
+	expect(row?.targetId).toBe(ownId);
+});
+
+test('action complete : brouillon -> 409, statut inchangé', async () => {
+	expect(await complete(ownId)).toMatchObject({ status: 409 });
+	expect(db.select().from(campaigns).where(eq(campaigns.id, ownId)).get()?.status).toBe('draft');
+});
+
+test('action complete : campagne d un autre tenant -> 403', async () => {
+	db.update(campaigns).set({ status: 'sending' }).where(eq(campaigns.id, foreignId)).run();
+	await expect(complete(foreignId)).rejects.toMatchObject({ status: 403 });
+	expect(db.select().from(campaigns).where(eq(campaigns.id, foreignId)).get()?.status).toBe(
+		'sending'
+	);
+});
+
+test('actions report et retryFailed : campagne clôturée -> 409', async () => {
+	db.update(campaigns).set({ status: 'completed' }).where(eq(campaigns.id, ownId)).run();
+	const body = new FormData();
+	body.set('emails', 'a@b.test');
+	const event = (request: Request) =>
+		({ request, locals: { user: operator }, params: { id: ownId } }) as never;
+	expect(
+		await actions.report(event(new Request('http://localhost', { method: 'POST', body })))
+	).toMatchObject({ status: 409 });
+	expect(
+		await actions.retryFailed(event(new Request('http://localhost', { method: 'POST' })))
+	).toMatchObject({ status: 409 });
 });

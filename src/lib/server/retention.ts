@@ -33,7 +33,7 @@ export async function anonymizeExpired(
 						select 1 from ${campaignRecipients}
 						join ${campaigns} on ${campaigns.id} = ${campaignRecipients.campaignId}
 						where ${campaignRecipients.targetId} = ${targets.id}
-						and (${campaigns.status} != 'completed' or ${campaigns.createdAt} > ${Math.floor(cutoff.getTime() / 1000)})
+						and (${campaigns.status} != 'completed' or coalesce(${campaigns.completedAt}, ${campaigns.createdAt}) > ${Math.floor(cutoff.getTime() / 1000)})
 					)`
 				)
 			)
