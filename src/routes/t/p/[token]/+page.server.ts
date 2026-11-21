@@ -46,7 +46,8 @@ export const load: PageServerLoad = async ({ params, getClientAddress }) => {
 			click: `/t/c/${token}`,
 			submit: `/t/s/${token}`,
 			beacon: `/t/b/${token}`,
-			awareness: `/t/a/${token}`
+			awareness: `/t/a/${token}`,
+			report: `/t/r/${token}`
 		}
 	};
 

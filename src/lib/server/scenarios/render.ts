@@ -20,6 +20,7 @@ export type RenderCtx = {
 		submit: string;
 		beacon: string;
 		awareness: string;
+		report: string;
 	};
 };
 
@@ -139,7 +140,7 @@ export function renderSubjectContent(
 
 /**
  * Rend l'e-mail à partir d'un contenu en mémoire. Interpole `{{firstName}}`
- * (échappé en HTML) et les URLs de tracking `{{clickUrl}}`/`{{openUrl}}`
+ * (échappé en HTML) et les URLs de tracking `{{clickUrl}}`/`{{openUrl}}`/`{{reportUrl}}`
  * (brutes : ce sont nos propres URLs, le jeton est en base64url), puis compile
  * le MJML en HTML. Lève {@link MjmlCompileError} si MJML renvoie des erreurs.
  */
@@ -150,7 +151,8 @@ export async function renderEmailContent(
 	const mjmlSource = substitute(content.email, {
 		firstName: escapeHtml(ctx.firstName),
 		clickUrl: ctx.urls.click,
-		openUrl: ctx.urls.open
+		openUrl: ctx.urls.open,
+		reportUrl: ctx.urls.report
 	});
 
 	const { html, errors } = await mjml2html(mjmlSource, { validationLevel: 'soft' });

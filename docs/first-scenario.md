@@ -29,16 +29,24 @@ The importer enforces the first three and refuses a scenario that breaks them.
 
 Write them as `{{name}}`. An unknown name becomes an empty string.
 
-| Placeholder            | Email | Subject | Landing | Awareness | Notes                                                        |
-| ---------------------- | ----- | ------- | ------- | --------- | ------------------------------------------------------------ |
-| `{{firstName}}`        | yes   | yes     | yes     | yes       | Escaped as HTML in the templates, plain text in the subject. |
-| `{{lastName}}`         | no    | yes     | no      | no        |                                                              |
-| `{{email}}`            | no    | yes     | no      | no        |                                                              |
-| `{{clickUrl}}`         | yes   | no      | no      | no        | Tracked link to the landing page.                            |
-| `{{openUrl}}`          | yes   | no      | no      | no        | Tracked open pixel.                                          |
-| `{{submitUrl}}`        | no    | no      | yes     | no        | Form action. Reads nothing.                                  |
-| `{{beaconUrl}}`        | no    | no      | yes     | yes       | Display beacon.                                              |
-| `{{awarenessMessage}}` | no    | no      | yes     | yes       | The debrief text, escaped. Required in the awareness page.   |
+| Placeholder            | Email | Subject | Landing | Awareness | Notes                                                              |
+| ---------------------- | ----- | ------- | ------- | --------- | ------------------------------------------------------------------ |
+| `{{firstName}}`        | yes   | yes     | yes     | yes       | Escaped as HTML in the templates, plain text in the subject.       |
+| `{{lastName}}`         | no    | yes     | no      | no        |                                                                    |
+| `{{email}}`            | no    | yes     | no      | no        |                                                                    |
+| `{{clickUrl}}`         | yes   | no      | no      | no        | Tracked link to the landing page.                                  |
+| `{{openUrl}}`          | yes   | no      | no      | no        | Tracked open pixel.                                                |
+| `{{reportUrl}}`        | yes   | no      | no      | no        | "Report this message" link. Records a report (once per recipient). |
+| `{{submitUrl}}`        | no    | no      | yes     | no        | Form action. Reads nothing.                                        |
+| `{{beaconUrl}}`        | no    | no      | yes     | yes       | Display beacon.                                                    |
+| `{{awarenessMessage}}` | no    | no      | yes     | yes       | The debrief text, escaped. Required in the awareness page.         |
+
+### Measuring reports
+
+The report rate is the main maturity metric. Two ways to record it:
+
+- **Report link**: put `{{reportUrl}}` in the email (for example a "Report this message" link). Opening it records one report for the recipient and shows a short thank-you page in the scenario's language. Scanner and bot hits are flagged and excluded from the human counts.
+- **Manual entry**: on the campaign page, paste the addresses (one per line) of people who reported the email to IT or a security mailbox. The matching recipients of that campaign are recorded; the result lists how many matched and which addresses did not.
 
 ## Export and import a bundle
 

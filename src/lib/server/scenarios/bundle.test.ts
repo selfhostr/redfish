@@ -69,7 +69,8 @@ const ctx: RenderCtx = {
 		click: 'https://track.exemple.test/c/TKN',
 		submit: 'https://track.exemple.test/s/TKN',
 		beacon: 'https://track.exemple.test/b/TKN',
-		awareness: 'https://track.exemple.test/a/TKN'
+		awareness: 'https://track.exemple.test/a/TKN',
+		report: 'https://track.exemple.test/r/TKN'
 	}
 };
 

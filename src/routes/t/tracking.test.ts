@@ -26,6 +26,7 @@ import { POST as beaconPost } from './b/[token]/+server';
 import { POST as submitPost } from './s/[token]/+server';
 import { load as landingLoad } from './p/[token]/+page.server';
 import { load as awarenessLoad } from './a/[token]/+page.server';
+import { load as reportLoad } from './r/[token]/+page.server';
 import { resetRateLimit } from '$lib/server/ratelimit';
 import { SKELETON_AWARENESS, SKELETON_EMAIL, SKELETON_LANDING } from '$lib/scenarios/skeletons';
 
@@ -311,4 +312,63 @@ test('POST /t/s under a flood from one IP is rate-limited (429) after the budget
 		submitPost(makeEvent('nope', { method: 'POST', ip: '198.51.100.99' }) as never)
 	);
 	expect((other as { status: number }).status).toBe(404);
+});
+
+/** Recule l'envoi d'une heure : un accès n'est plus « trop rapide pour être humain ». */
+function ageSend() {
+	db.update(events)
+		.set({ createdAt: new Date(Date.now() - 3_600_000) })
+		.where(eq(events.type, 'sent'))
+		.run();
+}
+
+test('GET /t/r records reported once per recipient and thanks in the scenario locale', async () => {
+	ageSend();
+	const data = (await reportLoad(makeEvent(TOKEN, { ua: 'Mozilla/5.0 Chrome/120' }) as never)) as {
+		lang: string;
+		title: string;
+	};
+	expect(data.lang).toBe('fr');
+	expect(data.title).toContain('Merci');
+	await reportLoad(makeEvent(TOKEN, { ua: 'Mozilla/5.0 Chrome/120' }) as never);
+	expect(eventsOfType('reported')).toHaveLength(1);
+});
+
+test('GET /t/r flags scanners as automated and does not mask a later human report', async () => {
+	ageSend();
+	await reportLoad(makeEvent(TOKEN, { ua: 'Mozilla/5.0 (compatible; Googlebot/2.1)' }) as never);
+	await reportLoad(makeEvent(TOKEN, { ua: 'curl/8.0' }) as never);
+	let rows = eventsOfType('reported');
+	expect(rows).toHaveLength(1);
+	expect(rows[0].isAutomated).toBe(true);
+	await reportLoad(makeEvent(TOKEN, { ua: 'Mozilla/5.0 Chrome/120' }) as never);
+	rows = eventsOfType('reported');
+	expect(rows.filter((r) => !r.isAutomated)).toHaveLength(1);
+});
+
+test('GET /t/r with an unknown token is 404 and records nothing', async () => {
+	const result = await thrown(() => reportLoad(makeEvent('nope') as never));
+	expect(isHttpError(result)).toBe(true);
+	expect((result as { status: number }).status).toBe(404);
+	expect(eventsOfType('reported')).toHaveLength(0);
+});
+
+test('GET /t/r is rate-limited like /t/c', async () => {
+	for (let i = 0; i < 60; i++) await reportLoad(makeEvent(TOKEN, { ua: 'Chrome' }) as never);
+	const result = await thrown(() => reportLoad(makeEvent(TOKEN, { ua: 'Chrome' }) as never));
+	expect((result as { status: number }).status).toBe(429);
+});
+
+test('funnel counts reported without a click and after a click', async () => {
+	ageSend();
+	const { campaignFunnel } = await import('$lib/server/tracking/stats');
+	const campaignId = db.select().from(campaigns).get()!.id;
+	await reportLoad(makeEvent(TOKEN, { ua: 'Chrome' }) as never);
+	let f = await campaignFunnel(campaignId);
+	expect(f.human.reported).toBe(1);
+	expect(f.human.clicked).toBe(0);
+	await thrown(() => clickGet(makeEvent(TOKEN, { ua: 'Chrome' }) as never));
+	f = await campaignFunnel(campaignId);
+	expect(f.human.reported).toBe(1);
+	expect(f.human.clicked).toBe(1);
 });

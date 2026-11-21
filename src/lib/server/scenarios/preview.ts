@@ -54,7 +54,8 @@ import type { RenderCtx, ScenarioContent } from './render';
 export const PREVIEW_SENTINELS = {
 	click: '#rf-preview-click',
 	submit: '#rf-preview-submit',
-	awareness: '#rf-preview-awareness'
+	awareness: '#rf-preview-awareness',
+	report: '#rf-preview-report'
 } as const;
 
 /** Destinataire fictif de l'aperçu (domaine réservé `.invalid`, RFC 2606). */
@@ -129,7 +130,8 @@ function previewCtx(options: ScenarioPreviewOptions): RenderCtx {
 			click: PREVIEW_SENTINELS.click,
 			submit: PREVIEW_SENTINELS.submit,
 			beacon: '',
-			awareness: PREVIEW_SENTINELS.awareness
+			awareness: PREVIEW_SENTINELS.awareness,
+			report: PREVIEW_SENTINELS.report
 		}
 	};
 }

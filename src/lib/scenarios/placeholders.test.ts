@@ -12,7 +12,7 @@ const ctx: RenderCtx = {
 	lastName: 'B',
 	email: 'c@d.invalid',
 	awarenessMessage: 'M',
-	urls: { open: 'o', click: 'k', submit: 's', beacon: 'b', awareness: 'w' }
+	urls: { open: 'o', click: 'k', submit: 's', beacon: 'b', awareness: 'w', report: 'r' }
 };
 
 const all = (field: keyof typeof TEMPLATE_PLACEHOLDERS) =>

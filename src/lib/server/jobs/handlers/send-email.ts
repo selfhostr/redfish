@@ -30,7 +30,8 @@ export function buildTrackingUrls(base: string, token: string): TrackingUrls {
 		click: `${root}/t/c/${token}`,
 		submit: `${root}/t/s/${token}`,
 		beacon: `${root}/t/b/${token}`,
-		awareness: `${root}/t/a/${token}`
+		awareness: `${root}/t/a/${token}`,
+		report: `${root}/t/r/${token}`
 	};
 }
 

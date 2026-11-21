@@ -291,6 +291,40 @@
 
 	<Panel>
 		{#snippet header()}
+			<h2 class="rf-eyebrow">Signalements manuels</h2>
+		{/snippet}
+		<form method="POST" action="?/report" use:enhance class="flex flex-col gap-3">
+			<p class="text-ink-dim">
+				Collez les adresses e-mail (une par ligne) des personnes qui ont signalé ce message à leur
+				service informatique, par exemple en le transmettant à une boîte de sécurité.
+			</p>
+			<Field label="Adresses e-mail" id="field-reportEmails">
+				{#snippet input()}
+					<textarea
+						id="field-reportEmails"
+						name="emails"
+						rows="5"
+						required
+						class="rf-input w-full max-w-full min-w-0"></textarea>
+				{/snippet}
+			</Field>
+			<Button type="submit" variant="secondary" class="max-md:w-full sm:self-start">
+				Enregistrer les signalements
+			</Button>
+			{#if form && 'reported' in form && form.reported}
+				<p class="text-ink" role="status">
+					{form.reported.matched} signalement(s) enregistré(s).
+					{#if form.reported.unmatched.length > 0}
+						Adresses sans correspondance dans cette campagne :
+						{form.reported.unmatched.join(', ')}.
+					{/if}
+				</p>
+			{/if}
+		</form>
+	</Panel>
+
+	<Panel>
+		{#snippet header()}
 			<h2 class="rf-eyebrow">Zone de danger</h2>
 		{/snippet}
 		<div class="flex flex-col gap-4">
