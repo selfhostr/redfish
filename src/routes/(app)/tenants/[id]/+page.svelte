@@ -1,12 +1,18 @@
 <script lang="ts">
+	import { enhance } from '$app/forms';
 	import ClientHeader from '$lib/components/ClientHeader.svelte';
 	import StatusPill from '$lib/components/StatusPill.svelte';
-	import { Button, EmptyState, LocalTime, Panel } from '$lib/components/ui';
-	import type { PageData } from './$types';
+	import { Button, EmptyState, ErrorNotice, Field, LocalTime, Panel } from '$lib/components/ui';
+	import type { ActionData, PageData } from './$types';
 
-	let { data }: { data: PageData } = $props();
+	let { data, form }: { data: PageData; form: ActionData } = $props();
 
 	const o = $derived(data.isActive ? data.overview : null);
+	const isSuperadmin = $derived(data.user.role === 'superadmin');
+
+	let showDelete = $state(false);
+	let confirmName = $state('');
+	const nameMatches = $derived(confirmName.trim() === data.tenant.name);
 	const steps = $derived(
 		o
 			? [
@@ -129,5 +135,55 @@
 				Toutes les campagnes
 			</a>
 		{/if}
+	{/if}
+
+	{#if isSuperadmin}
+		<Panel>
+			{#snippet header()}
+				<h2 class="rf-eyebrow">Zone de danger</h2>
+			{/snippet}
+			<div class="flex flex-col gap-4">
+				<p class="text-ink-dim">
+					Supprimer définitivement ce client efface toutes ses campagnes, listes, cibles, événements
+					de suivi et profils d'envoi. Les autres clients et les profils d'envoi globaux ne sont pas
+					touchés. Cette action est irréversible.
+				</p>
+				{#if form?.error}
+					<ErrorNotice message={form.error} />
+				{/if}
+				{#if !showDelete}
+					<div>
+						<Button variant="danger" class="max-md:w-full" onclick={() => (showDelete = true)}>
+							Supprimer ce client
+						</Button>
+					</div>
+				{:else}
+					<form method="POST" action="?/delete" use:enhance class="flex flex-col gap-3">
+						<Field
+							label="Confirmez en saisissant le nom du client"
+							name="confirm"
+							bind:value={confirmName}
+							autocomplete="off"
+							help={`Saisissez exactement : ${data.tenant.name}`}
+						/>
+						<div class="flex gap-3 max-md:flex-col">
+							<Button type="submit" variant="danger" disabled={!nameMatches} class="max-md:w-full">
+								Supprimer définitivement
+							</Button>
+							<Button
+								variant="ghost"
+								class="max-md:w-full"
+								onclick={() => {
+									showDelete = false;
+									confirmName = '';
+								}}
+							>
+								Annuler
+							</Button>
+						</div>
+					</form>
+				{/if}
+			</div>
+		</Panel>
 	{/if}
 </main>
