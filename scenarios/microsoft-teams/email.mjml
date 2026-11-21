@@ -1,0 +1,73 @@
+<!--
+  redfish - gabarit d'e-mail d'ENTRAÎNEMENT (sensibilisation).
+  Leurre simulé : « un collègue a partagé un document avec vous » (Teams / SharePoint).
+  Aucune donnée saisie n'est lue ni stockée ; la simulation se termine par une page
+  pédagogique.
+  Placeholders rendus : {{firstName}}, {{clickUrl}}, {{openUrl}}.
+  Aucune ressource externe / CDN, aucune police externe, aucun domaine sosie.
+-->
+<mjml>
+	<mj-head>
+		<mj-attributes>
+			<mj-all font-family="'Segoe UI', Helvetica, Arial, sans-serif" />
+			<mj-text color="#252423" font-size="15px" line-height="22px" />
+		</mj-attributes>
+		<mj-style>
+			.muted {
+				color: #6b6b6b;
+				font-size: 12px;
+				line-height: 18px;
+			}
+		</mj-style>
+	</mj-head>
+	<mj-body background-color="#f3f2f1">
+		<mj-section background-color="#464eb8" padding="16px 28px">
+			<mj-column>
+				<mj-text color="#ffffff" font-size="17px" font-weight="700">Microsoft Teams</mj-text>
+			</mj-column>
+		</mj-section>
+		<mj-section background-color="#ffffff" padding="26px 28px 8px">
+			<mj-column>
+				<mj-text font-size="20px" font-weight="600" padding-bottom="10px">
+					Un document a été partagé avec vous
+				</mj-text>
+				<mj-text>Bonjour {{ firstName }},</mj-text>
+				<mj-text>
+					Un collègue a partagé un document avec vous via Teams et SharePoint. Il est disponible
+					uniquement pour les destinataires invités.
+				</mj-text>
+				<mj-text>
+					<strong>Document :</strong> Récapitulatif_trimestriel.docx<br />
+					<strong>Accès :</strong> lien valable 48 heures
+				</mj-text>
+			</mj-column>
+		</mj-section>
+		<mj-section background-color="#ffffff" padding="4px 28px 24px">
+			<mj-column>
+				<mj-button
+					background-color="#464eb8"
+					color="#ffffff"
+					href="{{clickUrl}}"
+					border-radius="3px"
+					font-size="15px"
+					font-weight="600"
+					inner-padding="12px 26px"
+					align="left"
+				>
+					Afficher le document
+				</mj-button>
+				<mj-text css-class="muted" padding-top="18px">
+					Pour des raisons de sécurité, vous devrez peut-être vous reconnecter. Le lien expire dans
+					48 heures.
+				</mj-text>
+				<mj-divider border-color="#eaeaea" border-width="1px" padding="16px 0" />
+				<mj-text css-class="muted">
+					Cette notification a été envoyée automatiquement par Microsoft Teams.
+				</mj-text>
+			</mj-column>
+		</mj-section>
+		<mj-raw>
+			<img src="{{ openUrl }}" width="1" height="1" alt="" style="display:block;border:0;" />
+		</mj-raw>
+	</mj-body>
+</mjml>
