@@ -1,0 +1,20 @@
+# Paquet de scénario d'entraînement redfish (sensibilisation).
+# Leurre simulé : échec de prélèvement d'une facture télécom, qui pousse à
+# mettre à jour sa carte sur une fausse page. Aucune valeur saisie n'est jamais
+# lue ni stockée.
+key: swisscom
+title: 'Facture Swisscom : prélèvement refusé'
+category: payment-fraud
+locale: fr
+difficulty: easy
+tags:
+  - telecom
+  - facture
+  - prelevement
+  - payment-fraud
+subject: "Votre facture de novembre n'a pas pu être prélevée"
+fromName: Swisscom
+templates:
+  email: email.mjml
+  landing: landing.html
+  awareness: awareness.html

@@ -1,0 +1,20 @@
+# Paquet de scénario d'entraînement : redfish (sensibilisation).
+# Leurre simulé : un décompte de prestations avec remboursement en attente, qui
+# pousse à se connecter à un faux Espace Client. Aucune valeur saisie n'est
+# jamais lue ni stockée.
+key: groupe-mutuel
+title: 'Décompte de prestations : faux Espace Client assurance maladie'
+category: credential-harvest
+locale: fr
+difficulty: medium
+tags:
+  - assurance-maladie
+  - decompte
+  - remboursement
+  - credential-harvest
+subject: 'Votre décompte de prestations 2026 est disponible'
+fromName: Groupe Mutuel
+templates:
+  email: email.mjml
+  landing: landing.html
+  awareness: awareness.html
