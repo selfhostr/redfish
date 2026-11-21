@@ -1,4 +1,5 @@
 import { error, fail, redirect } from '@sveltejs/kit';
+import { audit } from '$lib/server/audit';
 import {
 	BUNDLE_SCHEMA_VERSION,
 	BundleImportError,
@@ -89,6 +90,7 @@ export const actions: Actions = {
 						: 'Création impossible.';
 			return fail(400, { error: message, values });
 		}
+		audit(locals.user, 'scenario.create', { targetType: 'scenario', targetId: key });
 		throw redirect(303, `/scenarios/${encodeURIComponent(key)}`);
 	}
 };

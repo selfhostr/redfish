@@ -19,6 +19,8 @@ First complete version (target `0.1.0`).
 - Docker: dev and production images, `HEALTHCHECK` on `/health`, `restart: unless-stopped`.
 - Repository files: README, SECURITY, CONTRIBUTING, CODE_OF_CONDUCT, CODEOWNERS, Dependabot, CI (Prettier, svelte-check, Vitest, build, licences, CodeQL).
 - Export and import of scenarios as self-contained JSON bundles, with zero-capture validation on import; imported scenarios live in the database and render like built-in ones.
+- Account security: account page to change the password (other sessions are closed) and revoke active sessions; optional TOTP two-factor authentication with a server-rendered QR code, an encrypted secret and eight single-use recovery codes; rate-limited second login step.
+- Audit log of sensitive actions (logins, account security, clients, scenarios, sending profiles, campaigns, targets), with a filterable, paginated read-only page for superadmins and its own retention period.
 - Permanent deletion of a campaign (with its recipients, events, authorizations and queued jobs) and of a client and everything it owns, each guarded by typing the entity name and run in a single transaction.
 
 ### Changed

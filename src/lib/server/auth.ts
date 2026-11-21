@@ -42,20 +42,37 @@ export async function verifyPassword(hash: string, pw: string): Promise<boolean>
 }
 
 /** SHA-256 (hex) du jeton de session, tel que stocké dans `sessions.id`. */
-function hashToken(token: string): string {
+export function hashToken(token: string): string {
 	return createHash('sha256').update(token).digest('hex');
 }
+
+/** Longueur maximale conservée du User-Agent d'une session. */
+const UA_MAX = 200;
+
+/** Intervalle minimal entre deux mises à jour de `lastUsedAt` (limite les écritures). */
+const TOUCH_INTERVAL_MS = 5 * 60 * 1000;
 
 /**
  * Crée une session pour `userId`. Le jeton brut (32 octets aléatoires en
  * base64url) n'est JAMAIS stocké : seule son empreinte SHA-256 va en base.
  * Le jeton brut n'existe que dans le cookie du client.
  */
-export async function createSession(userId: string): Promise<{ token: string; expiresAt: Date }> {
+export async function createSession(
+	userId: string,
+	meta: { userAgent?: string | null } = {}
+): Promise<{ token: string; expiresAt: Date }> {
 	const token = randomBytes(32).toString('base64url');
-	const expiresAt = new Date(Date.now() + SESSION_DURATION_MS);
+	const now = new Date();
+	const expiresAt = new Date(now.getTime() + SESSION_DURATION_MS);
 	db.insert(sessions)
-		.values({ id: hashToken(token), userId, expiresAt })
+		.values({
+			id: hashToken(token),
+			userId,
+			expiresAt,
+			createdAt: now,
+			lastUsedAt: now,
+			userAgent: meta.userAgent ? meta.userAgent.slice(0, UA_MAX) : null
+		})
 		.run();
 	return { token, expiresAt };
 }
@@ -77,6 +94,10 @@ export async function validateSession(token: string): Promise<{ user: User } | n
 	if (row.sessions.expiresAt.getTime() <= Date.now()) {
 		db.delete(sessions).where(eq(sessions.id, id)).run();
 		return null;
+	}
+	const last = row.sessions.lastUsedAt?.getTime() ?? 0;
+	if (Date.now() - last > TOUCH_INTERVAL_MS) {
+		db.update(sessions).set({ lastUsedAt: new Date() }).where(eq(sessions.id, id)).run();
 	}
 	return { user: row.users };
 }

@@ -2,6 +2,7 @@ import { error, fail, redirect } from '@sveltejs/kit';
 import { activeTenantId } from '$lib/server/active-tenant';
 import { assertTenantAccess, deleteTenant, tenantsForUser, updateTenant } from '$lib/server/tenant';
 import { overviewForTenant } from '$lib/server/tenant-overview';
+import { audit } from '$lib/server/audit';
 import { listCampaigns } from '$lib/server/campaigns';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -56,6 +57,11 @@ export const actions: Actions = {
 				...input
 			});
 		}
+		audit(locals.user, 'client.update', {
+			tenantId: params.id,
+			targetType: 'tenant',
+			targetId: params.id
+		});
 		return { saved: true as const };
 	},
 	delete: async ({ request, locals, params }) => {
@@ -68,6 +74,12 @@ export const actions: Actions = {
 		if (confirm !== tenant.name)
 			return fail(400, { error: 'Le nom saisi ne correspond pas au nom du client.' });
 		await deleteTenant(locals.user, tenant.id);
+		audit(locals.user, 'client.delete', {
+			tenantId: tenant.id,
+			targetType: 'tenant',
+			targetId: tenant.id,
+			details: { name: tenant.name }
+		});
 		throw redirect(303, '/tenants');
 	}
 };

@@ -6,6 +6,10 @@ The `retention` job runs once a day in the worker (the worker seeds it at startu
 
 `events` hold no personal data and campaign recipients are kept, so the statistics (funnel) are identical after anonymisation.
 
+## Audit log retention
+
+The same job deletes audit log entries older than `REDFISH_AUDIT_RETENTION_DAYS` (365 days by default), as well as expired sessions and second login steps. The period is global, not per organization: the log traces operator actions (not targets) and must also cover entries with no organization (logins) or from a deleted organization. It holds no IP address and no email typed during a failed login, only the email of the operator account concerned. See [account-security.md](account-security.md).
+
 ## Litestream backup
 
 SQLite runs in WAL mode. Litestream continuously replicates `data/redfish.db` to S3-compatible storage.

@@ -1,6 +1,7 @@
 import { fail, redirect } from '@sveltejs/kit';
 import { createSendingProfile, listSendingProfiles } from '$lib/server/sending-profiles';
 import { activeTenantId } from '$lib/server/active-tenant';
+import { audit } from '$lib/server/audit';
 import { assertTenantAccess } from '$lib/server/tenant';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -41,7 +42,7 @@ export const actions: Actions = {
 			await assertTenantAccess(user, tenantId);
 		}
 
-		await createSendingProfile({
+		const profile = await createSendingProfile({
 			tenantId,
 			name,
 			host,
@@ -50,6 +51,12 @@ export const actions: Actions = {
 			password,
 			fromName,
 			fromAddress
+		});
+		audit(user, 'sending_profile.create', {
+			tenantId,
+			targetType: 'sending_profile',
+			targetId: profile.id,
+			details: { name, host, global }
 		});
 		return { success: true };
 	}

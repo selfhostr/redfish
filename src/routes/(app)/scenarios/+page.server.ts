@@ -1,4 +1,5 @@
 import { fail, redirect } from '@sveltejs/kit';
+import { audit } from '$lib/server/audit';
 import { BundleImportError, importBundle } from '$lib/server/scenarios/bundle';
 import {
 	availableFilterValues,
@@ -50,6 +51,7 @@ export const actions: Actions = {
 
 		try {
 			const { key } = await importBundle(text);
+			audit(user, 'scenario.import', { targetType: 'scenario', targetId: key });
 			return { success: true, key };
 		} catch (e) {
 			if (e instanceof BundleImportError) return fail(400, { error: e.message });
