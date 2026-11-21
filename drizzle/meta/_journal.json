@@ -36,6 +36,13 @@
       "when": 1795271721397,
       "tag": "0004_gray_thor",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1795275139591,
+      "tag": "0005_worker_heartbeat",
+      "breakpoints": true
     }
   ]
 }

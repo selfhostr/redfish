@@ -67,6 +67,35 @@
 		{/if}
 	</header>
 
+	{#if data.queue}
+		<div
+			role="status"
+			class="rounded-card border border-l-2 border-line bg-surface-1 p-4 text-sm"
+			style="border-left-color: var(--c-warning)"
+		>
+			<p class="font-semibold text-ink">File d'envoi à surveiller</p>
+			<ul class="mt-1 list-disc pl-5 text-ink-dim">
+				{#if data.queue.workerDown}
+					<li>
+						{data.queue.neverSeen
+							? "Le worker n'a jamais donné signe de vie."
+							: 'Le worker ne répond plus depuis plusieurs minutes.'}
+						Les e-mails ne partiront pas tant qu'il est arrêté.
+					</li>
+				{/if}
+				{#if data.queue.failedJobs > 0}
+					<li>
+						{data.queue.failedJobs}
+						{data.queue.failedJobs > 1 ? 'tâches ont échoué' : 'tâche a échoué'} définitivement.
+					</li>
+				{/if}
+				{#if data.queue.oldestDueMinutes !== null && data.queue.oldestDueMinutes >= 1}
+					<li>Plus ancienne tâche en attente : {data.queue.oldestDueMinutes} min.</li>
+				{/if}
+			</ul>
+		</div>
+	{/if}
+
 	{#if !data.hasTenant}
 		<EmptyState
 			title="Créez votre premier client"
