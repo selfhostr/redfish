@@ -59,6 +59,34 @@
 								<Plate variant="neutral">Global</Plate>
 							{/if}
 						</span>
+						<div class="flex w-full flex-col gap-2">
+							<div class="flex flex-wrap items-center gap-2">
+								<form method="POST" action="?/verify" use:enhance>
+									<input type="hidden" name="profileId" value={p.id} />
+									<Button type="submit" size="sm">Tester la connexion</Button>
+								</form>
+								<form method="POST" action="?/sendTest" use:enhance class="flex flex-wrap gap-2">
+									<input type="hidden" name="profileId" value={p.id} />
+									<input
+										type="email"
+										name="to"
+										required
+										readonly
+										value={data.userEmail}
+										aria-label="Adresse de test"
+										class="min-h-8 rounded-md border border-line bg-transparent px-2 text-ink"
+									/>
+									<Button type="submit" size="sm">Envoyer un e-mail de test</Button>
+								</form>
+							</div>
+							{#if form?.profileId === p.id}
+								{#if form.testError}
+									<ErrorNotice message={form.testError} />
+								{:else if form.testOk}
+									<p class="text-sm text-ink" role="status">{form.testOk}</p>
+								{/if}
+							{/if}
+						</div>
 					</li>
 				{/each}
 			</ul>
@@ -69,7 +97,7 @@
 		{#snippet header()}
 			<h2 class="rf-label">Nouveau profil</h2>
 		{/snippet}
-		<form method="POST" use:enhance class="flex flex-col gap-4">
+		<form method="POST" action="?/create" use:enhance class="flex flex-col gap-4">
 			<p class="text-ink-dim">Tous les champs sont obligatoires.</p>
 			<div class="grid gap-4 sm:grid-cols-2">
 				{#each fields as [name, label, type] (name)}
