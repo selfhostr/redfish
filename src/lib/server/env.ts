@@ -38,6 +38,11 @@ function estimateEntropyBytes(key: string): number {
  */
 export function validateEnv(): void {
 	validateHosts();
+	if (process.env.NODE_ENV === 'production' && !process.env.ADDRESS_HEADER?.trim()) {
+		console.warn(
+			'ADDRESS_HEADER is not set: behind a reverse proxy, all clients share the proxy IP (shared rate limit). See docs/deployment.md.'
+		);
+	}
 	const raw = process.env.REDFISH_SECRET_KEY;
 	if (!raw || !raw.trim()) {
 		throw new Error(`REDFISH_SECRET_KEY est absente ou vide. ${GENERATE_HINT}`);

@@ -27,7 +27,7 @@ cp .env.example .env     # set REDFISH_SECRET_KEY: openssl rand -base64 32
 docker compose up -d
 ```
 
-The app answers on <http://localhost:3000>, and `GET /health` returns `{"status":"ok"}`. Create the first operator account on first visit. The SQLite database lives in `data/`: back that folder up, or enable the Litestream profile. See the [installation docs](https://redfish.selfhostr.io/docs/) for production setup, including host isolation and continuous backup.
+The app answers on <http://localhost:3000>, and `GET /health` returns `{"status":"ok"}`. Create the first operator account on first visit. The SQLite database lives in `data/`: back that folder up, or enable the Litestream profile. See the [installation docs](https://redfish.selfhostr.io/docs/) for production setup, including host isolation and continuous backup, and [docs/deployment.md](docs/deployment.md) for running behind a reverse proxy.
 
 ## Features
 
