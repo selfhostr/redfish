@@ -263,6 +263,32 @@ test('GET /t/a with an unknown token is 404 and records nothing', async () => {
 	expect(eventsOfType('awareness_viewed')).toHaveLength(0);
 });
 
+test('every /t route is rate-limited per IP; the pixel still serves the GIF without recording', async () => {
+	const ip = '198.51.100.77';
+	for (let i = 0; i < 60; i++) await openGet(makeEvent(TOKEN, { ip }) as never);
+	expect(eventsOfType('opened')).toHaveLength(1);
+	db.delete(events).where(eq(events.type, 'opened')).run();
+
+	// Budget épuisé (compteur partagé) : pixel servi, rien enregistré.
+	const res = await openGet(makeEvent(TOKEN, { ip }) as never);
+	expect(res.status).toBe(200);
+	expect(res.headers.get('content-type')).toBe('image/gif');
+	expect(eventsOfType('opened')).toHaveLength(0);
+
+	const status = async (fn: () => unknown) => ((await thrown(fn)) as { status: number }).status;
+	expect(await status(() => clickGet(makeEvent(TOKEN, { ip }) as never))).toBe(429);
+	expect(await status(() => beaconPost(makeEvent(TOKEN, { method: 'POST', ip }) as never))).toBe(
+		429
+	);
+	expect(await status(() => submitPost(makeEvent(TOKEN, { method: 'POST', ip }) as never))).toBe(
+		429
+	);
+	expect(await status(() => awarenessLoad(makeEvent(TOKEN, { ip }) as never))).toBe(429);
+	expect(await status(() => landingLoad(makeEvent(TOKEN, { ip }) as never))).toBe(429);
+	const recorded = db.select().from(events).all();
+	expect(recorded.filter((e) => e.type !== 'sent')).toHaveLength(0);
+});
+
 test('POST /t/s under a flood from one IP is rate-limited (429) after the budget', async () => {
 	const ip = '198.51.100.50';
 	// Les 60 premières requêtes (jeton inconnu) passent le garde-fou : 404.

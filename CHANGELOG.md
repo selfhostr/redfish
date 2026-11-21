@@ -4,6 +4,10 @@ Format based on Keep a Changelog. Versions follow `0.MINOR.PATCH` until 1.0.
 
 ## [Unreleased]
 
+### Fixed
+
+- Tracking routes share one per-IP rate limit and keep at most one event per recipient, type and automation class.
+
 ## [0.1.0] - 2026-11-21
 
 First complete version.

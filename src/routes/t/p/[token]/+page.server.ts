@@ -4,6 +4,7 @@ import { db } from '$lib/server/db';
 import { campaignRecipients, campaigns, scenarios, targets } from '$lib/server/db/schema';
 import { renderLanding } from '$lib/server/scenarios/render';
 import type { RenderCtx } from '$lib/server/scenarios/render';
+import { isTrackingLimited } from '$lib/server/tracking/guard';
 import type { PageServerLoad } from './$types';
 
 // Rendu entièrement côté serveur, aucun JS client (CSP-friendly) : le seul
@@ -17,7 +18,8 @@ export const csr = false;
  * prénom de la cible. Afficher la page n'enregistre aucun événement. Jeton
  * inconnu (ou données liées absentes) → 404.
  */
-export const load: PageServerLoad = async ({ params }) => {
+export const load: PageServerLoad = async ({ params, getClientAddress }) => {
+	if (isTrackingLimited(getClientAddress)) throw error(429, 'Trop de requêtes');
 	const { token } = params;
 	const recipient = db
 		.select()

@@ -24,6 +24,13 @@ Rate limiting on login and tracking relies on the client IP
 can lock everyone out of the login. In production, the app logs a warning at
 startup if the variable is missing.
 
+The limiter is in memory: counters are per process and reset on restart, so
+running several instances multiplies the budget. Every `/t/*` route shares one
+per-IP budget (60 requests/minute). The open pixel still returns its image when
+limited, but records nothing. Tracking also stores at most one event per
+recipient, event type and automated/human class, so a leaked token cannot grow
+the database.
+
 Only use a header that the proxy overwrites or sets itself, and never expose the
 app directly: otherwise a client could forge its IP.
 
