@@ -2,7 +2,6 @@ import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import mjml2html from 'mjml';
 import type { Scenario } from '$lib/server/db/schema';
-import type { Manifest } from './types';
 import { parseManifest } from './loader';
 
 /**
@@ -57,14 +56,52 @@ export function renderTemplate(src: string, vars: Record<string, string>): strin
 	return substitute(src, escaped);
 }
 
-/** Lit un fichier du paquet de scénario (dossier local de confiance). */
-async function readTemplateFile(scenario: Scenario, file: string): Promise<string> {
-	return readFile(join(scenario.path, file), 'utf8');
+/**
+ * Contenu interpolable d'un scénario : sujet, nom d'expéditeur et les trois
+ * gabarits (e-mail, landing, sensibilisation). Un scénario `builtin` le lit
+ * depuis son paquet sur disque ; un scénario `imported` le lit depuis les
+ * colonnes de la base (l'image Docker est figée et le worker ne partage pas le
+ * disque du web : le contenu importé doit vivre en base).
+ */
+export type ScenarioContent = {
+	subject: string;
+	fromName?: string;
+	email: string;
+	landing: string;
+	awareness: string;
+};
+
+/** Vrai si le contenu vit en base (scénario importé) plutôt que sur disque. */
+function isImported(scenario: Scenario): boolean {
+	return scenario.source === 'imported' || scenario.path === null;
 }
 
-/** Relit et valide le manifeste du paquet (noms de gabarits + sujet). */
-async function readManifest(scenario: Scenario): Promise<Manifest> {
-	return parseManifest(await readTemplateFile(scenario, 'manifest.yaml'));
+/**
+ * Charge le contenu d'un scénario, quelle que soit sa source. Point d'entrée
+ * unique du pipeline de rendu : e-mail (worker), landing et sensibilisation en
+ * dépendent tous, de sorte qu'un scénario importé se rend exactement comme un
+ * builtin.
+ */
+export async function loadScenarioContent(scenario: Scenario): Promise<ScenarioContent> {
+	if (isImported(scenario)) {
+		return {
+			subject: scenario.subject ?? '',
+			fromName: scenario.fromName ?? undefined,
+			email: scenario.emailTemplate ?? '',
+			landing: scenario.landingTemplate ?? '',
+			awareness: scenario.awarenessTemplate ?? ''
+		};
+	}
+	const path = scenario.path as string;
+	const manifest = parseManifest(await readFile(join(path, 'manifest.yaml'), 'utf8'));
+	// Un gabarit absent du manifeste reste une chaîne vide (plutôt que de lire le dossier).
+	const read = (name: string) => (name ? readFile(join(path, name), 'utf8') : Promise.resolve(''));
+	const [email, landing, awareness] = await Promise.all([
+		read(manifest.templates.email),
+		read(manifest.templates.landing),
+		read(manifest.templates.awareness)
+	]);
+	return { subject: manifest.subject, fromName: manifest.fromName, email, landing, awareness };
 }
 
 /**
@@ -78,10 +115,9 @@ export async function renderEmail(
 	scenario: Scenario,
 	ctx: RenderCtx
 ): Promise<{ subject: string; html: string }> {
-	const manifest = await readManifest(scenario);
-	const source = await readTemplateFile(scenario, manifest.templates.email);
+	const content = await loadScenarioContent(scenario);
 
-	const mjmlSource = substitute(source, {
+	const mjmlSource = substitute(content.email, {
 		firstName: escapeHtml(ctx.firstName),
 		clickUrl: ctx.urls.click,
 		openUrl: ctx.urls.open
@@ -97,7 +133,7 @@ export async function renderEmail(
 	// (sinon un prénom « A&B » deviendrait « A&amp;B » dans le sujet reçu).
 	// On retire néanmoins les CR/LF : un en-tête ne tient que sur une ligne, et
 	// les laisser passer permettrait une injection d'en-têtes (Bcc, etc.).
-	const subject = substitute(manifest.subject, {
+	const subject = substitute(content.subject, {
 		firstName: ctx.firstName,
 		lastName: ctx.lastName,
 		email: ctx.email
@@ -113,9 +149,8 @@ export async function renderEmail(
  * beacon sans corps) : cette fonction ne fait que de l'interpolation.
  */
 export async function renderLanding(scenario: Scenario, ctx: RenderCtx): Promise<string> {
-	const manifest = await readManifest(scenario);
-	const source = await readTemplateFile(scenario, manifest.templates.landing);
-	return substitute(source, {
+	const content = await loadScenarioContent(scenario);
+	return substitute(content.landing, {
 		firstName: escapeHtml(ctx.firstName),
 		awarenessMessage: escapeHtml(ctx.awarenessMessage ?? ''),
 		submitUrl: ctx.urls.submit,
@@ -129,9 +164,8 @@ export async function renderLanding(scenario: Scenario, ctx: RenderCtx): Promise
  * échappé.
  */
 export async function renderAwareness(scenario: Scenario, ctx: RenderCtx): Promise<string> {
-	const manifest = await readManifest(scenario);
-	const source = await readTemplateFile(scenario, manifest.templates.awareness);
-	return substitute(source, {
+	const content = await loadScenarioContent(scenario);
+	return substitute(content.awareness, {
 		firstName: escapeHtml(ctx.firstName),
 		awarenessMessage: escapeHtml(ctx.awarenessMessage ?? ''),
 		beaconUrl: ctx.urls.beacon
