@@ -1,4 +1,4 @@
-import { eq, sql } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { campaignRecipients, events } from '$lib/server/db/schema';
 
@@ -13,6 +13,7 @@ export type HumanFunnel = {
 export type Funnel = HumanFunnel & {
 	recipients: number;
 	sent: number;
+	failed: number;
 	human: HumanFunnel;
 };
 
@@ -44,6 +45,16 @@ export async function campaignFunnel(campaignId: string): Promise<Funnel> {
 		.from(campaignRecipients)
 		.where(eq(campaignRecipients.campaignId, campaignId))
 		.get();
+	const failed = db
+		.select({ n: sql<number>`count(*)` })
+		.from(campaignRecipients)
+		.where(
+			and(
+				eq(campaignRecipients.campaignId, campaignId),
+				eq(campaignRecipients.sendStatus, 'failed')
+			)
+		)
+		.get();
 	const human: HumanFunnel = {
 		opened: 0,
 		clicked: 0,
@@ -57,5 +68,11 @@ export async function campaignFunnel(campaignId: string): Promise<Funnel> {
 		raw[key] = by.get(type as keyof typeof KEYS)?.all ?? 0;
 		human[key] = by.get(type as keyof typeof KEYS)?.human ?? 0;
 	}
-	return { recipients: total?.n ?? 0, sent: by.get('sent')?.all ?? 0, ...raw, human };
+	return {
+		recipients: total?.n ?? 0,
+		sent: by.get('sent')?.all ?? 0,
+		failed: failed?.n ?? 0,
+		...raw,
+		human
+	};
 }

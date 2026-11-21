@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import {
 	campaignRecipients,
@@ -11,7 +11,7 @@ import {
 import { canSendCampaign } from '$lib/server/authorization';
 import { renderEmail } from '$lib/server/scenarios/render';
 import type { RenderCtx } from '$lib/server/scenarios/render';
-import { registerHandler } from '$lib/server/jobs/queue';
+import { registerFailureHandler, registerHandler } from '$lib/server/jobs/queue';
 import { buildTransport } from '$lib/server/mail/mailer';
 
 /** Les cinq URLs de tracking de l'opérateur injectées dans l'e-mail/la page. */
@@ -118,8 +118,34 @@ export async function sendRecipient(recipientId: string): Promise<void> {
 	db.insert(events).values({ campaignRecipientId: recipientId, type: 'sent' }).run();
 }
 
+/** Motif court d'une erreur d'envoi : une ligne, sans identifiants ni jetons, tronqué. */
+export function describeSendError(err: unknown): string {
+	let msg = err instanceof Error ? err.message : String(err);
+	msg = msg.split(/\r?\n/)[0];
+	msg = msg
+		.replace(/\b([a-z][a-z0-9+.-]*:\/\/)[^\s/@]+@/gi, '$1***@')
+		.replace(/\b(pass(?:word)?|pwd|secret|token|api[-_ ]?key|auth)(\s*[=:]\s*)\S+/gi, '$1$2***')
+		.replace(/\b(Bearer|Basic)\s+\S+/gi, '$1 ***')
+		.replace(/\b[A-Za-z0-9+/_-]{32,}={0,2}/g, '***');
+	msg = msg.trim() || 'Erreur inconnue';
+	return msg.length > 200 ? `${msg.slice(0, 197)}...` : msg;
+}
+
+/** Marque le destinataire en échec définitif (sauf s'il est déjà envoyé/ignoré). */
+export function markRecipientFailed(recipientId: string, err: unknown): void {
+	db.update(campaignRecipients)
+		.set({ sendStatus: 'failed', sendError: describeSendError(err) })
+		.where(
+			and(eq(campaignRecipients.id, recipientId), eq(campaignRecipients.sendStatus, 'pending'))
+		)
+		.run();
+}
+
 // Enregistre le handler au chargement du module : la file ne réclame que les
 // types ayant un handler, donc ce module doit être importé par le worker.
 registerHandler<{ recipientId: string }>('send-email', (payload) =>
 	sendRecipient(payload.recipientId)
+);
+registerFailureHandler<{ recipientId: string }>('send-email', (payload, err) =>
+	markRecipientFailed(payload.recipientId, err)
 );

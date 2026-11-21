@@ -17,7 +17,7 @@ const funnel = (sent: number, clicked: number, submitted: number, reported: numb
 		awarenessViewed: 0,
 		reported
 	};
-	return { recipients: sent, sent, ...human, clicked: clicked + 5, human };
+	return { recipients: sent, sent, failed: 0, ...human, clicked: clicked + 5, human };
 };
 
 test('taux humains sur les envois (scanners exclus)', () => {

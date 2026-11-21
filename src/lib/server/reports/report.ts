@@ -11,7 +11,7 @@ export type ReportData = {
 	anonymized: boolean;
 	generatedAt: string;
 	/** Comptes humains (scanners automatiques exclus). */
-	counts: HumanFunnel & { recipients: number; sent: number };
+	counts: HumanFunnel & { recipients: number; sent: number; failed: number };
 	rates: { open: number; click: number; submission: number; awareness: number; report: number };
 	attentionPoints: string[];
 	recommendations: string[];
@@ -37,7 +37,8 @@ export async function buildReport(
 	const campaign = await getCampaign(campaignId);
 	if (!campaign) throw new Error('Campagne introuvable');
 	const f = await campaignFunnel(campaignId);
-	const base = f.recipients;
+	// Les taux portent sur les envois réussis, pas sur les destinataires.
+	const base = f.sent;
 	const rate = (n: number) => (base > 0 ? n / base : 0);
 	const h = f.human;
 	const rates = {
@@ -50,8 +51,12 @@ export async function buildReport(
 
 	const attentionPoints: string[] = [];
 	const recommendations: string[] = [];
+	if (f.failed > 0)
+		attentionPoints.push(
+			`${f.failed} envoi(s) en échec : ces destinataires sont exclus des taux ci-dessous.`
+		);
 	if (base === 0) {
-		attentionPoints.push('Aucun destinataire dans cette campagne.');
+		attentionPoints.push('Aucun e-mail envoyé dans cette campagne.');
 	} else {
 		if (rates.click >= 0.3)
 			attentionPoints.push(
@@ -99,6 +104,7 @@ export async function buildReport(
 		counts: {
 			recipients: f.recipients,
 			sent: f.sent,
+			failed: f.failed,
 			opened: h.opened,
 			clicked: h.clicked,
 			pageInteraction: h.pageInteraction,
@@ -117,7 +123,8 @@ export async function buildReport(
 				id: campaignRecipients.id,
 				first: targets.firstName,
 				last: targets.lastName,
-				email: targets.email
+				email: targets.email,
+				status: campaignRecipients.sendStatus
 			})
 			.from(campaignRecipients)
 			.innerJoin(targets, eq(campaignRecipients.targetId, targets.id))
@@ -134,7 +141,10 @@ export async function buildReport(
 		report.details = rows.map((r) => ({
 			name: `${r.first ?? ''} ${r.last ?? ''}`.trim(),
 			email: r.email,
-			stage: STAGES.find(([k]) => seen.get(r.id)?.has(k))?.[1] ?? 'Aucune activité'
+			stage:
+				r.status === 'failed'
+					? 'Envoi en échec'
+					: (STAGES.find(([k]) => seen.get(r.id)?.has(k))?.[1] ?? 'Aucune activité')
 		}));
 	}
 	return report;

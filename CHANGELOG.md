@@ -11,6 +11,7 @@ Format based on Keep a Changelog. Versions follow `0.MINOR.PATCH` until 1.0.
 
 ### Fixed
 
+- Permanently failed sends are marked failed with a redacted reason, excluded from rates and can be retried while the campaign is sending.
 - Tracking routes share one per-IP rate limit and keep at most one event per recipient, type and automation class.
 
 ## [0.1.0] - 2026-11-21
