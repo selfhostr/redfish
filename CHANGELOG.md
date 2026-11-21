@@ -25,6 +25,10 @@ First complete version (target `0.1.0`).
 - The whole repository is formatted with Prettier (tabs, single quotes).
 - Upgraded to SvelteKit 3 (`@sveltejs/kit` 3.4.0, `@sveltejs/adapter-node` 6.0.5): configuration moved from `svelte.config.js` into the `sveltekit()` Vite plugin and the `$lib` alias is declared explicitly.
 
+### Fixed
+
+- Migrations that recreate a table now run with foreign keys disabled, so upgrading a populated database no longer fails on a foreign-key constraint (e.g. 0003 dropping `scenarios`).
+
 ### Security
 
 - Upgraded dependencies to patch advisories: `@sveltejs/kit` to 3.4.0 (open redirect, cache-control XSS, form-data DoS, and the bundled `cookie` out-of-bounds characters) and `csv-parse` to 7.0.3 (prototype pollution via the `columns` path).
