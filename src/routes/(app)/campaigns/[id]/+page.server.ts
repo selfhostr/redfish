@@ -7,6 +7,7 @@ import {
 import { parseUtcDateTime } from '$lib/server/datetime';
 import { deleteCampaign, getCampaign, scheduleCampaign } from '$lib/server/campaigns';
 import { LaunchError, launchCampaign } from '$lib/server/campaigns/launch';
+import { runPreflight } from '$lib/server/campaigns/preflight';
 import { campaignFunnel } from '$lib/server/tracking/stats';
 import { assertTenantAccess } from '$lib/server/tenant';
 import { getScenarioById, toSummary } from '$lib/server/scenarios/listing';
@@ -29,6 +30,7 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 		scenario: scenarioRow ? toSummary(scenarioRow) : null,
 		authorizations: await listAuthorizations(campaign.id),
 		canSend: await canSendCampaign(campaign.id),
+		preflight: await runPreflight(campaign.id),
 		funnel: await campaignFunnel(campaign.id)
 	};
 };
@@ -47,7 +49,8 @@ export const actions: Actions = {
 					unauthorized: [403, 'Lancement bloqué : aucune autorisation valide pour cette campagne.'],
 					empty_list: [422, 'La liste de cibles est vide : ajoutez des cibles avant de lancer.'],
 					bad_status: [409, 'Cette campagne a déjà été lancée.'],
-					not_found: [404, 'Campagne introuvable.']
+					not_found: [404, 'Campagne introuvable.'],
+					preflight_failed: [422, e.message]
 				} as const;
 				const [status, message] = map[e.code];
 				return fail(status, { error: message });

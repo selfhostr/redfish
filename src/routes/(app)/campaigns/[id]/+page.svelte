@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import PreflightPanel from '$lib/components/campaigns/PreflightPanel.svelte';
 	import StatusPill from '$lib/components/StatusPill.svelte';
 	import {
 		Button,
@@ -187,6 +188,15 @@
 			{/snippet}
 			<div class="flex flex-col gap-4">
 				<p class="text-ink-dim">Programmez l'envoi ou lancez la campagne immédiatement.</p>
+				{#if data.preflight}
+					<PreflightPanel report={data.preflight} />
+				{/if}
+				{#if data.campaign.launchError}
+					<ErrorNotice
+						title="Lancement programmé annulé"
+						message={`${data.campaign.launchError} Corrigez le problème, puis reprogrammez ou lancez la campagne.`}
+					/>
+				{/if}
 				{#if !data.canSend.ok}
 					<ErrorNotice title="Envoi bloqué" message={data.canSend.reason} />
 				{/if}
@@ -228,7 +238,12 @@
 							cancel();
 					}}
 				>
-					<Button type="submit" variant="primary" disabled={!data.canSend.ok} class="max-md:w-full">
+					<Button
+						type="submit"
+						variant="primary"
+						disabled={!data.canSend.ok || data.preflight?.ok === false}
+						class="max-md:w-full"
+					>
 						Lancer maintenant
 					</Button>
 				</form>
