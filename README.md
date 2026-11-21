@@ -1,8 +1,8 @@
 <div align="center">
 
-<a href="https://redfish.selfhostr.io"><img src=".github/assets/banner.svg" alt="redfish: self-hosted phishing simulation and security awareness training" width="100%"></a>
+<a href="https://redfish.selfhostr.io"><img src=".github/assets/banner.svg" alt="redfish: self-hosted security awareness campaigns and training" width="100%"></a>
 
-<h3>redfish runs authorized phishing simulations and security awareness training, self hosted, for your organization.</h3>
+<h3>redfish runs authorized security awareness campaigns, self hosted, for your organization.</h3>
 
 [![CI](https://github.com/selfhostr/redfish/actions/workflows/ci.yml/badge.svg)](https://github.com/selfhostr/redfish/actions/workflows/ci.yml) [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/selfhostr/redfish/badge)](https://scorecard.dev/viewer/?uri=github.com/selfhostr/redfish) [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
@@ -12,7 +12,7 @@ Screenshots: [screenshots/](screenshots/)
 
 ## Overview
 
-redfish is a self-hosted platform for authorized phishing simulations and security awareness training. You run a campaign against your own team, from CSV import to launch, tracking and report, and a target who clicks lands on an awareness page. No credential is ever captured, by design: the simulated login page records no input. It is multi-organization, with per-organization sending profiles, retention and reports.
+redfish is a self-hosted platform for authorized security awareness campaigns and training. You run a campaign against your own team, from CSV import to launch, tracking and report, and a target who clicks lands on an awareness page. No credential is ever captured, by design: the simulated login page records no input. It is multi-organization, with per-organization sending profiles, retention and reports.
 
 Free, for good. MIT licence, no paid edition.
 
