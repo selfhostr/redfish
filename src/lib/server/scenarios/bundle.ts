@@ -97,7 +97,7 @@ function parseInput(input: unknown): Record<string, unknown> {
  * `navigator.sendBeacon('{{beaconUrl}}')` est présent (il ne signale que
  * l'affichage, jamais la saisie). Lève à la première violation.
  */
-function validateLanding(landing: string): void {
+export function validateLanding(landing: string): void {
 	// Le formulaire doit poster vers la sentinelle de soumission de l'opérateur.
 	if (!/<form\b[^>]*\saction\s*=\s*(["'])\{\{\s*submitUrl\s*\}\}\1/i.test(landing)) {
 		throw new BundleImportError(
@@ -119,7 +119,7 @@ function validateLanding(landing: string): void {
 }
 
 /** Vérifie que la page de sensibilisation comporte le point d'insertion du message. */
-function validateAwareness(awareness: string): void {
+export function validateAwareness(awareness: string): void {
 	if (!/\{\{\s*awarenessMessage\s*\}\}/.test(awareness)) {
 		throw new BundleImportError(
 			'Sensibilisation refusée : le placeholder {{awarenessMessage}} est absent.'
