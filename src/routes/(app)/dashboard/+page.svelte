@@ -1,4 +1,5 @@
 <script lang="ts">
+	import TrendChart from '$lib/components/TrendChart.svelte';
 	import StatusPill from '$lib/components/StatusPill.svelte';
 	import { Button, Panel, EmptyState, CopyButton } from '$lib/components/ui';
 	import { funnelLabels } from '$lib/funnel-labels';
@@ -172,6 +173,19 @@
 				{/if}
 			</Panel>
 		{/if}
+
+		<Panel>
+			{#snippet header()}
+				<h2 class="rf-eyebrow">Progression</h2>
+			{/snippet}
+			{#if data.trend.length < 2}
+				<p class="text-ink-dim">
+					La progression apparaît à partir de deux campagnes terminées ayant envoyé des e-mails.
+				</p>
+			{:else}
+				<TrendChart points={data.trend} />
+			{/if}
+		</Panel>
 
 		<p class="text-ink-dim">Chaque campagne avec son scénario, son statut et ses résultats.</p>
 		<Panel flush>

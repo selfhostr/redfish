@@ -67,6 +67,13 @@
 		</div>
 		<div class="flex gap-3 max-md:w-full max-md:[&>*]:flex-1">
 			<Button variant="secondary" href={`/campaigns/${data.campaign.id}/report`}>Rapport</Button>
+			<Button
+				variant="secondary"
+				href={`/campaigns/${data.campaign.id}/export`}
+				data-sveltekit-reload
+			>
+				Export CSV
+			</Button>
 			<Button variant="ghost" href="/campaigns">Campagnes</Button>
 		</div>
 	</div>
