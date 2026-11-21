@@ -1,0 +1,1 @@
+ALTER TABLE `campaigns` ADD `launch_error` text;

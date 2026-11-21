@@ -84,7 +84,7 @@ export async function scheduleCampaign(
 	if (!atSend.ok) throw new Error(`Envoi bloqué à l'heure programmée : ${atSend.reason}`);
 	return db
 		.update(campaigns)
-		.set({ status: 'scheduled', scheduledAt })
+		.set({ status: 'scheduled', scheduledAt, launchError: null })
 		.where(and(eq(campaigns.id, campaignId), eq(campaigns.status, 'draft')))
 		.returning()
 		.get();

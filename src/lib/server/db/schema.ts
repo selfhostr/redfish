@@ -166,6 +166,8 @@ export const campaigns = sqliteTable(
 		trackingDomain: text('tracking_domain').notNull(),
 		awarenessMessage: text('awareness_message'),
 		scheduledAt: integer('scheduled_at', { mode: 'timestamp' }),
+		/** Motif du dernier échec de lancement programmé (campagne repassée en brouillon). */
+		launchError: text('launch_error'),
 		createdAt: createdAt()
 	},
 	(t) => [

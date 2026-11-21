@@ -1,7 +1,7 @@
 import { and, eq, inArray, lte } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { campaigns, jobs } from '$lib/server/db/schema';
-import { launchCampaign } from '$lib/server/campaigns/launch';
+import { LaunchError, launchCampaign } from '$lib/server/campaigns/launch';
 import { canSendCampaign } from '$lib/server/authorization';
 import { enqueue, registerHandler } from '$lib/server/jobs/queue';
 
@@ -27,6 +27,15 @@ export async function launchDueCampaigns(now = new Date()): Promise<number> {
 			await launchCampaign(id, now);
 			launched++;
 		} catch (e) {
+			if (e instanceof LaunchError && (e.code === 'preflight_failed' || e.code === 'empty_list')) {
+				// Échec durable : on arrête de réessayer, la campagne repasse en brouillon.
+				db.update(campaigns)
+					.set({ status: 'draft', scheduledAt: null, launchError: e.message })
+					.where(and(eq(campaigns.id, id), eq(campaigns.status, 'scheduled')))
+					.run();
+				console.warn(`scheduled-launch: campagne ${id} repassée en brouillon (${e.message})`);
+				continue;
+			}
 			// Une campagne en échec ne doit pas bloquer les autres.
 			console.error(`scheduled-launch: échec pour la campagne ${id}`, e);
 		}

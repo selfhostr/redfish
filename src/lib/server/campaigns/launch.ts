@@ -3,14 +3,19 @@ import { eq } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { campaignRecipients, campaigns, jobs, targets } from '$lib/server/db/schema';
 import { canSendCampaign } from '../authorization';
+import { isValidEmail } from '../targets';
+import { runPreflight } from './preflight';
+import type { PreflightReport } from './preflight';
 
-export type LaunchErrorCode = 'not_found' | 'bad_status' | 'unauthorized' | 'empty_list';
+export type LaunchErrorCode =
+	'not_found' | 'bad_status' | 'unauthorized' | 'empty_list' | 'preflight_failed';
 
 /** Échec de lancement attendu (mappable en message utilisateur). */
 export class LaunchError extends Error {
 	constructor(
 		public code: LaunchErrorCode,
-		message: string
+		message: string,
+		public report?: PreflightReport
 	) {
 		super(message);
 		this.name = 'LaunchError';
@@ -38,13 +43,23 @@ export async function launchCampaign(
 	const check = await canSendCampaign(campaignId, now);
 	if (!check.ok) throw new LaunchError('unauthorized', check.reason ?? 'Envoi non autorisé');
 
+	// Contrôle de pré-lancement : les erreurs bloquent, les avertissements non.
+	const report = await runPreflight(campaignId, now);
+	if (report?.total === 0) throw new LaunchError('empty_list', 'Liste de cibles vide');
+	if (report && !report.ok) {
+		const errs = report.items.filter((i) => i.severity === 'error').map((i) => i.message);
+		throw new LaunchError('preflight_failed', `Pré-lancement bloqué : ${errs.join(' ')}`, report);
+	}
+
 	return db.transaction(
 		(tx) => {
 			// Re-lecture dans la transaction : évite un double lancement concurrent.
 			const fresh = tx.select().from(campaigns).where(eq(campaigns.id, campaignId)).get();
 			if (!fresh || (fresh.status !== 'draft' && fresh.status !== 'scheduled'))
 				throw new LaunchError('bad_status', 'Campagne déjà lancée');
-			const list = tx.select().from(targets).where(eq(targets.listId, campaign.targetListId)).all();
+			const all = tx.select().from(targets).where(eq(targets.listId, campaign.targetListId)).all();
+			// Cibles anonymisées ou à adresse invalide : exclues (cf. pré-lancement).
+			const list = all.filter((t) => !t.anonymizedAt && isValidEmail(t.email));
 			if (list.length === 0) throw new LaunchError('empty_list', 'Liste de cibles vide');
 			list.forEach((t, index) => {
 				const rec = tx
@@ -67,7 +82,10 @@ export async function launchCampaign(
 					})
 					.run();
 			});
-			tx.update(campaigns).set({ status: 'sending' }).where(eq(campaigns.id, campaignId)).run();
+			tx.update(campaigns)
+				.set({ status: 'sending', launchError: null })
+				.where(eq(campaigns.id, campaignId))
+				.run();
 			return { recipients: list.length };
 		},
 		{ behavior: 'immediate' }

@@ -2,15 +2,15 @@
 	import { onMount } from 'svelte';
 	import { enhance } from '$app/forms';
 	import { Button, ErrorNotice, Field, Panel } from '$lib/components/ui';
-	import { categoryLabel, difficultyLabel, localeLabel } from '$lib/scenario-labels';
+	import AuthorizationFields from '$lib/components/campaigns/AuthorizationFields.svelte';
+	import ScenarioPicker from '$lib/components/campaigns/ScenarioPicker.svelte';
 	import type { ActionData, PageData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
-	const hasScenarios = $derived(data.scenarios.length > 0);
 	const hasProfiles = $derived(data.profiles.length > 0);
 	const hasLists = $derived(data.lists.length > 0);
-	const ready = $derived(hasScenarios && hasProfiles && hasLists);
+	const ready = $derived(data.scenarios.length > 0 && hasProfiles && hasLists);
 
 	const monthYear = new Date().toLocaleDateString('fr-CH', { month: 'long', year: 'numeric' });
 
@@ -44,19 +44,6 @@
 	const hasTrackingDefault = init.tracking !== '';
 	const profile = $derived(data.profiles.find((p) => p.id === sendingProfileId));
 	const list = $derived(data.lists.find((l) => l.id === targetListId));
-	const authUntil = $derived(
-		validUntil
-			? new Date(`${validUntil}Z`).toLocaleDateString('fr-CH', {
-					timeZone: 'UTC',
-					day: 'numeric',
-					month: 'long',
-					year: 'numeric'
-				})
-			: ''
-	);
-
-	const meta = (s: { category: string; difficulty: string; locale: string }) =>
-		[categoryLabel(s.category), difficultyLabel(s.difficulty), localeLabel(s.locale)].join(' · ');
 
 	function pickScenario(id: string) {
 		scenarioId = id;
@@ -136,44 +123,7 @@
 			};
 		}}
 	>
-		<Panel>
-			<fieldset class="flex min-w-0 flex-col gap-3">
-				<legend class="rf-eyebrow mb-3">Scénario</legend>
-				{#if hasScenarios}
-					<div class="flex flex-col gap-2" role="radiogroup" aria-label="Scénario">
-						{#each data.scenarios as s, i (s.id)}
-							<div class="card" class:selected={scenarioId === s.id}>
-								<label class="card-main">
-									<input
-										type="radio"
-										name="scenarioId"
-										value={s.id}
-										required={i === 0}
-										checked={scenarioId === s.id}
-										onchange={() => pickScenario(s.id)}
-									/>
-									<span class="card-title">{s.title}</span>
-									<span class="card-meta">{meta(s)}</span>
-								</label>
-								<a
-									href="/scenarios/{s.key}"
-									target="_blank"
-									rel="noopener"
-									class="rf-link card-preview"
-									aria-label="Aperçu du scénario {s.title}"
-								>
-									Aperçu
-								</a>
-							</div>
-						{/each}
-					</div>
-				{:else}
-					<p class="rounded-md bg-surface-2 px-3 py-2 text-ink-dim">
-						Aucun scénario disponible. Chargez un scénario côté serveur avant de créer une campagne.
-					</p>
-				{/if}
-			</fieldset>
-		</Panel>
+		<ScenarioPicker scenarios={data.scenarios} {scenarioId} onpick={pickScenario} />
 
 		<Panel>
 			<div class="flex flex-col gap-4">
@@ -280,67 +230,14 @@
 			</div>
 		</Panel>
 
-		<Panel>
-			<div class="flex flex-col gap-4">
-				<h2 class="rf-eyebrow">Autorisation écrite</h2>
-				{#if hasAuthDefault && !editAuth}
-					<input type="hidden" name="reference" value={reference} />
-					<input type="hidden" name="approvedBy" value={approvedBy} />
-					<input type="hidden" name="validFrom" value={validFrom} />
-					<input type="hidden" name="validUntil" value={validUntil} />
-					<div class="summary">
-						<span class="summary-text">
-							Autorisation reprise : réf. {reference}, approuvée par {approvedBy}, valable jusqu'au {authUntil}.
-						</span>
-						<button type="button" class="rf-link" onclick={() => (editAuth = true)}>
-							Modifier
-						</button>
-					</div>
-				{:else}
-					<p class="text-ink-dim">Une autorisation valide est obligatoire avant tout envoi réel.</p>
-					<div class="grid gap-4 sm:grid-cols-2">
-						<Field
-							label="Référence"
-							name="reference"
-							required
-							placeholder="N° de mandat / contrat"
-							bind:value={reference}
-						/>
-						<Field
-							label="Approuvé par"
-							name="approvedBy"
-							required
-							placeholder="Nom du responsable"
-							bind:value={approvedBy}
-						/>
-						<Field label="Valide du (UTC)" id="field-validFrom">
-							{#snippet input()}
-								<input
-									id="field-validFrom"
-									name="validFrom"
-									type="datetime-local"
-									required
-									class="rf-input w-full max-w-full min-w-0"
-									bind:value={validFrom}
-								/>
-							{/snippet}
-						</Field>
-						<Field label="Jusqu'au (UTC)" id="field-validUntil">
-							{#snippet input()}
-								<input
-									id="field-validUntil"
-									name="validUntil"
-									type="datetime-local"
-									required
-									class="rf-input w-full max-w-full min-w-0"
-									bind:value={validUntil}
-								/>
-							{/snippet}
-						</Field>
-					</div>
-				{/if}
-			</div>
-		</Panel>
+		<AuthorizationFields
+			bind:reference
+			bind:approvedBy
+			bind:validFrom
+			bind:validUntil
+			bind:editAuth
+			{hasAuthDefault}
+		/>
 
 		<details class="advanced" bind:open={advancedOpen}>
 			<summary>Options avancées</summary>
@@ -389,54 +286,6 @@
 		font-size: 0.6875rem;
 		letter-spacing: 0.04em;
 		color: var(--c-ink-dim);
-	}
-	.card {
-		display: flex;
-		align-items: stretch;
-		gap: 0.75rem;
-		min-width: 0;
-		background: var(--c-surface-2);
-		border: 1px solid var(--c-line-strong);
-		border-radius: var(--r-btn);
-		padding-right: 0.875rem;
-	}
-	.card.selected {
-		border-color: var(--c-ink);
-	}
-	.card:has(input:focus-visible) {
-		outline: 2px solid var(--c-ink);
-		outline-offset: 2px;
-	}
-	.card-main {
-		flex: 1;
-		min-width: 0;
-		display: flex;
-		flex-direction: column;
-		gap: 0.125rem;
-		padding: 0.75rem 0 0.75rem 0.875rem;
-		cursor: pointer;
-		position: relative;
-	}
-	.card-main input {
-		position: absolute;
-		opacity: 0;
-		inset: 0;
-		margin: 0;
-		cursor: pointer;
-	}
-	.card-title {
-		font-weight: 500;
-		color: var(--c-ink);
-		overflow-wrap: anywhere;
-	}
-	.card-meta {
-		font-size: 0.75rem;
-		color: var(--c-ink-dim);
-	}
-	.card-preview {
-		align-self: center;
-		font-size: 0.8125rem;
-		padding: 0.5rem 0;
 	}
 	.summary {
 		display: flex;

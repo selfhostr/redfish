@@ -41,7 +41,19 @@ beforeEach(async () => {
 	tenantId = (await createTenant({ name: 'A' })).id;
 	const sc = db
 		.insert(scenarios)
-		.values({ key: 's1', title: 'S', category: 'c', locale: 'fr', difficulty: 'easy', path: '/s' })
+		.values({
+			key: 's1',
+			title: 'S',
+			category: 'c',
+			locale: 'fr',
+			difficulty: 'easy',
+			source: 'imported',
+			subject: 'Sujet',
+			emailTemplate:
+				'<mjml><mj-body><mj-section><mj-column><mj-text>Hello</mj-text></mj-column></mj-section></mj-body></mjml>',
+			landingTemplate: '<p>landing</p>',
+			awarenessTemplate: '<p>awareness</p>'
+		})
 		.returning()
 		.get();
 	const sp = db
@@ -116,6 +128,25 @@ test('launch refuses a campaign already sending', async () => {
 	expect(db.select().from(campaignRecipients).all()).toHaveLength(2);
 });
 
+test('launch refuses on a blocking preflight error and creates nothing', async () => {
+	await authorize();
+	db.update(scenarios).set({ enabled: false }).run();
+	const err = await launchCampaign(campaignId, now).catch((e) => e);
+	expect(err).toMatchObject({ code: 'preflight_failed' });
+	expect(err.report.ok).toBe(false);
+	expect(db.select().from(campaignRecipients).all()).toHaveLength(0);
+	expect(db.select().from(jobs).all()).toHaveLength(0);
+	expect(db.select().from(campaigns).where(eq(campaigns.id, campaignId)).get()!.status).toBe(
+		'draft'
+	);
+});
+
+test('launch proceeds with warnings and skips anonymized targets', async () => {
+	await authorize();
+	db.update(targets).set({ anonymizedAt: now }).where(eq(targets.email, 'a@x.test')).run();
+	expect(await launchCampaign(campaignId, now)).toEqual({ recipients: 1 });
+});
+
 test('launch refuses an empty target list and leaves the campaign untouched', async () => {
 	await authorize();
 	db.delete(targets).run();
@@ -124,4 +155,12 @@ test('launch refuses an empty target list and leaves the campaign untouched', as
 	expect(db.select().from(campaigns).where(eq(campaigns.id, campaignId)).get()!.status).toBe(
 		'draft'
 	);
+});
+
+test('launch passes preflight with a builtin (on-disk) scenario', async () => {
+	const { makeScenarioRoot, writeScenarioPackage } = await import('../scenarios/fixtures');
+	const dir = await writeScenarioPackage(await makeScenarioRoot(), { key: 'disk1' });
+	db.update(scenarios).set({ source: 'builtin', path: dir }).run();
+	await authorize();
+	expect(await launchCampaign(campaignId, now)).toEqual({ recipients: 2 });
 });

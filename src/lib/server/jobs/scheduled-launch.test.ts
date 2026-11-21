@@ -41,7 +41,19 @@ beforeEach(async () => {
 	tenantId = (await createTenant({ name: 'A' })).id;
 	const sc = db
 		.insert(scenarios)
-		.values({ key: 's1', title: 'S', category: 'c', locale: 'fr', difficulty: 'easy', path: '/s' })
+		.values({
+			key: 's1',
+			title: 'S',
+			category: 'c',
+			locale: 'fr',
+			difficulty: 'easy',
+			source: 'imported',
+			subject: 'Sujet',
+			emailTemplate:
+				'<mjml><mj-body><mj-section><mj-column><mj-text>Hello</mj-text></mj-column></mj-section></mj-body></mjml>',
+			landingTemplate: '<p>landing</p>',
+			awarenessTemplate: '<p>awareness</p>'
+		})
 		.returning()
 		.get();
 	const sp = db
@@ -114,6 +126,18 @@ test('a due scheduled campaign without valid authorization is not launched', asy
 	expect(await launchDueCampaigns(now)).toBe(0);
 	expect(status()).toBe('scheduled');
 	expect(db.select().from(campaignRecipients).all()).toHaveLength(0);
+});
+
+test('a scheduled campaign failing pre-flight returns to draft with a reason, once', async () => {
+	await authorize();
+	db.delete(targets).run();
+	schedule(new Date(now.getTime() - 60_000));
+	expect(await launchDueCampaigns(now)).toBe(0);
+	expect(status()).toBe('draft');
+	const c = db.select().from(campaigns).where(eq(campaigns.id, campaignId)).get()!;
+	expect(c.launchError).toBeTruthy();
+	expect(c.scheduledAt).toBeNull();
+	expect(await launchDueCampaigns(now)).toBe(0);
 });
 
 test('scheduleLaunchCheck does not enqueue duplicates', async () => {
