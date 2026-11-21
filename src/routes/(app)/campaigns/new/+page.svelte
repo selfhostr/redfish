@@ -236,6 +236,7 @@
 			bind:validFrom
 			bind:validUntil
 			bind:editAuth
+			timezone={data.timezone}
 			{hasAuthDefault}
 		/>
 

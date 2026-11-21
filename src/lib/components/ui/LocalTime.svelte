@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { formatZoned } from '$lib/timezone';
 
 	// SSR et première hydratation : texte UTC déterministe. Après montage :
 	// format local fr-CH avec fuseau abrégé (title = heure UTC). Aucun écart d'hydratation.
@@ -7,8 +8,10 @@
 		value: Date | string | number | null | undefined;
 		mode?: 'datetime' | 'date';
 		class?: string;
+		/** Fuseau IANA du client : affichage fixe dans ce fuseau (SSR identique). */
+		timeZone?: string;
 	};
-	let { value, mode = 'datetime', class: klass = '' }: Props = $props();
+	let { value, mode = 'datetime', class: klass = '', timeZone }: Props = $props();
 
 	let mounted = $state(false);
 	onMount(() => {
@@ -28,6 +31,7 @@
 					(mode === 'datetime' ? ` ${p(date.getUTCHours())}:${p(date.getUTCMinutes())} UTC` : '')
 			: ''
 	);
+	const zoned = $derived(date && timeZone ? formatZoned(date, timeZone, mode) : '');
 	const local = $derived(
 		date && mounted
 			? new Intl.DateTimeFormat(
@@ -48,8 +52,8 @@
 </script>
 
 {#if date}
-	<time datetime={date.toISOString()} class={klass} title={mounted ? utc : undefined}>
-		{mounted ? local : utc}
+	<time datetime={date.toISOString()} class={klass} title={timeZone || mounted ? utc : undefined}>
+		{timeZone ? zoned : mounted ? local : utc}
 	</time>
 {:else}
 	<span class={klass}>n/d</span>

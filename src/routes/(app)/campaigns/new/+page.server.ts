@@ -1,5 +1,6 @@
 import { fail, redirect } from '@sveltejs/kit';
-import { parseUtcDateTime } from '$lib/server/datetime';
+import { parseZonedDateTime } from '$lib/server/datetime';
+import { utcToZonedInput } from '$lib/timezone';
 import { db } from '$lib/server/db';
 import { scenarios } from '$lib/server/db/schema';
 import { activeTenantId } from '$lib/server/active-tenant';
@@ -8,11 +9,9 @@ import { createAuthorization, latestValidAuthorization } from '$lib/server/autho
 import { createCampaign, latestTrackingDomain } from '$lib/server/campaigns';
 import { listSendingProfiles } from '$lib/server/sending-profiles';
 import { countTargetsByList, listLists } from '$lib/server/targets';
-import { assertTenantAccess } from '$lib/server/tenant';
+import { assertTenantAccess, tenantTimezone } from '$lib/server/tenant';
 import type { Actions, PageServerLoad } from './$types';
 
-/** Valeur `datetime-local` (UTC, sans fuseau) : l'inverse de parseUtcDateTime. */
-const toLocalInput = (d: Date) => d.toISOString().slice(0, 16);
 const emptyDefaults = { trackingDomain: '', authorization: null };
 
 async function withTargetCounts(tenantId: string) {
@@ -24,19 +23,28 @@ export const load: PageServerLoad = async ({ locals, cookies }) => {
 	if (!locals.user) throw redirect(303, '/login');
 	const tenantId = await activeTenantId(locals.user, cookies);
 	if (!tenantId)
-		return { tenantId: null, scenarios: [], profiles: [], lists: [], defaults: emptyDefaults };
+		return {
+			tenantId: null,
+			timezone: undefined,
+			scenarios: [],
+			profiles: [],
+			lists: [],
+			defaults: emptyDefaults
+		};
 	await assertTenantAccess(locals.user, tenantId);
 	const lastAuth = await latestValidAuthorization(tenantId);
+	const timezone = tenantTimezone(tenantId);
 	return {
 		tenantId,
+		timezone,
 		defaults: {
 			trackingDomain: (await latestTrackingDomain(tenantId)) ?? '',
 			authorization: lastAuth
 				? {
 						reference: lastAuth.reference,
 						approvedBy: lastAuth.approvedBy,
-						validFrom: toLocalInput(lastAuth.validFrom),
-						validUntil: toLocalInput(lastAuth.validUntil)
+						validFrom: utcToZonedInput(lastAuth.validFrom, timezone),
+						validUntil: utcToZonedInput(lastAuth.validUntil, timezone)
 					}
 				: null
 		},
@@ -73,8 +81,9 @@ export const actions: Actions = {
 		const trackingDomain = str('trackingDomain');
 		const reference = str('reference');
 		const approvedBy = str('approvedBy');
-		const validFrom = parseUtcDateTime(str('validFrom'));
-		const validUntil = parseUtcDateTime(str('validUntil'));
+		const tz = tenantTimezone(tenantId);
+		const validFrom = parseZonedDateTime(str('validFrom'), tz);
+		const validUntil = parseZonedDateTime(str('validUntil'), tz);
 		if (!name || !scenarioId || !sendingProfileId || !targetListId || !trackingDomain)
 			return fail(400, { error: 'Champs requis manquants' });
 		if (!reference || !approvedBy || !validFrom || !validUntil)

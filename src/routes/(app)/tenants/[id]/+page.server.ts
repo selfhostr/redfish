@@ -4,6 +4,7 @@ import { assertTenantAccess, deleteTenant, tenantsForUser, updateTenant } from '
 import { overviewForTenant } from '$lib/server/tenant-overview';
 import { audit } from '$lib/server/audit';
 import { listCampaigns } from '$lib/server/campaigns';
+import { listTimeZones } from '$lib/timezone';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals, cookies, params }) => {
@@ -26,8 +27,10 @@ export const load: PageServerLoad = async ({ locals, cookies, params }) => {
 		contact: {
 			contactName: tenant.contactName,
 			contactEmail: tenant.contactEmail,
-			notes: tenant.notes
+			notes: tenant.notes,
+			timezone: tenant.timezone
 		},
+		timezones: listTimeZones(),
 		overview,
 		latest: campaigns.slice(0, 5).map((c) => ({
 			id: c.id,
@@ -46,7 +49,8 @@ export const actions: Actions = {
 		const input = {
 			contactName: String(data.get('contactName') ?? ''),
 			contactEmail: String(data.get('contactEmail') ?? ''),
-			notes: String(data.get('notes') ?? '')
+			notes: String(data.get('notes') ?? ''),
+			timezone: String(data.get('timezone') ?? '')
 		};
 		try {
 			await updateTenant(params.id, input);

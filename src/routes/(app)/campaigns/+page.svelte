@@ -90,9 +90,11 @@
 							</span>
 							<span class="flex flex-col gap-0.5 text-ink-dim">
 								{#if c.scheduledAt}
-									<span>Programmée : <LocalTime value={c.scheduledAt} /></span>
+									<span>
+										Programmée : <LocalTime value={c.scheduledAt} timeZone={data.timezone} />
+									</span>
 								{/if}
-								<span>Créée le <LocalTime value={c.createdAt} /></span>
+								<span>Créée le <LocalTime value={c.createdAt} timeZone={data.timezone} /></span>
 							</span>
 						</a>
 					</li>
@@ -119,8 +121,12 @@
 											</a>
 										</td>
 										<td class="px-4 py-3"><StatusPill status={c.status} /></td>
-										<td class="px-4 py-3 text-ink-dim"><LocalTime value={c.scheduledAt} /></td>
-										<td class="px-4 py-3 text-ink-dim"><LocalTime value={c.createdAt} /></td>
+										<td class="px-4 py-3 text-ink-dim">
+											<LocalTime value={c.scheduledAt} timeZone={data.timezone} />
+										</td>
+										<td class="px-4 py-3 text-ink-dim">
+											<LocalTime value={c.createdAt} timeZone={data.timezone} />
+										</td>
 									</tr>
 								{/each}
 							</tbody>

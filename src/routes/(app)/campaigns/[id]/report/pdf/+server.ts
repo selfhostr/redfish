@@ -1,6 +1,7 @@
 import { error, redirect } from '@sveltejs/kit';
 import { getCampaign } from '$lib/server/campaigns';
 import { assertTenantAccess } from '$lib/server/tenant';
+import { formatZoned } from '$lib/timezone';
 import { buildReport, type ReportData } from '$lib/server/reports/report';
 import type { RequestHandler } from './$types';
 
@@ -21,7 +22,7 @@ function render(r: ReportData): string {
 <style>@page{size:A4;margin:18mm}body{font:14px/1.5 system-ui,sans-serif;color:#111;max-width:780px;margin:0 auto;padding:16px}
 table{border-collapse:collapse;width:100%}td,th{border:1px solid #ccc;padding:4px 8px;text-align:left}h2{margin-top:1.5em;break-after:avoid}</style></head><body>
 <h1>Rapport de campagne : ${esc(r.campaignName)}</h1>
-<p>Généré le ${esc(r.generatedAt)}${r.anonymized ? ', données anonymisées' : ''}</p>
+<p>Généré le ${esc(formatZoned(new Date(r.generatedAt), r.timezone))}${r.anonymized ? ', données anonymisées' : ''}</p>
 <h2>Indicateurs</h2><table>
 <tr><th>Destinataires</th><td>${r.counts.recipients}</td></tr>
 <tr><th>Envoyés</th><td>${r.counts.sent}</td></tr>${r.counts.failed > 0 ? `\n<tr><th>Échecs</th><td>${r.counts.failed} envois en échec</td></tr>` : ''}

@@ -87,6 +87,19 @@ test('createTenant rejects invalid email and over-long values', async () => {
 	await expect(createTenant({ name: 'X', notes: 'a'.repeat(2001) })).rejects.toThrow(/2000/);
 });
 
+test('tenant timezone: default, validation, update', async () => {
+	const t = await createTenant({ name: 'TZ' });
+	expect(t.timezone).toBe('Europe/Zurich');
+	expect((await createTenant({ name: 'TZ2', timezone: 'America/New_York' })).timezone).toBe(
+		'America/New_York'
+	);
+	await expect(createTenant({ name: 'TZ3', timezone: 'Mars/Olympus' })).rejects.toThrow(/Fuseau/);
+	expect((await updateTenant(t.id, { timezone: 'Asia/Tokyo' })).timezone).toBe('Asia/Tokyo');
+	// non fourni : inchangé
+	expect((await updateTenant(t.id, { notes: 'x' })).timezone).toBe('Asia/Tokyo');
+	await expect(updateTenant(t.id, { timezone: 'nope' })).rejects.toThrow(/Fuseau/);
+});
+
 test('updateTenant updates, clears and validates contact fields', async () => {
 	const u = await updateTenant(linked.id, {
 		contactName: 'Jean',

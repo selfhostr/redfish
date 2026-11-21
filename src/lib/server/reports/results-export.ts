@@ -1,6 +1,9 @@
 import { and, eq } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { campaignRecipients, events, targets } from '$lib/server/db/schema';
+import { tenantTimezone } from '$lib/server/tenant';
+import { getCampaign } from '$lib/server/campaigns';
+import { isoWithOffset } from '$lib/timezone';
 import { toCsv } from './csv';
 
 const HEADER = [
@@ -17,20 +20,25 @@ const HEADER = [
 	'date_ouverture',
 	'date_clic',
 	'date_soumission',
-	'date_signalement'
+	'date_signalement',
+	'fuseau'
 ];
 
-const iso = (d: Date | null | undefined) => (d ? d.toISOString() : '');
 const yn = (d: Date | null | undefined) => (d ? 'oui' : 'non');
 
 /**
- * Export CSV par cible. Aucune valeur saisie n'est exportée (l'application n'en
+ * Export CSV par cible. Dates en ISO 8601 avec décalage du fuseau du client
+ * (ex. 2027-03-26T09:00:00+01:00, instant identique à l'UTC) ; la dernière colonne
+ * `fuseau` donne le nom IANA. Aucune valeur saisie n'est exportée (l'application n'en
  * capture pas). Seuls les événements humains comptent (scanners exclus). Pour une
  * cible anonymisée par la rétention, on exporte ce qui reste (marqueur
  * irréversible, nom vide) sans jamais ré-identifier.
  * L'appelant doit avoir vérifié l'accès au tenant de la campagne.
  */
-export function buildResultsCsv(campaignId: string): string {
+export async function buildResultsCsv(campaignId: string): Promise<string> {
+	const campaign = await getCampaign(campaignId);
+	const tz = campaign ? tenantTimezone(campaign.tenantId) : 'UTC';
+	const iso = (d: Date | null | undefined) => (d ? isoWithOffset(d, tz) : '');
 	const rows = db
 		.select({
 			id: campaignRecipients.id,
@@ -80,7 +88,8 @@ export function buildResultsCsv(campaignId: string): string {
 			iso(opened),
 			iso(clicked),
 			iso(submitted),
-			iso(reported)
+			iso(reported),
+			tz
 		]);
 	}
 	return toCsv(out);

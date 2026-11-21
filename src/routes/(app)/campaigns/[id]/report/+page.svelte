@@ -22,7 +22,9 @@
 		</nav>
 		<h1 class="text-2xl font-semibold break-words">Rapport de campagne : {r.campaignName}</h1>
 		<p class="text-sm">
-			Généré le <LocalTime value={r.generatedAt} />{r.anonymized ? ', données anonymisées' : ''}
+			Généré le <LocalTime value={r.generatedAt} timeZone={r.timezone} />{r.anonymized
+				? ', données anonymisées'
+				: ''}
 		</p>
 	</div>
 

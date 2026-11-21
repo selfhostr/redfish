@@ -9,7 +9,7 @@ export const GET: RequestHandler = async ({ locals, params }) => {
 	const campaign = await getCampaign(params.id);
 	if (!campaign) throw error(404, 'Campagne introuvable');
 	await assertTenantAccess(locals.user, campaign.tenantId);
-	return new Response(buildResultsCsv(campaign.id), {
+	return new Response(await buildResultsCsv(campaign.id), {
 		headers: {
 			'content-type': 'text/csv; charset=utf-8',
 			'content-disposition': `attachment; filename="campagne-${campaign.id.replace(/[^A-Za-z0-9_-]/g, '_')}-resultats.csv"`,

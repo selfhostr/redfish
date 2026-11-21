@@ -57,7 +57,7 @@
 			</div>
 			{#if data.campaign.scheduledAt}
 				<p class="text-ink-dim">
-					Programmée : <LocalTime value={data.campaign.scheduledAt} />
+					Programmée : <LocalTime value={data.campaign.scheduledAt} timeZone={data.timezone} />
 				</p>
 			{/if}
 			<p class="flex flex-wrap items-center gap-2 text-ink-dim">
@@ -150,7 +150,10 @@
 					<li class="rounded-md border border-line bg-surface-2 px-3 py-2 break-words text-ink">
 						<span class="font-medium">{a.reference}</span>, {a.approvedBy}
 						<span class="text-ink-dim">
-							(<LocalTime value={a.validFrom} /> → <LocalTime value={a.validUntil} />)
+							(<LocalTime value={a.validFrom} timeZone={data.timezone} /> → <LocalTime
+								value={a.validUntil}
+								timeZone={data.timezone}
+							/>)
 						</span>
 					</li>
 				{:else}
@@ -160,7 +163,7 @@
 			<form method="POST" action="?/authorize" use:enhance class="grid gap-3 sm:grid-cols-2">
 				<Field label="Référence" name="reference" required />
 				<Field label="Approuvé par" name="approvedBy" required />
-				<Field label="Valide du (UTC)" id="field-validFrom">
+				<Field label={`Valide du (${data.timezone})`} id="field-validFrom">
 					{#snippet input()}
 						<input
 							id="field-validFrom"
@@ -171,7 +174,7 @@
 						/>
 					{/snippet}
 				</Field>
-				<Field label="Jusqu'au (UTC)" id="field-validUntil">
+				<Field label={`Jusqu'au (${data.timezone})`} id="field-validUntil">
 					{#snippet input()}
 						<input
 							id="field-validUntil"
@@ -216,7 +219,7 @@
 						use:enhance
 						class="flex flex-col gap-3 sm:flex-row sm:items-end"
 					>
-						<Field label="Date d'envoi (UTC)" id="field-scheduledAt" class="grow">
+						<Field label={`Date d'envoi (${data.timezone})`} id="field-scheduledAt" class="grow">
 							{#snippet input()}
 								<input
 									id="field-scheduledAt"
