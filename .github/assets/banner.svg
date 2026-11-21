@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="280" viewBox="0 0 1280 280" role="img" aria-label="redfish">
+<defs><pattern id="g" width="44" height="44" patternUnits="userSpaceOnUse"><path d="M44 0H0V44" fill="none" stroke="#ffffff" stroke-opacity="0.04" stroke-width="1"/></pattern></defs>
+<rect width="1280" height="280" fill="#07080a"/><rect width="1280" height="280" fill="url(#g)"/>
+<g transform="translate(90 60) scale(2.5)"><path d="M12 32C19 21 30 18 39 22C43 24 46 28 48 32C46 36 43 40 39 42C30 46 19 43 12 32Z" fill="none" stroke="#e879f9" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M48 32L56 24V40Z" fill="#e879f9" stroke="#e879f9" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="23" cy="30" r="2.5" fill="#e879f9"/></g>
+<text x="290" y="145" font-family="Inter, system-ui, sans-serif" font-size="84" font-weight="600" fill="#e6e8ec">redfish</text>
+<text x="292" y="190" font-family="Inter, system-ui, sans-serif" font-size="24" fill="#9aa0aa">Self-hosted phishing simulation and security awareness training</text>
+<text x="1240" y="258" text-anchor="end" font-family="Inter, system-ui, sans-serif" font-size="15" fill="#6b717c">a selfhostr project</text>
+</svg>
