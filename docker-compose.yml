@@ -39,3 +39,28 @@ services:
     volumes:
       - ./litestream.yml:/etc/litestream.yml:ro
       - ./data:/app/data
+
+  # Serveur d'envoi optionnel (OpenSMTPD, soumission authentifiée uniquement, DKIM).
+  # Jamais publié sur l'hôte : joignable seulement par `web` et `worker` (hôte « mail », port 587).
+  # Démarrage : docker compose --profile mail up -d   (voir docs/self-hosted-sending.md)
+  mail:
+    image: ${REDFISH_MAIL_IMAGE:-ghcr.io/selfhostr/redfish-mail:latest}
+    build: ./mail
+    profiles: ['mail']
+    # Only the mail variables: the container must not receive the other secrets of .env.
+    environment:
+      - MAIL_DOMAIN=${MAIL_DOMAIN:-}
+      - MAIL_HOSTNAME=${MAIL_HOSTNAME:-}
+      - MAIL_DKIM_SELECTOR=${MAIL_DKIM_SELECTOR:-}
+      - MAIL_SMTP_USER=${MAIL_SMTP_USER:-}
+      - MAIL_SMTP_PASSWORD=${MAIL_SMTP_PASSWORD:-}
+    restart: unless-stopped
+    volumes:
+      - ./data/mail:/var/lib/redfish-mail
+      - ./data/mail/spool:/var/spool/smtpd
+    healthcheck:
+      test: ['CMD', 'bash', '-c', 'exec 3<>/dev/tcp/127.0.0.1/587']
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s

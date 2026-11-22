@@ -75,3 +75,7 @@ Traefik: `X-Forwarded-For` is added by default; do not enable
 $host;` and `proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;`.
 
 Do not log request bodies or `Cookie`/`Authorization` headers.
+
+## Sending mail
+
+To send without a third-party relay, see [self-hosted-sending.md](self-hosted-sending.md): an optional send-only mail container, started with `docker compose --profile mail up -d`.

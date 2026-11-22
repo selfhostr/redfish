@@ -1,6 +1,8 @@
+import { rootCertificates } from 'node:tls';
 import nodemailer from 'nodemailer';
 import type { Transporter } from 'nodemailer';
 import { getSmtpPassword } from '$lib/server/sending-profiles';
+import { MAIL_MODULE_HOST, readModuleCa } from './module';
 
 /** Champs d'un profil d'envoi nécessaires à l'ouverture du transport SMTP. */
 export type TransportProfile = {
@@ -17,6 +19,10 @@ export type TransportProfile = {
  */
 export async function buildTransport(profile: TransportProfile): Promise<Transporter> {
 	const pass = await getSmtpPassword(profile.id);
+	// CA privée du module d'envoi intégré, uniquement pour l'hôte du module : AJOUTÉE aux racines par défaut (jamais à leur
+	// place), relue à chaque transport pour suivre une rotation. La vérification des
+	// certificats reste active pour tous les profils.
+	const moduleCa = profile.host === MAIL_MODULE_HOST ? readModuleCa() : null;
 	return nodemailer.createTransport({
 		host: profile.host,
 		port: profile.port,
@@ -25,6 +31,7 @@ export async function buildTransport(profile: TransportProfile): Promise<Transpo
 		// Hors 465, STARTTLS est OBLIGATOIRE : on refuse d'envoyer en clair si le
 		// serveur n'annonce pas STARTTLS (p. ex. sur 587), au lieu de dégrader.
 		requireTLS: profile.port !== 465,
-		auth: { user: profile.username, pass }
+		auth: { user: profile.username, pass },
+		...(moduleCa ? { tls: { ca: [...rootCertificates, moduleCa] } } : {})
 	});
 }

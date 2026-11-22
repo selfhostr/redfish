@@ -51,6 +51,15 @@ jobs:
           persist-credentials: false
       - run: docker build --target runtime -t redfish:ci .
 
+  mail-image:
+    name: Mail image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: scripts/test-mail-image.sh
+
   e2e:
     name: End-to-end (Playwright)
     runs-on: ubuntu-latest
