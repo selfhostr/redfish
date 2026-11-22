@@ -1,3 +1,6 @@
+// Transport SMTP de redfish, plateforme open-source (MIT) de sensibilisation à la
+// sécurité AUTORISÉE : https://github.com/selfhostr/redfish — usage défensif, accord
+// écrit requis, aucun identifiant capturé (cf. README « Limits »).
 import { rootCertificates } from 'node:tls';
 import nodemailer from 'nodemailer';
 import type { Transporter } from 'nodemailer';
