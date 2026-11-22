@@ -127,3 +127,19 @@ test('a tracking link click is recorded then redirected', async ({ request }) =>
 	expect(res.status()).toBe(302);
 	expect(res.headers().location).toBe(`/t/p/${row!.token}`);
 });
+
+test('a recipient list can be created then deleted from the Destinataires page', async ({
+	page
+}) => {
+	await login(page);
+	const name = `Liste E2E ${Date.now()}`;
+	await page.goto('/lists');
+	await page.getByLabel('Nom de la liste').fill(name);
+	await page.getByRole('button', { name: 'Créer', exact: true }).click();
+	const item = page.getByRole('listitem').filter({ hasText: name });
+	await expect(item).toBeVisible();
+	await item.getByRole('button', { name: 'Supprimer' }).click();
+	await page.getByRole('button', { name: 'Supprimer définitivement' }).click();
+	await expect(page.getByText('Liste supprimée.')).toBeVisible();
+	await expect(page.getByRole('listitem').filter({ hasText: name })).toHaveCount(0);
+});

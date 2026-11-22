@@ -9,6 +9,8 @@
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 	const next = $derived(localNext(page.url.searchParams.get('next')));
+	// A named action replaces the query string, so ?next= is carried over explicitly.
+	const createAction = $derived(`?/create${next ? `&next=${encodeURIComponent(next)}` : ''}`);
 	let pendingId: string | null = $state(null);
 	let newName = $state('');
 	const pending = $derived(data.lists.find((l) => l.id === pendingId));
@@ -125,7 +127,12 @@
 				Donnez un nom à la liste, par exemple le service ou le groupe visé. Les adresses e-mail des
 				destinataires s'ajoutent ensuite, à l'intérieur de la liste.
 			</p>
-			<form method="POST" use:enhance class="flex flex-col gap-3 sm:flex-row sm:items-end">
+			<form
+				method="POST"
+				action={createAction}
+				use:enhance
+				class="flex flex-col gap-3 sm:flex-row sm:items-end"
+			>
 				<Field
 					class="grow"
 					label="Nom de la liste"

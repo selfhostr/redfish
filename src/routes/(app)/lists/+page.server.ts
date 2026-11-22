@@ -41,7 +41,7 @@ async function listContext(locals: App.Locals, cookies: Parameters<typeof active
 }
 
 export const actions: Actions = {
-	default: async ({ request, locals, cookies, url }) => {
+	create: async ({ request, locals, cookies, url }) => {
 		if (!locals.user) throw redirect(303, '/login');
 		const tenantId = await activeTenantId(locals.user, cookies);
 		if (!tenantId) return fail(400, { error: 'Aucun tenant actif' });

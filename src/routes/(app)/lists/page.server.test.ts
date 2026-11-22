@@ -24,12 +24,12 @@ beforeEach(async () => {
 const create = (search: string, name = 'Staff') => {
 	const fd = new FormData();
 	fd.set('name', name);
-	return actions.default({
+	return actions.create({
 		request: { formData: async () => fd },
 		locals: { user: superadmin },
 		cookies: { get: () => tenantId, delete: () => {}, set: () => {} },
 		url: new URL(`http://x/lists${search}`)
-	} as unknown as Parameters<typeof actions.default>[0]);
+	} as unknown as Parameters<typeof actions.create>[0]);
 };
 
 test('creating a list without next stays on the page', async () => {

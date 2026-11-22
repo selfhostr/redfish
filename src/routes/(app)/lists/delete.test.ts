@@ -214,7 +214,7 @@ test('detail delete redirects to the list page', async () => {
 });
 
 test('creating a list named like an e-mail warns but succeeds', async () => {
-	const r = (await actions.default(ctx(superadmin, tenantA, { name: 'x@y.ch' }) as never)) as {
+	const r = (await actions.create(ctx(superadmin, tenantA, { name: 'x@y.ch' }) as never)) as {
 		success: boolean;
 		warning?: string;
 	};
