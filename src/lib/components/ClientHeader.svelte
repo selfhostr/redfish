@@ -1,12 +1,13 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import { appPathname } from '$lib/base-path';
 
 	// En-tête de la fiche du client actif : nom, langue et onglets de navigation
 	// (liens) vers sa vue d'ensemble, ses listes et ses profils d'envoi.
 	const tenant = $derived(
 		page.data.activeTenant as { id: string; name: string; locale: string } | null
 	);
-	const path = $derived(page.url.pathname);
+	const path = $derived(appPathname(page.url));
 
 	const tabs = $derived(
 		tenant

@@ -9,3 +9,4 @@ All pages are in English.
 - [Retention and backup](retention-backup.md)
 - [Account security and audit log](account-security.md)
 - [Design system](design-system.md): for contributors.
+- [Static demo](demo.md): the clickable demo without a server.

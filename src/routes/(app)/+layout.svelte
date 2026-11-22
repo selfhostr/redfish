@@ -5,6 +5,7 @@
 	import Button from '$lib/components/ui/Button.svelte';
 	import Skeleton from '$lib/components/ui/Skeleton.svelte';
 	import Toast from '$lib/components/ui/Toast.svelte';
+	import { appPathname } from '$lib/base-path';
 	let { data, children } = $props();
 
 	// Listes et profils d'envoi dépendent du client : visibles seulement s'il y en a un d'actif.
@@ -65,8 +66,10 @@
 		}
 	}
 
-	const isActive = (href: string) =>
-		page.url.pathname === href || page.url.pathname.startsWith(href + '/');
+	const isActive = (href: string) => {
+		const path = appPathname(page.url);
+		return path === href || path.startsWith(href + '/');
+	};
 </script>
 
 <svelte:window onkeydown={onWindowKey} />
@@ -103,7 +106,7 @@
 {#snippet tenantForm(idp: string)}
 	{#if data.tenants.length > 1}
 		<form method="POST" action="/set-tenant" class="tenant-switcher">
-			<input type="hidden" name="redirectTo" value={page.url.pathname} />
+			<input type="hidden" name="redirectTo" value={appPathname(page.url)} />
 			<label class="tenant-label" for="tenant-{idp}">
 				<span class="rf-eyebrow">Organisation</span>
 				<select
