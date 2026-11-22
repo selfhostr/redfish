@@ -33,6 +33,7 @@ export const AUDIT_ACTIONS = {
 	'sending_profile.create': "Profil d'envoi créé",
 	'sending_profile.update': "Profil d'envoi modifié",
 	'sending_profile.delete': "Profil d'envoi supprimé",
+	'deliverability.create_module_profile': "Profil d'envoi du module créé",
 	'campaign.create': 'Campagne créée',
 	'campaign.authorize': 'Autorisation ajoutée',
 	'campaign.schedule': 'Campagne planifiée',

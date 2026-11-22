@@ -29,6 +29,7 @@
 		...(data.user.role === 'superadmin'
 			? [
 					{ href: '/users', label: 'Utilisateurs', match: ['/users'] },
+					{ href: '/deliverability', label: 'Délivrabilité', match: ['/deliverability'] },
 					{ href: '/audit', label: "Journal d'audit", match: ['/audit'] }
 				]
 			: [])

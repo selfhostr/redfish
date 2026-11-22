@@ -55,6 +55,12 @@
 							<span class="font-mono [overflow-wrap:anywhere]">{p.host}:{p.port}</span>
 							<span class="font-mono [overflow-wrap:anywhere]">{p.fromAddress}</span>
 							<CopyButton value={p.fromAddress} what="l'adresse expéditeur" size="sm" />
+							{#if data.wrongDomainIds.includes(p.id)}
+								<span class="basis-full text-sm text-warning" role="alert">
+									Ce profil passe par le module d'envoi mais n'envoie pas depuis le domaine signé :
+									DMARC échouera.
+								</span>
+							{/if}
 							{#if !p.tenantId}
 								<Plate variant="neutral">Global</Plate>
 							{/if}
@@ -150,6 +156,10 @@
 					<Field {label} {name} {type} required autocomplete="off" />
 				{/each}
 			</div>
+			<p class="text-sm text-ink-dim">
+				Avec l'hôte « mail » (module d'envoi intégré), l'adresse expéditeur doit utiliser le domaine
+				du module, sinon DMARC échouera.
+			</p>
 			<details class="rounded-md border border-line px-3 py-2">
 				<summary class="min-h-8 cursor-pointer text-ink-dim">Options avancées</summary>
 				<label class="mt-2 flex min-h-8 items-center gap-2">
