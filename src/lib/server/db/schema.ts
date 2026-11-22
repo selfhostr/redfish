@@ -157,6 +157,8 @@ export const targetLists = sqliteTable('target_lists', {
 		.notNull()
 		.references(() => tenants.id),
 	name: text('name').notNull(),
+	/** Liste utilisée par des campagnes puis « supprimée » : masquée, historique conservé. */
+	archivedAt: integer('archived_at', { mode: 'timestamp' }),
 	createdAt: createdAt()
 });
 

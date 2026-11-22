@@ -1,0 +1,1 @@
+ALTER TABLE `target_lists` ADD `archived_at` integer;

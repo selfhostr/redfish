@@ -5,7 +5,18 @@ import { error, fail, redirect } from '@sveltejs/kit';
 import { activeTenantId } from '$lib/server/active-tenant';
 import { audit } from '$lib/server/audit';
 import { assertTenantAccess } from '$lib/server/tenant';
-import { addTarget, getList, importCsv, listTargets } from '$lib/server/targets';
+import {
+	EMAIL_NAME_WARNING,
+	addTarget,
+	countCampaignsUsingList,
+	deleteOrArchiveList,
+	getList,
+	importCsv,
+	listTargets,
+	looksLikeEmail,
+	renameList,
+	restoreList
+} from '$lib/server/targets';
 import { anonymizeTarget, deleteTarget, updateTarget } from '$lib/server/person-data';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -41,11 +52,38 @@ export const load: PageServerLoad = async ({ locals, cookies, params }) => {
 	);
 	return {
 		list,
+		usage: countCampaignsUsingList(list.id),
 		targets: (await listTargets(list.id, tenantId)).map((t) => ({ ...t, used: used.has(t.id) }))
 	};
 };
 
 export const actions: Actions = {
+	rename: async ({ request, locals, cookies, params }) => {
+		const { tenantId, list } = await context(locals, cookies, params.listId);
+		const name = String((await request.formData()).get('name') ?? '').trim();
+		if (!name) return fail(400, { error: 'Nom requis' });
+		renameList(list.id, tenantId, name);
+		audit(locals.user, 'list.rename', { tenantId, targetType: 'target_list', targetId: list.id });
+		return looksLikeEmail(name)
+			? { renamed: true, warning: EMAIL_NAME_WARNING }
+			: { renamed: true };
+	},
+	deleteList: async ({ locals, cookies, params }) => {
+		const { tenantId, list } = await context(locals, cookies, params.listId);
+		const outcome = deleteOrArchiveList(list.id, tenantId);
+		audit(locals.user, outcome === 'deleted' ? 'list.delete' : 'list.archive', {
+			tenantId,
+			targetType: 'target_list',
+			targetId: list.id
+		});
+		throw redirect(303, '/lists');
+	},
+	restoreList: async ({ locals, cookies, params }) => {
+		const { tenantId, list } = await context(locals, cookies, params.listId);
+		restoreList(list.id, tenantId);
+		audit(locals.user, 'list.restore', { tenantId, targetType: 'target_list', targetId: list.id });
+		return { restored: true };
+	},
 	import: async ({ request, locals, cookies, params }) => {
 		const { tenantId, list } = await context(locals, cookies, params.listId);
 		const file = (await request.formData()).get('csv');
