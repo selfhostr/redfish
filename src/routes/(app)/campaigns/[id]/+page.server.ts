@@ -5,6 +5,7 @@ import {
 	listAuthorizations
 } from '$lib/server/authorization';
 import { audit } from '$lib/server/audit';
+import { parseAuthorizationFields } from '$lib/server/authorization-input';
 import { parseZonedDateTime } from '$lib/server/datetime';
 import {
 	deleteCampaign,
@@ -115,23 +116,21 @@ export const actions: Actions = {
 		if (!locals.user) throw redirect(303, '/login');
 		const campaign = await loadCampaign(locals.user, params.id);
 		const data = await request.formData();
-		const tz = tenantTimezone(campaign.tenantId);
 		const str = (k: string) => String(data.get(k) ?? '').trim();
+		const auth = parseAuthorizationFields(str, tenantTimezone(campaign.tenantId));
+		if ('error' in auth) return fail(400, { error: auth.error });
 		try {
 			await createAuthorization({
 				tenantId: campaign.tenantId,
 				campaignId: campaign.id,
-				reference: str('reference'),
-				approvedBy: str('approvedBy'),
-				validFrom: parseZonedDateTime(str('validFrom'), tz) ?? new Date(NaN),
-				validUntil: parseZonedDateTime(str('validUntil'), tz) ?? new Date(NaN)
+				...auth
 			});
 		} catch (e) {
 			return fail(400, { error: e instanceof Error ? e.message : 'Autorisation invalide' });
 		}
 		audit(locals.user, 'campaign.authorize', {
 			...campaignRef(campaign),
-			details: { reference: str('reference') }
+			details: { reference: auth.reference }
 		});
 		return { success: true };
 	},

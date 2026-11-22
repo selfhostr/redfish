@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { DATETIME_MAX, DATETIME_MIN } from '$lib/datetime-bounds';
 	import { enhance } from '$app/forms';
 	import PreflightPanel from '$lib/components/campaigns/PreflightPanel.svelte';
 	import SendingPaceFields from '$lib/components/campaigns/SendingPaceFields.svelte';
@@ -170,6 +171,8 @@
 							id="field-validFrom"
 							name="validFrom"
 							type="datetime-local"
+							min={DATETIME_MIN}
+							max={DATETIME_MAX}
 							required
 							class="rf-input w-full max-w-full min-w-0"
 						/>
@@ -181,6 +184,8 @@
 							id="field-validUntil"
 							name="validUntil"
 							type="datetime-local"
+							min={DATETIME_MIN}
+							max={DATETIME_MAX}
 							required
 							class="rf-input w-full max-w-full min-w-0"
 						/>
@@ -246,6 +251,8 @@
 									id="field-scheduledAt"
 									name="scheduledAt"
 									type="datetime-local"
+									min={DATETIME_MIN}
+									max={DATETIME_MAX}
 									required
 									class="rf-input w-full max-w-full min-w-0"
 								/>

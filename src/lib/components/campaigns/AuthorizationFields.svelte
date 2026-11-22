@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { DATETIME_MAX, DATETIME_MIN } from '$lib/datetime-bounds';
 	import { Field, Panel } from '$lib/components/ui';
 	import { zonedToUtc } from '$lib/timezone';
 
@@ -69,6 +70,8 @@
 							id="field-validFrom"
 							name="validFrom"
 							type="datetime-local"
+							min={DATETIME_MIN}
+							max={DATETIME_MAX}
 							required
 							class="rf-input w-full max-w-full min-w-0"
 							bind:value={validFrom}
@@ -81,6 +84,8 @@
 							id="field-validUntil"
 							name="validUntil"
 							type="datetime-local"
+							min={DATETIME_MIN}
+							max={DATETIME_MAX}
 							required
 							class="rf-input w-full max-w-full min-w-0"
 							bind:value={validUntil}
