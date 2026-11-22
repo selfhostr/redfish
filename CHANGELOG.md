@@ -4,6 +4,8 @@ Format based on Keep a Changelog. Versions follow `0.MINOR.PATCH` until 1.0.
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-22
+
 ### Added
 
 - Optional self-hosted sending module: a hardened, send-only OpenSMTPD container (compose profile `mail`, off by default) with authenticated STARTTLS submission on the internal Docker network only, no open relay and DKIM signing for one domain, published and signed as `ghcr.io/selfhostr/redfish-mail`. redfish trusts the module's own CA in addition to the default roots (certificate verification stays on for every profile). See `docs/self-hosted-sending.md`.
