@@ -42,11 +42,12 @@ async function login(page: Page, email: string) {
 }
 
 async function chooseClient(page: Page, name: string) {
-	const select = page.getByLabel('Organisation');
-	if (await select.count()) {
-		await select.selectOption({ label: name });
-		await page.waitForLoadState('networkidle');
-	}
+	// Client switcher at the start of the bar: only switch when another client is active.
+	const current = page.getByRole('button', { name: `Client actif : ${name}` });
+	if (await current.count()) return;
+	await page.getByRole('button', { name: /^Client actif :/ }).click();
+	await page.getByRole('button', { name, exact: true }).click();
+	await expect(current).toBeVisible();
 }
 
 async function save(page: Page, name: string, scheme: 'light' | 'dark') {

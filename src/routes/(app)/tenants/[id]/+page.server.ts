@@ -1,43 +1,30 @@
 import { error, fail, redirect } from '@sveltejs/kit';
 import { activeTenantId } from '$lib/server/active-tenant';
 import { assertTenantAccess, deleteTenant, tenantsForUser, updateTenant } from '$lib/server/tenant';
-import { overviewForTenant } from '$lib/server/tenant-overview';
 import { audit } from '$lib/server/audit';
-import { listCampaigns } from '$lib/server/campaigns';
 import { listTimeZones } from '$lib/timezone';
 import type { Actions, PageServerLoad } from './$types';
 
+/**
+ * Paramètres d'un client accessible. Consulter cette page ne change pas le client
+ * actif : seul le sélecteur de client (POST /set-tenant) le fait.
+ */
 export const load: PageServerLoad = async ({ locals, cookies, params }) => {
 	if (!locals.user) throw redirect(303, '/login');
 	await assertTenantAccess(locals.user, params.id);
 	const tenant = (await tenantsForUser(locals.user)).find((t) => t.id === params.id);
 	if (!tenant) throw error(404, 'Client introuvable');
 	const active = await activeTenantId(locals.user, cookies);
-	if (active !== tenant.id) {
-		// Pas de données du client tant qu'il n'est pas activé (POST /set-tenant).
-		return { isActive: false as const, tenant: { id: tenant.id, name: tenant.name } };
-	}
-	const [overview, campaigns] = await Promise.all([
-		overviewForTenant(tenant),
-		listCampaigns(tenant.id)
-	]);
 	return {
-		isActive: true as const,
-		tenant: { id: tenant.id, name: tenant.name },
+		isActive: active === tenant.id,
+		tenant: { id: tenant.id, name: tenant.name, locale: tenant.locale },
 		contact: {
 			contactName: tenant.contactName,
 			contactEmail: tenant.contactEmail,
 			notes: tenant.notes,
 			timezone: tenant.timezone
 		},
-		timezones: listTimeZones(),
-		overview,
-		latest: campaigns.slice(0, 5).map((c) => ({
-			id: c.id,
-			name: c.name,
-			status: c.status,
-			createdAt: c.createdAt
-		}))
+		timezones: listTimeZones()
 	};
 };
 

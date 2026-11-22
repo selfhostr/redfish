@@ -8,6 +8,12 @@ Format based on Keep a Changelog. Versions follow `0.MINOR.PATCH` until 1.0.
 
 - Scenario deletion (superadmin): a scenario used by no campaign is deleted; one used by campaigns is archived instead, hidden from the scenario list and the campaign picker but kept in existing campaigns and reports. Archived scenarios can be shown and restored from the scenario list.
 
+### Changed
+
+- Navigation: the client switcher comes first in the bar (active client, other clients, « Paramètres de ce client », « Gérer les clients »), followed only by the active client's screens (Tableau de bord, Campagnes, Destinataires, Profils d'envoi). Global screens move to an « Administration » menu (Clients, Scénarios, and for superadmins Utilisateurs and Journal d'audit), next to the account menu. The mobile menu has the same structure.
+- The client page tabs are gone. `/tenants/[id]` is now « Paramètres du client » (identity, contact, timezone, deletion) and no longer requires switching to that client; switching is done with the switcher or « Travailler sur ce client ». The dashboard shows the « Premiers pas » checklist until the client has a list, a sending profile and a campaign, and invites to create a first client when there is none.
+- « Listes » is renamed « Destinataires » in the interface; « Données personnelles (RGPD) » is reached from that page.
+
 ## [0.2.0] - 2026-11-22
 
 ### Added

@@ -46,7 +46,7 @@
 					label="Nom"
 					name="name"
 					required
-					placeholder="Nom de l'organisation"
+					placeholder="Ex. Fiduciaire Alpina SA"
 					value={form?.name ?? ''}
 				/>
 				<Field label="Langue" name="locale">
@@ -117,7 +117,7 @@
 	{#if data.overviews.length === 0}
 		<EmptyState
 			title="Aucun client"
-			message="Un client est une organisation dont les données sont isolées des autres. Créez le premier pour commencer."
+			message="Un client est l'entreprise que vous sensibilisez : ses destinataires, profils d'envoi et campagnes sont isolés des autres clients. Créez le premier pour commencer."
 		/>
 	{:else}
 		<ul class="grid gap-4 md:grid-cols-2">
@@ -152,19 +152,19 @@
 							Aucune campagne
 						{/if}
 					</p>
-					<div class="mt-auto flex flex-col gap-2 sm:flex-row">
-						<form method="POST" action="/set-tenant" class="contents">
-							<input type="hidden" name="tenantId" value={t.id} />
-							<input type="hidden" name="redirectTo" value="/campaigns/new" />
-							<Button type="submit" variant="secondary" class="max-sm:w-full">
-								Nouvelle campagne
-							</Button>
-						</form>
-						<form method="POST" action="/set-tenant" class="contents">
-							<input type="hidden" name="tenantId" value={t.id} />
-							<input type="hidden" name="redirectTo" value="/tenants/{t.id}" />
-							<Button type="submit" variant="secondary" class="max-sm:w-full">Ouvrir</Button>
-						</form>
+					<div class="mt-auto flex flex-col gap-2 sm:flex-row sm:items-center">
+						{#if t.id === data.activeTenant?.id}
+							<span class="text-signal max-sm:text-center sm:mr-auto">Client actif</span>
+						{:else}
+							<form method="POST" action="/set-tenant" class="contents">
+								<input type="hidden" name="tenantId" value={t.id} />
+								<input type="hidden" name="redirectTo" value="/dashboard" />
+								<Button type="submit" variant="secondary" class="max-sm:w-full">
+									Travailler sur ce client
+								</Button>
+							</form>
+						{/if}
+						<Button href="/tenants/{t.id}" variant="ghost" class="max-sm:w-full">Paramètres</Button>
 					</div>
 				</li>
 			{/each}

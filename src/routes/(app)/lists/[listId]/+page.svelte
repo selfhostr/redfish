@@ -2,7 +2,6 @@
 	import { enhance } from '$app/forms';
 	import { page } from '$app/state';
 	import { localNext } from '$lib/return-path';
-	import ClientHeader from '$lib/components/ClientHeader.svelte';
 	import {
 		Button,
 		CopyButton,
@@ -103,11 +102,10 @@
 {/snippet}
 
 <main class="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-6 md:px-6 md:py-8">
-	<ClientHeader />
 	<div class="flex flex-wrap items-center justify-between gap-3">
-		<h2 class="text-lg font-semibold tracking-tight [overflow-wrap:anywhere] text-ink">
+		<h1 class="text-2xl font-semibold tracking-tight [overflow-wrap:anywhere] text-ink">
 			{data.list.name}
-		</h2>
+		</h1>
 		<Button href="/lists" variant="ghost" size="sm">Toutes les listes</Button>
 	</div>
 

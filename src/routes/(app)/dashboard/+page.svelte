@@ -10,6 +10,14 @@
 
 	const tenantName = $derived(data.activeTenant?.name ?? '');
 
+	// « Premiers pas » du client actif, affichés tant qu'une étape reste à faire.
+	const steps = $derived([
+		{ done: data.listCount > 0, label: 'Créer une liste de destinataires', href: '/lists' },
+		{ done: data.profileCount > 0, label: "Ajouter un profil d'envoi", href: '/sending-profiles' },
+		{ done: data.campaignCount > 0, label: 'Lancer une première campagne', href: '/campaigns/new' }
+	]);
+	const onboarded = $derived(steps.every((s) => s.done));
+
 	const pct = (num: number, den: number) => (den > 0 ? Math.round((num / den) * 100) : 0);
 	const ratePct = (num: number, den: number) => (den > 0 ? `${pct(num, den)} %` : 'n/d');
 
@@ -100,24 +108,50 @@
 	{#if !data.hasTenant}
 		<EmptyState
 			title="Créez votre premier client"
-			message="Un client (organisation cible) regroupe ses listes de destinataires, ses profils d'envoi et ses campagnes. Commencez par en créer un."
+			message="Un client est l'entreprise que vous sensibilisez : il regroupe ses destinataires, ses profils d'envoi et ses campagnes. Le menu propose ces rubriques dès qu'un client existe."
 		>
 			<Button variant="primary" href="/tenants">Créer un client</Button>
 		</EmptyState>
-	{:else if data.campaignCount === 0}
-		<EmptyState
-			title="Créez votre première campagne"
-			message={`Aucune campagne pour « ${tenantName} » pour le moment. Une campagne combine un scénario, un profil d'envoi et une liste de destinataires.`}
-		>
-			<div class="flex flex-wrap justify-center gap-3">
-				<Button variant="primary" href="/campaigns/new">Créer une campagne</Button>
-				{#if data.listCount === 0}
-					<Button variant="ghost" href="/lists">Créer une liste de destinataires</Button>
-				{/if}
-				<Button variant="ghost" href="/sending-profiles">Ajouter un profil d'envoi</Button>
-			</div>
-		</EmptyState>
-	{:else}
+	{:else if !onboarded}
+		<Panel>
+			{#snippet header()}
+				<h2 class="rf-eyebrow">Premiers pas</h2>
+			{/snippet}
+			<p class="mb-3 text-ink-dim">
+				Une campagne combine un scénario, un profil d'envoi et une liste de destinataires. Trois
+				étapes pour lancer la première campagne de « {tenantName} » :
+			</p>
+			<ol class="flex flex-col gap-1">
+				{#each steps as s, i (s.href)}
+					<li>
+						<a
+							href={s.href}
+							class="flex min-h-11 items-center gap-3 rounded-md px-1 text-ink hover:bg-surface-2"
+						>
+							<span
+								class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-line-strong font-mono text-xs"
+								class:text-signal={s.done}
+								aria-hidden="true"
+							>
+								{s.done ? '✓' : i + 1}
+							</span>
+							<span class="min-w-0 grow [overflow-wrap:anywhere]" class:text-ink-dim={s.done}>
+								{s.label}
+							</span>
+							<span
+								class="shrink-0 text-xs"
+								class:text-signal={s.done}
+								class:text-ink-dim={!s.done}
+							>
+								{s.done ? 'Fait' : 'À faire'}
+							</span>
+						</a>
+					</li>
+				{/each}
+			</ol>
+		</Panel>
+	{/if}
+	{#if data.hasTenant && data.campaignCount > 0}
 		<p class="text-ink-dim">Cumul des indicateurs sur toutes les campagnes du client.</p>
 		<section class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
 			{#each kpis as k (k.label)}

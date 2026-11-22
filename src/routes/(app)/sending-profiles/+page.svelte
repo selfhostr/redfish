@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { page } from '$app/state';
-	import ClientHeader from '$lib/components/ClientHeader.svelte';
 	import { localNext } from '$lib/return-path';
 	import {
 		Button,
@@ -29,8 +28,7 @@
 </script>
 
 <main class="mx-auto flex max-w-3xl flex-col gap-6 px-4 py-6 md:px-6 md:py-8">
-	<ClientHeader />
-	<h2 class="text-lg font-semibold tracking-tight text-ink">Profils d'envoi</h2>
+	<h1 class="text-2xl font-semibold tracking-tight text-ink">Profils d'envoi</h1>
 
 	<p class="text-ink-dim">
 		Un profil d'envoi décrit le serveur SMTP et l'expéditeur utilisés pour envoyer les e-mails d'une

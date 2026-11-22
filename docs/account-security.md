@@ -2,7 +2,7 @@
 
 ## Account page
 
-Reached from the email shown in the navigation bar (`/account`).
+Reached from the account menu (your email, at the end of the navigation bar) → « Mon compte » (`/account`).
 
 - **Password**: the current password is required, and the new one must be at least 12 characters long. After the change, every other session of the account is closed.
 - **Active sessions**: list of sessions (truncated User-Agent, opened, last activity). Any session other than the current one can be revoked, or all of them at once. The IP address is never stored.
@@ -25,6 +25,6 @@ Table `audit_log`: date, actor (id and frozen email), organization, action, obje
 
 Logged actions: successful or failed login (the email typed is never written), recovery code used, password changed, sessions revoked, 2FA enabled or disabled, client created, updated or deleted, scenario created or imported, sending profile created, campaign created, authorized, scheduled, sending pace changed, launched or deleted, targets imported or added, anonymisation by retention. The identifiers `scenario.delete`, `campaign.cancel` and `sending_profile.update`/`delete` are reserved for actions that do not exist in the interface yet.
 
-The `/audit` page (read-only, filters by action group, actor, organization and dates, 50 entries per page) is reserved for superadmins. The `operator` role has no administration rights, so there is no view limited to one organization.
+The `/audit` page (« Administration » menu → « Journal d'audit »; read-only, filters by action group, actor, organization and dates, 50 entries per page) is reserved for superadmins. The `operator` role has no administration rights, so there is no view limited to one organization.
 
 Retention: see [retention-backup.md](retention-backup.md).

@@ -10,7 +10,7 @@ Targets **never used in any campaign** are deleted by the same job once `retenti
 
 ## Individual rights (access, erasure)
 
-The "Données personnelles" tab of a client searches an email across all of that client's lists. It can export everything stored about the person as JSON (target rows, campaign participation, events with timestamps), or erase them: targets used in campaigns are anonymised (same as retention, statistics preserved), unused ones are deleted. On a list page, a single target can be edited, deleted (if unused) or anonymised (if used). Every export, anonymisation and deletion is written to the audit log with a salted hash of the email, never the email itself.
+The « Données personnelles (RGPD) » page (`/privacy`, linked from the « Destinataires » page) searches an email across all lists of the active client. It can export everything stored about the person as JSON (target rows, campaign participation, events with timestamps), or erase them: targets used in campaigns are anonymised (same as retention, statistics preserved), unused ones are deleted. On a list page, a single target can be edited, deleted (if unused) or anonymised (if used). Every export, anonymisation and deletion is written to the audit log with a salted hash of the email, never the email itself.
 
 ## Audit log retention
 

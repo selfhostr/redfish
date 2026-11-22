@@ -6,6 +6,7 @@ import { listCampaigns } from '$lib/server/campaigns';
 import { campaignFunnel, type Funnel } from '$lib/server/tracking/stats';
 import { tenantTrend, type TrendPoint } from '$lib/server/tracking/trends';
 import { listLists } from '$lib/server/targets';
+import { listSendingProfiles } from '$lib/server/sending-profiles';
 import { assertTenantAccess } from '$lib/server/tenant';
 import { toMeta, type ScenarioMeta } from '$lib/server/scenarios/listing';
 import { getQueueHealth } from '$lib/server/jobs/health';
@@ -67,6 +68,7 @@ export const load: PageServerLoad = async ({ locals, cookies }) => {
 			queue,
 			hasTenant: false,
 			listCount: 0,
+			profileCount: 0,
 			campaignCount: 0,
 			aggregate: emptyAggregate(),
 			rows: [] as DashboardRow[],
@@ -76,7 +78,11 @@ export const load: PageServerLoad = async ({ locals, cookies }) => {
 	}
 	await assertTenantAccess(locals.user, tenantId);
 
-	const [campaigns, lists] = await Promise.all([listCampaigns(tenantId), listLists(tenantId)]);
+	const [campaigns, lists, profiles] = await Promise.all([
+		listCampaigns(tenantId),
+		listLists(tenantId),
+		listSendingProfiles(tenantId)
+	]);
 	const scenarioById = new Map(
 		db
 			.select()
@@ -109,6 +115,7 @@ export const load: PageServerLoad = async ({ locals, cookies }) => {
 		queue,
 		hasTenant: true,
 		listCount: lists.length,
+		profileCount: profiles.length,
 		campaignCount: campaigns.length,
 		aggregate,
 		trend: await tenantTrend(tenantId),

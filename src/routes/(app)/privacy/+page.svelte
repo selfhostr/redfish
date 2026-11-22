@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import ClientHeader from '$lib/components/ClientHeader.svelte';
 	import { Button, EmptyState, ErrorNotice, Field, Panel } from '$lib/components/ui';
 	import type { ActionData, PageData } from './$types';
 
@@ -8,8 +7,12 @@
 </script>
 
 <main class="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-6 md:px-6 md:py-8">
-	<ClientHeader />
-	<h2 class="text-lg font-semibold tracking-tight text-ink">Données personnelles</h2>
+	<div class="flex flex-wrap items-center justify-between gap-3">
+		<h1 class="text-2xl font-semibold tracking-tight text-ink">Données personnelles (RGPD)</h1>
+		<Button href="/lists" variant="ghost" size="sm" class="max-sm:w-full">
+			Retour aux destinataires
+		</Button>
+	</div>
 	<p class="text-ink-dim">
 		Recherchez une personne par e-mail dans toutes les listes de ce client, exportez ses données
 		(demande d'accès) ou effacez-les. Les cibles déjà utilisées en campagne sont anonymisées, les
