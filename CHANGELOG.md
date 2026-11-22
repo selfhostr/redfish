@@ -4,6 +4,11 @@ Format based on Keep a Changelog. Versions follow `0.MINOR.PATCH` until 1.0.
 
 ## [Unreleased]
 
+### Security
+
+- In production, startup now fails unless both `DASHBOARD_HOST` and `TRACKING_HOST` are set, so host isolation can no longer be silently disabled by omitting them. Development (both unset) is unchanged.
+- Every response, including the unknown-host 404, now carries `Referrer-Policy: no-referrer` (tracking tokens live in the `/t/...` URL and must not leak via `Referer`) and `X-Content-Type-Options: nosniff`.
+
 ## [0.3.1] - 2026-11-22
 
 ### Changed

@@ -84,3 +84,18 @@ describe('CSP', () => {
 		expect(res.headers.get('content-security-policy')).toContain("default-src 'self'");
 	});
 });
+
+describe('en-têtes de sécurité', () => {
+	const expectHeaders = (res: Response) => {
+		expect(res.headers.get('referrer-policy')).toBe('no-referrer');
+		expect(res.headers.get('x-content-type-options')).toBe('nosniff');
+	};
+	test('réponse normale', async () => {
+		expectHeaders((await run('https://go.example.net/t/p/abc')).res);
+	});
+	test('404 d’hôte inconnu', async () => {
+		const { res } = await run('https://dash.example.org/t/p/abc');
+		expect(res.status).toBe(404);
+		expectHeaders(res);
+	});
+});

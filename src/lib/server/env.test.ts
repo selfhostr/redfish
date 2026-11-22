@@ -50,3 +50,32 @@ test('rejects a partial host isolation config', () => {
 		/DASHBOARD_HOST/
 	);
 });
+
+test('production requires both hosts', () => {
+	const prod = { NODE_ENV: 'production' };
+	const both = { ...prod, DASHBOARD_HOST: 'a.example', TRACKING_HOST: 'b.example' };
+	expect(() => validateHosts(prod)).toThrow(/isolation des hôtes/);
+	expect(() => validateHosts({ ...prod, DASHBOARD_HOST: ' ', TRACKING_HOST: '' })).toThrow(
+		/isolation des hôtes/
+	);
+	expect(() => validateHosts({ ...prod, DASHBOARD_HOST: 'a.example' })).toThrow(/TRACKING_HOST/);
+	expect(() => validateHosts(both)).not.toThrow();
+});
+
+test('development without hosts stays permissive, a single host is still refused', () => {
+	expect(() => validateHosts({ NODE_ENV: 'development' })).not.toThrow();
+	expect(() => validateHosts({ NODE_ENV: 'development', DASHBOARD_HOST: 'a.example' })).toThrow(
+		/TRACKING_HOST/
+	);
+});
+
+test('validateEnv enforces host isolation in production', () => {
+	vi.stubEnv('REDFISH_SECRET_KEY', randomBytes(32).toString('base64'));
+	vi.stubEnv('NODE_ENV', 'production');
+	vi.stubEnv('DASHBOARD_HOST', '');
+	vi.stubEnv('TRACKING_HOST', '');
+	expect(() => validateEnv()).toThrow(/isolation des hôtes/);
+	vi.stubEnv('DASHBOARD_HOST', 'a.example');
+	vi.stubEnv('TRACKING_HOST', 'b.example');
+	expect(() => validateEnv()).not.toThrow();
+});

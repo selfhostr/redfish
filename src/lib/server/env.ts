@@ -60,9 +60,16 @@ export function validateEnv(): void {
  * L'isolation des hôtes exige DASHBOARD_HOST et TRACKING_HOST ensemble : les deux
  * définis = isolation active, les deux absents = développement permissif. Un seul
  * des deux désactiverait silencieusement l'isolation, on refuse donc de démarrer.
+ * En production, les deux sont obligatoires : sans eux, le tableau de bord et le
+ * tracking seraient servis sur le même hôte.
  */
 export function validateHosts(env: NodeJS.ProcessEnv = process.env): void {
 	const set = (v: string | undefined) => !!v?.trim();
+	if (env.NODE_ENV === 'production' && !(set(env.DASHBOARD_HOST) && set(env.TRACKING_HOST))) {
+		throw new Error(
+			"En production, l'isolation des hôtes est obligatoire : DASHBOARD_HOST et TRACKING_HOST doivent tous les deux être définis."
+		);
+	}
 	if (set(env.DASHBOARD_HOST) !== set(env.TRACKING_HOST)) {
 		throw new Error(
 			'DASHBOARD_HOST et TRACKING_HOST doivent être définis ensemble (isolation des hôtes) ou absents tous les deux (développement).'
