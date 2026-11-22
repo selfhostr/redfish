@@ -72,6 +72,6 @@ export const actions: Actions = {
 				timezone
 			});
 		}
-		throw redirect(303, '/dashboard');
+		throw redirect(303, `/tenants/${id}?welcome=1`);
 	}
 };

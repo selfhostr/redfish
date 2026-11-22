@@ -4,7 +4,7 @@
 	import { Button, Panel, EmptyState, CopyButton } from '$lib/components/ui';
 	import { funnelLabels } from '$lib/funnel-labels';
 	import { categoryLabel, difficultyLabel, localeLabel } from '$lib/scenario-labels';
-	import { onboardingSteps, showOnboarding } from '$lib/onboarding';
+	import { clientSettingsDone, onboardingSteps, showOnboarding } from '$lib/onboarding';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -12,8 +12,13 @@
 	const tenantName = $derived(data.activeTenant?.name ?? '');
 
 	// « Premiers pas » du client actif, seulement tant qu'il n'a lancé aucune campagne.
-	const steps = $derived(onboardingSteps(data));
-	const onboarding = $derived(showOnboarding(data));
+	const progress = $derived({ ...data, settingsDone: clientSettingsDone(data.activeTenant) });
+	const steps = $derived(onboardingSteps(progress, data.activeTenant?.id));
+	const onboarding = $derived(showOnboarding(progress));
+	const tenant = $derived(data.activeTenant);
+	const contact = $derived(
+		[tenant?.contactName, tenant?.contactEmail].filter((v) => v?.trim()).join(' · ')
+	);
 
 	const pct = (num: number, den: number) => (den > 0 ? Math.round((num / den) * 100) : 0);
 	const ratePct = (num: number, den: number) => (den > 0 ? `${pct(num, den)} %` : 'n/d');
@@ -62,15 +67,27 @@
 
 <main class="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-6 md:px-6 md:py-8">
 	<header class="flex flex-wrap items-end justify-between gap-4">
-		<div>
-			<h1 class="text-2xl font-semibold tracking-tight text-ink">Tableau de bord</h1>
-			<p class="mt-1 text-ink-dim">
+		<div class="min-w-0">
+			<p class="rf-eyebrow">Tableau de bord</p>
+			<h1 class="mt-1 text-2xl font-semibold tracking-tight [overflow-wrap:anywhere] text-ink">
 				{#if tenantName}{tenantName}{:else}Aucun client sélectionné{/if}
-			</p>
+			</h1>
+			{#if tenant}
+				<p class="mt-1 text-sm text-ink-dim [overflow-wrap:anywhere]">
+					Contact : {contact || 'non renseigné'} · Fuseau horaire : {tenant.timezone} · Langue : {localeLabel(
+						tenant.locale
+					)}
+				</p>
+			{/if}
 		</div>
-		{#if data.campaignCount > 0}
-			<Button variant="primary" href="/campaigns/new">Nouvelle campagne</Button>
-		{/if}
+		<div class="flex flex-wrap gap-2">
+			{#if tenant}
+				<Button variant="secondary" href={`/tenants/${tenant.id}`}>Paramètres</Button>
+			{/if}
+			{#if data.campaignCount > 0}
+				<Button variant="primary" href="/campaigns/new">Nouvelle campagne</Button>
+			{/if}
+		</div>
 	</header>
 
 	{#if data.queue}
@@ -115,7 +132,7 @@
 				<h2 class="rf-eyebrow">Premiers pas</h2>
 			{/snippet}
 			<p class="mb-3 text-ink-dim">
-				Une campagne combine un scénario, un profil d'envoi et une liste de destinataires. Trois
+				Une campagne combine un scénario, un profil d'envoi et une liste de destinataires. Quatre
 				étapes pour lancer la première campagne de « {tenantName} » :
 			</p>
 			<ol class="flex flex-col gap-1">

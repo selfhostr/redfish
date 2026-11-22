@@ -9,7 +9,7 @@ import type { Actions, PageServerLoad } from './$types';
  * Paramètres d'un client accessible. Consulter cette page ne change pas le client
  * actif : seul le sélecteur de client (POST /set-tenant) le fait.
  */
-export const load: PageServerLoad = async ({ locals, cookies, params }) => {
+export const load: PageServerLoad = async ({ locals, cookies, params, url }) => {
 	if (!locals.user) throw redirect(303, '/login');
 	await assertTenantAccess(locals.user, params.id);
 	const tenant = (await tenantsForUser(locals.user)).find((t) => t.id === params.id);
@@ -17,6 +17,8 @@ export const load: PageServerLoad = async ({ locals, cookies, params }) => {
 	const active = await activeTenantId(locals.user, cookies);
 	return {
 		isActive: active === tenant.id,
+		// Arrivée depuis la création du client : propose de continuer vers le tableau de bord.
+		welcome: url.searchParams.get('welcome') === '1' && active === tenant.id,
 		tenant: { id: tenant.id, name: tenant.name, locale: tenant.locale },
 		contact: {
 			contactName: tenant.contactName,
