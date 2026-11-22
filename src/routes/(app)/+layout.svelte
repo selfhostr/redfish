@@ -6,7 +6,6 @@
 	import Skeleton from '$lib/components/ui/Skeleton.svelte';
 	import Toast from '$lib/components/ui/Toast.svelte';
 	import { appPathname } from '$lib/base-path';
-	import { switchTarget } from '$lib/client-switch';
 	let { data, children } = $props();
 
 	type NavLink = { href: string; label: string; match: string[] };
@@ -41,8 +40,6 @@
 	const adminActive = $derived(adminLinks.some(isActive));
 	const clientsActive = $derived(under('/tenants'));
 	const accountActive = $derived(under('/account'));
-
-	const afterSwitch = $derived(switchTarget(path));
 
 	// Squelette affiché seulement après un court délai (évite le clignotement) ;
 	// la page reste montée pour ne pas perdre la saisie en cas d'échec.
@@ -124,7 +121,7 @@
 {#snippet clientChoices(itemClass: string)}
 	{#if data.tenants.length > 1}
 		<form method="POST" action="/set-tenant" class="client-choices">
-			<input type="hidden" name="redirectTo" value={afterSwitch} />
+			<input type="hidden" name="redirectTo" value="/dashboard" />
 			<p class="rf-eyebrow group-label">Changer de client</p>
 			{#each data.tenants as t (t.id)}
 				{@const current = t.id === data.activeTenant?.id}

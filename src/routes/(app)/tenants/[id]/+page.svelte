@@ -26,6 +26,20 @@
 		</Button>
 	</header>
 
+	{#if data.welcome}
+		<div
+			class="flex flex-col gap-3 rounded-lg border border-line-strong bg-surface-1 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+		>
+			<p class="text-ink-dim">
+				Le client est créé et actif. Complétez son contact et son fuseau horaire si vous le
+				souhaitez, puis passez au tableau de bord.
+			</p>
+			<Button href="/dashboard" variant="primary" class="w-full sm:w-auto sm:shrink-0">
+				Continuer vers le tableau de bord
+			</Button>
+		</div>
+	{/if}
+
 	{#if !data.isActive}
 		<!-- Consulter les paramètres ne change pas le client actif : le changement est explicite. -->
 		<form

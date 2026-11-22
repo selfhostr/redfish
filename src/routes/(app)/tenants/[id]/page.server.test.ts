@@ -100,11 +100,12 @@ test('action update : operator non lié -> 403', async () => {
 	});
 });
 
-const view = (user: User, id: string, activeId?: string) =>
+const view = (user: User, id: string, activeId?: string, search = '') =>
 	Promise.resolve(
 		load({
 			locals: { user },
 			params: { id },
+			url: new URL(`http://localhost/tenants/${id}${search}`),
 			cookies: { get: () => activeId, delete: () => {} }
 		} as unknown as Parameters<typeof load>[0])
 	);
@@ -117,6 +118,13 @@ test('load : operator non lié -> 403, aucune donnée du client', async () => {
 test('load : client inexistant -> 403 ou 404', async () => {
 	const err = await view(operator, 'inexistant').catch((e: { status: number }) => e);
 	expect([403, 404]).toContain((err as { status: number }).status);
+});
+
+test('load : ?welcome=1 propose le tableau de bord seulement pour le client actif', async () => {
+	const on = (await view(operator, tenantId, tenantId, '?welcome=1')) as { welcome: boolean };
+	expect(on.welcome).toBe(true);
+	const off = (await view(operator, tenantId, tenantId)) as { welcome: boolean };
+	expect(off.welcome).toBe(false);
 });
 
 test('load : operator lié voit les paramètres de son client actif', async () => {

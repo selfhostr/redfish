@@ -1,17 +1,34 @@
 import { expect, test } from 'vitest';
-import { onboardingSteps, showOnboarding } from './onboarding';
+import { clientSettingsDone, onboardingSteps, showOnboarding } from './onboarding';
+
+const none = { settingsDone: false, listCount: 0, profileCount: 0, campaignCount: 0 };
 
 test("client qui n'a pas commencé : premiers pas affichés", () => {
-	expect(showOnboarding({ listCount: 0, profileCount: 0, campaignCount: 0 })).toBe(true);
-	expect(showOnboarding({ listCount: 1, profileCount: 1, campaignCount: 0 })).toBe(true);
+	expect(showOnboarding(none)).toBe(true);
+	expect(showOnboarding({ ...none, settingsDone: true, listCount: 1, profileCount: 1 })).toBe(true);
 });
 
-test('client actif (au moins une campagne) : premiers pas masqués, même incomplets', () => {
-	expect(showOnboarding({ listCount: 0, profileCount: 0, campaignCount: 2 })).toBe(false);
-	expect(showOnboarding({ listCount: 1, profileCount: 1, campaignCount: 1 })).toBe(false);
+test('client avec une campagne : premiers pas masqués, même incomplets', () => {
+	expect(showOnboarding({ ...none, campaignCount: 2 })).toBe(false);
+	expect(
+		showOnboarding({ settingsDone: true, listCount: 1, profileCount: 1, campaignCount: 1 })
+	).toBe(false);
 });
 
-test('les étapes suivent les compteurs', () => {
-	const steps = onboardingSteps({ listCount: 1, profileCount: 0, campaignCount: 0 });
-	expect(steps.map((s) => s.done)).toEqual([true, false, false]);
+test('les étapes suivent les compteurs et gardent leur ordre', () => {
+	const steps = onboardingSteps({ ...none, settingsDone: true, listCount: 1 }, 't1');
+	expect(steps.map((s) => s.done)).toEqual([true, true, false, false]);
+	expect(steps.map((s) => s.href)).toEqual([
+		'/tenants/t1',
+		'/lists',
+		'/sending-profiles',
+		'/campaigns/new'
+	]);
+});
+
+test("paramètres complétés dès qu'un contact est renseigné", () => {
+	expect(clientSettingsDone({ contactEmail: 'a@b.ch' })).toBe(true);
+	expect(clientSettingsDone({ contactName: 'Alice', contactEmail: '' })).toBe(true);
+	expect(clientSettingsDone({ contactName: ' ', contactEmail: null })).toBe(false);
+	expect(clientSettingsDone(null)).toBe(false);
 });

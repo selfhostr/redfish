@@ -28,9 +28,14 @@ test('login then client creation', async ({ page }) => {
 	await page.getByRole('button', { name: 'Nouveau client' }).click();
 	await page.getByLabel('Nom', { exact: true }).fill('Client E2E SA');
 	await page.getByRole('button', { name: 'Créer le client' }).click();
-	// The new client becomes the active one and the dashboard shows its first steps.
-	await expect(page).toHaveURL(/\/dashboard$/);
+	// The new client becomes the active one and its settings page opens first.
+	await expect(page).toHaveURL(/\/tenants\/[^/]+\?welcome=1$/);
+	await expect(page.getByRole('heading', { name: 'Client E2E SA' })).toBeVisible();
 	await expect(page.getByRole('button', { name: 'Client actif : Client E2E SA' })).toBeVisible();
+	await page.getByRole('link', { name: 'Continuer vers le tableau de bord' }).click();
+	await expect(page).toHaveURL(/\/dashboard$/);
+	await expect(page.getByRole('heading', { name: 'Client E2E SA', level: 1 })).toBeVisible();
+	await expect(page.getByRole('link', { name: 'Paramètres', exact: true })).toBeVisible();
 	await expect(page.getByRole('heading', { name: 'Premiers pas' })).toBeVisible();
 });
 
