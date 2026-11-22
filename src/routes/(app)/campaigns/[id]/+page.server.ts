@@ -16,7 +16,12 @@ import {
 } from '$lib/server/campaigns';
 import { completeCampaign } from '$lib/server/campaigns/completion';
 import { LaunchError, launchCampaign } from '$lib/server/campaigns/launch';
-import { listFailedRecipients, retryFailedSends } from '$lib/server/campaigns/retry';
+import {
+	listFailedRecipients,
+	listRetryingRecipients,
+	retryFailedSends
+} from '$lib/server/campaigns/retry';
+import { MAX_ATTEMPTS } from '$lib/server/jobs/queue';
 import { runPreflight } from '$lib/server/campaigns/preflight';
 import { recordManualReports } from '$lib/server/tracking/events';
 import { campaignFunnel } from '$lib/server/tracking/stats';
@@ -51,6 +56,8 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 		preflight: await runPreflight(campaign.id),
 		funnel: await campaignFunnel(campaign.id),
 		failedRecipients: listFailedRecipients(campaign.id),
+		retryingRecipients: listRetryingRecipients(campaign.id),
+		maxAttempts: MAX_ATTEMPTS,
 		progress: campaign.status === 'sending' ? sendingProgress(campaign.id) : null
 	};
 };
