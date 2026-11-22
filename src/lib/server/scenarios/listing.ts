@@ -1,4 +1,4 @@
-import { asc } from 'drizzle-orm';
+import { asc, isNull } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { scenarios } from '$lib/server/db/schema';
 import type { Scenario } from '$lib/server/db/schema';
@@ -14,6 +14,7 @@ export type ScenarioSummary = {
 	locale: string;
 	tags: string[];
 	enabled: boolean;
+	archived: boolean;
 };
 
 export type ScenarioMeta = Pick<
@@ -31,7 +32,8 @@ export const toSummary = (s: Scenario): ScenarioSummary => ({
 	difficulty: s.difficulty,
 	locale: s.locale,
 	tags: parseTags(s.tagsJson),
-	enabled: s.enabled
+	enabled: s.enabled,
+	archived: s.archivedAt !== null
 });
 
 export const toMeta = (s: Scenario): ScenarioMeta => ({
@@ -50,8 +52,15 @@ export function getScenarioById(id: string): Scenario | undefined {
 		.find((s) => s.id === id);
 }
 
-export function listScenarioSummaries(): ScenarioSummary[] {
-	return db.select().from(scenarios).orderBy(asc(scenarios.title)).all().map(toSummary);
+/** Liste les scénarios ; les archivés sont masqués sauf avec `includeArchived`. */
+export function listScenarioSummaries(includeArchived = false): ScenarioSummary[] {
+	return db
+		.select()
+		.from(scenarios)
+		.where(includeArchived ? undefined : isNull(scenarios.archivedAt))
+		.orderBy(asc(scenarios.title))
+		.all()
+		.map(toSummary);
 }
 
 export function readFilters(params: URLSearchParams): ScenarioFilters {

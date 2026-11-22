@@ -23,6 +23,8 @@ export const AUDIT_ACTIONS = {
 	'scenario.create': 'Scénario créé',
 	'scenario.import': 'Scénario importé',
 	'scenario.delete': 'Scénario supprimé',
+	'scenario.archive': 'Scénario archivé',
+	'scenario.restore': 'Scénario restauré',
 	'sending_profile.create': "Profil d'envoi créé",
 	'sending_profile.update': "Profil d'envoi modifié",
 	'sending_profile.delete': "Profil d'envoi supprimé",

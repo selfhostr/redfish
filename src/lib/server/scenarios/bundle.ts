@@ -239,7 +239,8 @@ export async function importBundle(input: unknown): Promise<{ key: string }> {
 				emailTemplate: email,
 				landingTemplate: landing,
 				awarenessTemplate: awareness,
-				enabled: true
+				enabled: true,
+				archivedAt: null
 			}
 		})
 		.run();

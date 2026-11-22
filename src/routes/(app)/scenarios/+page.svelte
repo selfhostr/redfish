@@ -11,6 +11,9 @@
 	const isSuperadmin = $derived(data.user.role === 'superadmin');
 	let importing = $state(false);
 	let fileInput: HTMLInputElement | undefined = $state();
+	let pendingKey: string | null = $state(null);
+	const pending = $derived(data.scenarios.find((s) => s.key === pendingKey));
+	const pendingUsage = $derived(pending ? (data.usage[pending.key] ?? 0) : 0);
 
 	const hasFilters = $derived(
 		Boolean(
@@ -20,7 +23,19 @@
 	const resetHref = $derived(
 		withParams(page.url, { q: null, category: null, difficulty: null, locale: null })
 	);
+	const archivedHref = $derived(withParams(page.url, { archived: data.showArchived ? null : '1' }));
 </script>
+
+{#snippet rowAction(s: PageData['scenarios'][number])}
+	{#if s.archived}
+		<form method="POST" action="?/restore" use:enhance>
+			<input type="hidden" name="key" value={s.key} />
+			<Button type="submit" variant="secondary">Restaurer</Button>
+		</form>
+	{:else}
+		<Button variant="danger" onclick={() => (pendingKey = s.key)}>Supprimer</Button>
+	{/if}
+{/snippet}
 
 <main class="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-6 md:px-6 md:py-8">
 	<div class="flex flex-wrap items-center justify-between gap-3">
@@ -61,6 +76,15 @@
 
 	{#if form?.error}
 		<ErrorNotice message={form.error} />
+	{:else if form && 'removed' in form}
+		<p role="status" class="text-ink">
+			{form.removed === 'deleted' ? 'Scénario supprimé' : 'Scénario archivé'} :
+			<span class="font-mono">{form.key}</span>
+		</p>
+	{:else if form && 'restored' in form}
+		<p role="status" class="text-ink">
+			Scénario restauré : <span class="font-mono">{form.key}</span>
+		</p>
 	{:else if form?.success}
 		<p role="status" class="text-ink">
 			Scénario importé : <span class="font-mono">{form.key}</span>
@@ -118,7 +142,48 @@
 		</form>
 	</Panel>
 
-	<p class="text-ink-dim">{data.scenarios.length} sur {data.total}</p>
+	<div class="flex flex-wrap items-center justify-between gap-3">
+		<p class="text-ink-dim">{data.scenarios.length} sur {data.total}</p>
+		<Button href={archivedHref} variant="ghost" size="sm">
+			{data.showArchived ? 'Masquer les archivés' : 'Afficher les archivés'}
+		</Button>
+	</div>
+
+	{#if pending && isSuperadmin}
+		<Panel>
+			<form
+				method="POST"
+				action="?/delete"
+				class="flex flex-col gap-3"
+				use:enhance={() => {
+					return async ({ update }) => {
+						await update();
+						pendingKey = null;
+					};
+				}}
+			>
+				<input type="hidden" name="key" value={pending.key} />
+				<p class="text-ink">
+					{#if pendingUsage > 0}
+						Le scénario « {pending.title} » est utilisé par {pendingUsage}
+						{pendingUsage > 1 ? 'campagnes' : 'campagne'} : il sera archivé (masqué de la liste et du
+						choix pour les nouvelles campagnes) mais restera visible dans les campagnes et rapports existants.
+					{:else}
+						Supprimer définitivement le scénario « {pending.title} » ? Il n'est utilisé par aucune campagne.
+						Cette action est irréversible.
+					{/if}
+				</p>
+				<div class="flex gap-3 max-md:flex-col">
+					<Button type="submit" variant="danger" class="max-md:w-full">
+						{pendingUsage > 0 ? 'Archiver' : 'Supprimer définitivement'}
+					</Button>
+					<Button variant="ghost" class="max-md:w-full" onclick={() => (pendingKey = null)}>
+						Annuler
+					</Button>
+				</div>
+			</form>
+		</Panel>
+	{/if}
 
 	{#if data.total === 0}
 		<EmptyState
@@ -150,7 +215,9 @@
 							>
 								{s.title}
 							</a>
-							{#if s.enabled}
+							{#if s.archived}
+								<Plate variant="neutral">Archivé</Plate>
+							{:else if s.enabled}
 								<Plate variant="signal">Activé</Plate>
 							{:else}
 								<Plate variant="neutral">Désactivé</Plate>
@@ -168,7 +235,7 @@
 						{#if s.tags.length > 0}
 							<p class="text-xs [overflow-wrap:anywhere] text-ink-dim">{s.tags.join(', ')}</p>
 						{/if}
-						<div>
+						<div class="flex flex-wrap gap-2">
 							<Button
 								href="/scenarios/{encodeURIComponent(s.key)}/export"
 								download
@@ -176,6 +243,9 @@
 							>
 								Exporter
 							</Button>
+							{#if isSuperadmin}
+								{@render rowAction(s)}
+							{/if}
 						</div>
 					</li>
 				{/each}
@@ -191,7 +261,7 @@
 							<th class="rf-label px-4 py-3 font-medium">Langue</th>
 							<th class="rf-label px-4 py-3 font-medium">Tags</th>
 							<th class="rf-label px-4 py-3 font-medium">État</th>
-							<th class="rf-label px-4 py-3 font-medium">Export</th>
+							<th class="rf-label px-4 py-3 font-medium">Actions</th>
 						</tr>
 					</thead>
 					<tbody class="divide-y divide-line">
@@ -218,20 +288,27 @@
 									{s.tags.length > 0 ? s.tags.join(', ') : 'n/d'}
 								</td>
 								<td class="px-4 py-3">
-									{#if s.enabled}
+									{#if s.archived}
+										<Plate variant="neutral">Archivé</Plate>
+									{:else if s.enabled}
 										<Plate variant="signal">Activé</Plate>
 									{:else}
 										<Plate variant="neutral">Désactivé</Plate>
 									{/if}
 								</td>
 								<td class="px-4 py-3">
-									<Button
-										href="/scenarios/{encodeURIComponent(s.key)}/export"
-										download
-										variant="secondary"
-									>
-										Exporter
-									</Button>
+									<div class="flex flex-wrap gap-2">
+										<Button
+											href="/scenarios/{encodeURIComponent(s.key)}/export"
+											download
+											variant="secondary"
+										>
+											Exporter
+										</Button>
+										{#if isSuperadmin}
+											{@render rowAction(s)}
+										{/if}
+									</div>
 								</td>
 							</tr>
 						{/each}
