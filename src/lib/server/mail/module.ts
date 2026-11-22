@@ -1,3 +1,8 @@
+// Module d'envoi intégré de redfish — plateforme open-source (MIT) de
+// sensibilisation à la sécurité AUTORISÉE : https://github.com/selfhostr/redfish
+// Serveur SMTP envoi-seul et verrouillé (authentification obligatoire, aucun
+// relais ouvert), activé en option. Usage défensif uniquement, accord écrit de
+// l'organisation ciblée requis ; aucun identifiant n'est capturé (cf. README « Limits »).
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
