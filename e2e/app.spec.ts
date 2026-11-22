@@ -55,6 +55,7 @@ test('the navigation separates the client from the administration', async ({ pag
 	await expect(nav.locator('#admin-menu').getByRole('link', { name: 'Clients' })).toHaveCount(0);
 	// An operator does not see the superadmin screens.
 	await expect(nav.getByRole('link', { name: 'Utilisateurs' })).toHaveCount(0);
+	await expect(nav.getByRole('link', { name: 'Délivrabilité' })).toHaveCount(0);
 	await page.keyboard.press('Escape');
 	await expect(admin).toHaveAttribute('aria-expanded', 'false');
 	await expect(admin).toBeFocused();

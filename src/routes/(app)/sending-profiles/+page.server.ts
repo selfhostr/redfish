@@ -10,13 +10,25 @@ import { rateLimit } from '$lib/server/ratelimit';
 import { activeTenantId } from '$lib/server/active-tenant';
 import { audit } from '$lib/server/audit';
 import { assertTenantAccess } from '$lib/server/tenant';
+import { MAIL_MODULE_HOST, mailModuleConfig } from '$lib/server/mail/module';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals, cookies }) => {
 	if (!locals.user) throw redirect(303, '/login');
 	const tenantId = await activeTenantId(locals.user, cookies);
 	if (tenantId) await assertTenantAccess(locals.user, tenantId);
-	return { profiles: await listSendingProfiles(tenantId), userEmail: locals.user.email };
+	const profiles = await listSendingProfiles(tenantId);
+	// Un profil qui passe par le module doit envoyer depuis le domaine signé (DKIM/DMARC).
+	const moduleDomain = mailModuleConfig()?.domain ?? null;
+	const wrongDomainIds = profiles
+		.filter(
+			(p) =>
+				p.host === MAIL_MODULE_HOST &&
+				moduleDomain &&
+				p.fromAddress.split('@').pop()?.toLowerCase() !== moduleDomain
+		)
+		.map((p) => p.id);
+	return { profiles, userEmail: locals.user.email, wrongDomainIds };
 };
 
 export const actions: Actions = {
