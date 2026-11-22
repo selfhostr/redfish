@@ -4,6 +4,8 @@ Format based on Keep a Changelog. Versions follow `0.MINOR.PATCH` until 1.0.
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-22
+
 ### Added
 
 - Report tracking: `{{reportUrl}}` placeholder with a `/t/r` thank-you page, and manual entry of reports from pasted e-mail addresses.
