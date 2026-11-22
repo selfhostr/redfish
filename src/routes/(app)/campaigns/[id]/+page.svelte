@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import PreflightPanel from '$lib/components/campaigns/PreflightPanel.svelte';
+	import SendingPaceFields from '$lib/components/campaigns/SendingPaceFields.svelte';
 	import StatusPill from '$lib/components/StatusPill.svelte';
 	import {
 		Button,
@@ -212,6 +213,26 @@
 					<ErrorNotice title="Envoi bloqué" message={data.canSend.reason} />
 				{/if}
 
+				<form
+					method="POST"
+					action="?/pace"
+					use:enhance={() =>
+						({ update }) =>
+							update({ reset: false })}
+					class="flex flex-col gap-3"
+				>
+					<SendingPaceFields
+						spreadHours={data.campaign.spreadHours}
+						workingHoursOnly={data.campaign.workingHoursOnly}
+						workStartHour={data.campaign.workStartHour}
+						workEndHour={data.campaign.workEndHour}
+						timezone={data.timezone}
+					/>
+					<Button type="submit" variant="secondary" size="sm" class="max-md:w-full sm:self-start">
+						Enregistrer le rythme d'envoi
+					</Button>
+				</form>
+
 				{#if data.campaign.status === 'draft'}
 					<form
 						method="POST"
@@ -259,6 +280,42 @@
 					</Button>
 				</form>
 			</div>
+		</Panel>
+	{/if}
+
+	{#if data.progress}
+		<Panel>
+			{#snippet header()}
+				<h2 class="rf-eyebrow">Avancement de l'envoi</h2>
+			{/snippet}
+			<dl class="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-2 md:gap-x-6">
+				<dt class="text-ink-dim">Envoyés</dt>
+				<dd class="text-ink">{data.progress.sent} / {data.progress.planned}</dd>
+				{#if data.campaign.spreadHours}
+					<dt class="text-ink-dim">Étalement</dt>
+					<dd class="text-ink">
+						{data.campaign.spreadHours % 24 === 0
+							? `${data.campaign.spreadHours / 24} jour(s)`
+							: `${data.campaign.spreadHours} heure(s)`}{data.campaign.workingHoursOnly
+							? `, heures ouvrées ${data.campaign.workStartHour} h à ${data.campaign.workEndHour} h (lundi à vendredi)`
+							: ''}
+					</dd>
+				{/if}
+				<dt class="text-ink-dim">Prochain envoi</dt>
+				<dd class="text-ink">
+					{#if data.progress.nextAt}
+						<LocalTime value={data.progress.nextAt} timeZone={data.timezone} />
+					{:else}
+						Aucun envoi en attente
+					{/if}
+				</dd>
+				{#if data.progress.endAt}
+					<dt class="text-ink-dim">Fin de la fenêtre d'envoi</dt>
+					<dd class="text-ink">
+						<LocalTime value={data.progress.endAt} timeZone={data.timezone} />
+					</dd>
+				{/if}
+			</dl>
 		</Panel>
 	{/if}
 
@@ -373,8 +430,9 @@
 			<div class="flex flex-col gap-4">
 				<p class="text-ink-dim">
 					La campagne est clôturée automatiquement une fois les envois terminés et la période
-					d'observation écoulée. Clôturer maintenant fige les statistiques : les événements suivants
-					ne sont plus enregistrés. Cette action est irréversible.
+					d'observation écoulée (comptée depuis le dernier envoi planifié). Clôturer maintenant
+					annule les envois encore planifiés et fige les statistiques : les événements suivants ne
+					sont plus enregistrés. Cette action est irréversible.
 				</p>
 				{#if !showComplete}
 					<div>

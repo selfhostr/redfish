@@ -122,3 +122,11 @@ test('retryFailedSends re-queues failed recipients only while the campaign is no
 	expect(rec()).toMatchObject({ sendStatus: 'pending', sendError: null });
 	expect(db.select().from(jobs).where(eq(jobs.status, 'queued')).all().length).toBe(1);
 });
+
+test('a planned send of a campaign no longer sending is skipped, nothing is sent', async () => {
+	db.update(campaigns).set({ status: 'completed' }).where(eq(campaigns.id, campaignId)).run();
+	await enqueue('send-email', { recipientId });
+	const res = await runDueJobs(new Date(Date.now() + 1000));
+	expect(res).toEqual({ ran: 1, failed: 0 });
+	expect(rec().sendStatus).toBe('skipped');
+});

@@ -78,6 +78,13 @@
       "when": 1795284367286,
       "tag": "0010_tenant_timezone",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1795323779483,
+      "tag": "0011_staggered_sending",
+      "breakpoints": true
     }
   ]
 }

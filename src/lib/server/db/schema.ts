@@ -210,6 +210,12 @@ export const campaigns = sqliteTable(
 		launchError: text('launch_error'),
 		/** Clôture (automatique après la fenêtre d'observation, ou manuelle) ; null tant que non terminée. */
 		completedAt: integer('completed_at', { mode: 'timestamp' }),
+		/** Étalement des envois en heures ; null = tout envoyer d'un coup. */
+		spreadHours: integer('spread_hours'),
+		/** Étalement limité aux heures ouvrées (lundi à vendredi, fuseau du client). */
+		workingHoursOnly: integer('working_hours_only', { mode: 'boolean' }).notNull().default(false),
+		workStartHour: integer('work_start_hour').notNull().default(8),
+		workEndHour: integer('work_end_hour').notNull().default(18),
 		createdAt: createdAt()
 	},
 	(t) => [
@@ -250,6 +256,8 @@ export const campaignRecipients = sqliteTable(
 			.notNull()
 			.default('pending'),
 		sentAt: integer('sent_at', { mode: 'timestamp' }),
+		/** Heure d'envoi planifiée au lancement (étalement). */
+		plannedAt: integer('planned_at', { mode: 'timestamp' }),
 		/** Motif court (sans secret) d'un échec d'envoi définitif. */
 		sendError: text('send_error')
 	},

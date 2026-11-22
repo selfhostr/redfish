@@ -21,6 +21,7 @@ import {
 	getCampaign,
 	latestTrackingDomain,
 	listCampaigns,
+	parseSendingPace,
 	scheduleCampaign
 } from './campaigns';
 import { createTenant } from './tenant';
@@ -144,4 +145,57 @@ test('latestTrackingDomain: domaine de la campagne la plus récente, scopé au t
 	await createCampaign({ ...base, trackingDomain: 'new.example.test' });
 	expect(await latestTrackingDomain(tenantId)).toBe('new.example.test');
 	expect(await latestTrackingDomain(otherTenantId)).toBeNull();
+});
+
+const form = (v: Record<string, string>) => {
+	const f = new FormData();
+	for (const [k, x] of Object.entries(v)) f.set(k, x);
+	return f;
+};
+
+test('parseSendingPace: all at once by default', () => {
+	expect(parseSendingPace(form({}))).toMatchObject({ spreadHours: null, workingHoursOnly: false });
+	expect(parseSendingPace(form({ sendMode: 'all', spreadAmount: '3' }))).toMatchObject({
+		spreadHours: null
+	});
+});
+
+test('parseSendingPace: spread in hours or days, with working hours', () => {
+	expect(
+		parseSendingPace(form({ sendMode: 'spread', spreadAmount: '3', spreadUnit: 'days' }))
+	).toEqual({ spreadHours: 72, workingHoursOnly: false, workStartHour: 8, workEndHour: 18 });
+	expect(
+		parseSendingPace(
+			form({
+				sendMode: 'spread',
+				spreadAmount: '6',
+				spreadUnit: 'hours',
+				workingHoursOnly: 'on',
+				workStartHour: '9',
+				workEndHour: '17'
+			})
+		)
+	).toEqual({ spreadHours: 6, workingHoursOnly: true, workStartHour: 9, workEndHour: 17 });
+});
+
+test('parseSendingPace: rejects out-of-range durations and inverted hours', () => {
+	for (const v of [
+		{ spreadAmount: '0', spreadUnit: 'hours' },
+		{ spreadAmount: '31', spreadUnit: 'days' },
+		{ spreadAmount: '1.5', spreadUnit: 'hours' },
+		{ spreadAmount: 'x', spreadUnit: 'days' }
+	])
+		expect(parseSendingPace(form({ sendMode: 'spread', ...v }))).toHaveProperty('error');
+	expect(
+		parseSendingPace(
+			form({
+				sendMode: 'spread',
+				spreadAmount: '2',
+				spreadUnit: 'days',
+				workingHoursOnly: 'on',
+				workStartHour: '18',
+				workEndHour: '8'
+			})
+		)
+	).toHaveProperty('error');
 });

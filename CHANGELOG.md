@@ -10,6 +10,7 @@ Format based on Keep a Changelog. Versions follow `0.MINOR.PATCH` until 1.0.
 - Person data rights: edit, delete, anonymise and export one person's data, and retention of targets never used in a campaign.
 - Per-client timezone for scheduling, date display and CSV exports.
 - Static demo (`npm run build:demo`): the real interface with recorded fictional data, served under `/demo/` without a server.
+- Staggered sending: a campaign can spread its e-mails over 1 hour to 30 days in random recipient order, optionally only during working hours (weekdays, client timezone). The campaign page shows sent / planned, the next send and the end of the window; the observation period starts after the last planned send, and closing a campaign cancels the remaining sends.
 
 ### Fixed
 

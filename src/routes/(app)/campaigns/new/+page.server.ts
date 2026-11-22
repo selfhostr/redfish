@@ -6,7 +6,7 @@ import { scenarios } from '$lib/server/db/schema';
 import { activeTenantId } from '$lib/server/active-tenant';
 import { audit } from '$lib/server/audit';
 import { createAuthorization, latestValidAuthorization } from '$lib/server/authorization';
-import { createCampaign, latestTrackingDomain } from '$lib/server/campaigns';
+import { createCampaign, latestTrackingDomain, parseSendingPace } from '$lib/server/campaigns';
 import { listSendingProfiles } from '$lib/server/sending-profiles';
 import { countTargetsByList, listLists } from '$lib/server/targets';
 import { assertTenantAccess, tenantTimezone } from '$lib/server/tenant';
@@ -88,6 +88,8 @@ export const actions: Actions = {
 			return fail(400, { error: 'Champs requis manquants' });
 		if (!reference || !approvedBy || !validFrom || !validUntil)
 			return fail(400, { error: 'Autorisation requise (référence, approbateur, période)' });
+		const pace = parseSendingPace(data);
+		if ('error' in pace) return fail(400, { error: pace.error });
 
 		let campaignId: string;
 		try {
@@ -98,7 +100,8 @@ export const actions: Actions = {
 				sendingProfileId,
 				targetListId,
 				trackingDomain,
-				awarenessMessage: str('awarenessMessage') || null
+				awarenessMessage: str('awarenessMessage') || null,
+				pace
 			});
 			campaignId = campaign.id;
 			await createAuthorization({
@@ -116,7 +119,7 @@ export const actions: Actions = {
 			tenantId,
 			targetType: 'campaign',
 			targetId: campaignId,
-			details: { name, reference }
+			details: { name, reference, spreadHours: pace.spreadHours }
 		});
 		throw redirect(303, `/campaigns/${campaignId}`);
 	}

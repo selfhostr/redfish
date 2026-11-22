@@ -27,7 +27,12 @@ export async function launchDueCampaigns(now = new Date()): Promise<number> {
 			await launchCampaign(id, now);
 			launched++;
 		} catch (e) {
-			if (e instanceof LaunchError && (e.code === 'preflight_failed' || e.code === 'empty_list')) {
+			if (
+				e instanceof LaunchError &&
+				(e.code === 'preflight_failed' ||
+					e.code === 'empty_list' ||
+					e.code === 'window_unauthorized')
+			) {
 				// Échec durable : on arrête de réessayer, la campagne repasse en brouillon.
 				db.update(campaigns)
 					.set({ status: 'draft', scheduledAt: null, launchError: e.message })

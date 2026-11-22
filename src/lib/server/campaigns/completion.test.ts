@@ -23,7 +23,7 @@ import { createTenant } from '../tenant';
 import { anonymizeExpired } from '../retention';
 import { recordEvent } from '../tracking/events';
 import { tenantTrend } from '../tracking/trends';
-import { completeDueCampaigns, observationDays } from './completion';
+import { completeCampaign, completeDueCampaigns, observationDays } from './completion';
 
 const DAY = 86_400_000;
 const sentAt = new Date('2026-01-01T00:00:00Z');
@@ -171,4 +171,41 @@ test('après clôture, les événements de tracking ne sont plus enregistrés', 
 		.map((e) => e.type)
 		.sort();
 	expect(types).toEqual(['clicked', 'sent']);
+});
+
+test('envoi étalé : la fenêtre d’observation part du dernier envoi planifié', () => {
+	const planned = new Date(sentAt.getTime() + 5 * DAY);
+	db.update(campaignRecipients)
+		.set({ plannedAt: sentAt })
+		.where(eq(campaignRecipients.id, recipientId))
+		.run();
+	db.insert(campaignRecipients)
+		.values({ campaignId, targetId, token: 'tok2', sendStatus: 'skipped', plannedAt: planned })
+		.run();
+	expect(completeDueCampaigns(new Date(sentAt.getTime() + 15 * DAY))).toEqual([]);
+	expect(completeDueCampaigns(new Date(planned.getTime() + 15 * DAY))).toEqual([campaignId]);
+});
+
+test('clôture manuelle : annule les envois encore planifiés', () => {
+	const pendingId = db
+		.insert(campaignRecipients)
+		.values({ campaignId, targetId, token: 'tok3', sendStatus: 'pending' })
+		.returning()
+		.get().id;
+	db.insert(jobs)
+		.values({
+			type: 'send-email',
+			payloadJson: JSON.stringify({ recipientId: pendingId }),
+			runAt: new Date(sentAt.getTime() + DAY),
+			status: 'queued'
+		})
+		.run();
+	expect(completeCampaign(campaignId, sentAt)).toBe(true);
+	expect(db.select().from(jobs).all()).toHaveLength(0);
+	const rec = (id: string) =>
+		db.select().from(campaignRecipients).where(eq(campaignRecipients.id, id)).get()!;
+	expect(rec(pendingId).sendStatus).toBe('skipped');
+	// Le destinataire déjà envoyé n'est pas touché.
+	expect(rec(recipientId).sendStatus).toBe('sent');
+	expect(completeCampaign(campaignId, sentAt)).toBe(false);
 });

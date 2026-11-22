@@ -56,6 +56,17 @@ export async function sendRecipient(recipientId: string): Promise<void> {
 	const campaign = db.select().from(campaigns).where(eq(campaigns.id, recipient.campaignId)).get();
 	if (!campaign) throw new Error('Campagne introuvable');
 
+	// Campagne clôturée (arrêtée) avant l'heure planifiée : plus aucun envoi.
+	if (campaign.status !== 'sending') {
+		db.update(campaignRecipients)
+			.set({ sendStatus: 'skipped' })
+			.where(
+				and(eq(campaignRecipients.id, recipientId), eq(campaignRecipients.sendStatus, 'pending'))
+			)
+			.run();
+		return;
+	}
+
 	// Défense TOCTOU : l'autorisation a pu expirer entre le lancement et l'envoi.
 	const check = await canSendCampaign(campaign.id, new Date());
 	if (!check.ok) {

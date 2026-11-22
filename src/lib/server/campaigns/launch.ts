@@ -1,14 +1,22 @@
 import { randomBytes } from 'node:crypto';
 import { eq } from 'drizzle-orm';
 import { db } from '$lib/server/db';
+import { formatZoned } from '$lib/timezone';
 import { campaignRecipients, campaigns, jobs, targets } from '$lib/server/db/schema';
-import { canSendCampaign } from '../authorization';
+import { canSendCampaign, listAuthorizations } from '../authorization';
 import { isValidEmail } from '../targets';
+import { tenantTimezone } from '../tenant';
+import { DEFAULT_WORK_END_HOUR, DEFAULT_WORK_START_HOUR, planSends } from './stagger';
 import { runPreflight } from './preflight';
 import type { PreflightReport } from './preflight';
 
 export type LaunchErrorCode =
-	'not_found' | 'bad_status' | 'unauthorized' | 'empty_list' | 'preflight_failed';
+	| 'not_found'
+	| 'bad_status'
+	| 'unauthorized'
+	| 'empty_list'
+	| 'preflight_failed'
+	| 'window_unauthorized';
 
 /** Échec de lancement attendu (mappable en message utilisateur). */
 export class LaunchError extends Error {
@@ -22,15 +30,18 @@ export class LaunchError extends Error {
 	}
 }
 
-/** Écart entre deux envois consécutifs (enfilement étalé). */
+/** Écart minimal entre deux envois consécutifs (limite de débit SMTP). */
 export const STAGGER_MS = 3_000;
 
 const newToken = () => randomBytes(32).toString('base64url');
 
 /**
- * Lance une campagne : re-vérifie l'autorisation, crée un destinataire (token
- * opaque) par cible et un job `send-email` étalé par destinataire, puis passe
- * la campagne à « sending ». Tout est écrit dans une seule transaction.
+ * Lance une campagne : re-vérifie l'autorisation, mélange les cibles, planifie
+ * un créneau d'envoi par cible (d'un coup ou étalé sur la fenêtre choisie, cf.
+ * planSends), crée un destinataire (token opaque, heure planifiée) et un job
+ * `send-email` dû à cette heure par cible, puis passe la campagne à
+ * « sending ». Tout est écrit dans une seule transaction. Chaque créneau doit
+ * être couvert par une autorisation, sinon le lancement est refusé.
  */
 export async function launchCampaign(
 	campaignId: string,
@@ -51,6 +62,11 @@ export async function launchCampaign(
 		throw new LaunchError('preflight_failed', `Pré-lancement bloqué : ${errs.join(' ')}`, report);
 	}
 
+	const auths = await listAuthorizations(campaignId);
+	const covered = (t: number) =>
+		auths.some((a) => a.validFrom.getTime() <= t && t <= a.validUntil.getTime());
+	const timeZone = tenantTimezone(campaign.tenantId);
+
 	return db.transaction(
 		(tx) => {
 			// Re-lecture dans la transaction : évite un double lancement concurrent.
@@ -61,14 +77,34 @@ export async function launchCampaign(
 			// Cibles anonymisées ou à adresse invalide : exclues (cf. pré-lancement).
 			const list = all.filter((t) => !t.anonymizedAt && isValidEmail(t.email));
 			if (list.length === 0) throw new LaunchError('empty_list', 'Liste de cibles vide');
-			list.forEach((t, index) => {
+			const plan = planSends({
+				items: list,
+				start: now,
+				spreadHours: fresh.spreadHours,
+				workingHours: fresh.workingHoursOnly
+					? {
+							startHour: fresh.workStartHour ?? DEFAULT_WORK_START_HOUR,
+							endHour: fresh.workEndHour ?? DEFAULT_WORK_END_HOUR
+						}
+					: null,
+				timeZone,
+				minGapMs: STAGGER_MS
+			});
+			const last = plan[plan.length - 1].at;
+			if (!plan.every((p) => covered(p.at.getTime())))
+				throw new LaunchError(
+					'window_unauthorized',
+					`L'autorisation ne couvre pas toute la fenêtre d'envoi (dernier envoi prévu le ${formatZoned(last, timeZone)}).`
+				);
+			for (const { item: t, at } of plan) {
 				const rec = tx
 					.insert(campaignRecipients)
 					.values({
 						campaignId,
 						targetId: t.id,
 						token: newToken(),
-						sendStatus: 'pending'
+						sendStatus: 'pending',
+						plannedAt: at
 					})
 					.returning()
 					.get();
@@ -77,11 +113,11 @@ export async function launchCampaign(
 					.values({
 						type: 'send-email',
 						payloadJson: JSON.stringify({ recipientId: rec.id }),
-						runAt: new Date(now.getTime() + index * STAGGER_MS),
+						runAt: at,
 						status: 'queued'
 					})
 					.run();
-			});
+			}
 			tx.update(campaigns)
 				.set({ status: 'sending', launchError: null })
 				.where(eq(campaigns.id, campaignId))

@@ -4,6 +4,7 @@
 	import { Button, ErrorNotice, Field, Panel } from '$lib/components/ui';
 	import AuthorizationFields from '$lib/components/campaigns/AuthorizationFields.svelte';
 	import ScenarioPicker from '$lib/components/campaigns/ScenarioPicker.svelte';
+	import SendingPaceFields from '$lib/components/campaigns/SendingPaceFields.svelte';
 	import type { ActionData, PageData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -239,6 +240,10 @@
 			timezone={data.timezone}
 			{hasAuthDefault}
 		/>
+
+		<Panel>
+			<SendingPaceFields timezone={data.timezone} />
+		</Panel>
 
 		<details class="advanced" bind:open={advancedOpen}>
 			<summary>Options avancées</summary>

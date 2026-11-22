@@ -29,6 +29,7 @@ export const AUDIT_ACTIONS = {
 	'campaign.create': 'Campagne créée',
 	'campaign.authorize': 'Autorisation ajoutée',
 	'campaign.schedule': 'Campagne planifiée',
+	'campaign.pace': "Rythme d'envoi modifié",
 	'campaign.retry_failed': 'Envois en échec relancés',
 	'campaign.launch': 'Campagne lancée',
 	'campaign.complete': 'Campagne clôturée',
