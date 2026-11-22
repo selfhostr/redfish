@@ -106,6 +106,43 @@ export async function changePassword(
 	return { ok: true, revoked: revokeOtherSessions(userId, currentSessionId) };
 }
 
+/* ---------- Adresse e-mail ---------- */
+
+export type ChangeEmailResult =
+	| { ok: true; revoked: number }
+	| { ok: false; error: 'invalid' | 'bad_password' | 'same' | 'unavailable' };
+
+const EMAIL_FORMAT = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/**
+ * Change l'adresse de connexion après vérification du mot de passe actuel.
+ * L'adresse est normalisée comme à la connexion (trim + minuscules). Le mot de
+ * passe est vérifié AVANT le test d'unicité : sans lui, on ne révèle pas si une
+ * adresse est déjà prise. Les autres sessions sont fermées, comme pour le mot de passe.
+ */
+export async function changeEmail(
+	userId: string,
+	password: string,
+	rawEmail: string,
+	currentSessionId: string | null
+): Promise<ChangeEmailResult> {
+	const email = rawEmail.trim().toLowerCase();
+	if (email.length > 254 || !EMAIL_FORMAT.test(email)) return { ok: false, error: 'invalid' };
+	const fresh = db.select().from(users).where(eq(users.id, userId)).get();
+	if (!fresh || !(await verifyPassword(fresh.passwordHash, password)))
+		return { ok: false, error: 'bad_password' };
+	if (fresh.email === email) return { ok: false, error: 'same' };
+	const taken = db.select({ id: users.id }).from(users).where(eq(users.email, email)).get();
+	if (taken) return { ok: false, error: 'unavailable' };
+	try {
+		db.update(users).set({ email }).where(eq(users.id, userId)).run();
+	} catch {
+		return { ok: false, error: 'unavailable' }; // contrainte UNIQUE (course)
+	}
+	deleteUserChallenges(userId);
+	return { ok: true, revoked: revokeOtherSessions(userId, currentSessionId) };
+}
+
 /* ---------- 2FA TOTP ---------- */
 
 function getUser(userId: string): User | undefined {

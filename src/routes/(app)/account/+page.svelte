@@ -18,6 +18,7 @@
 	);
 	const totpError = $derived(form?.totp && 'error' in form.totp ? form.totp.error : null);
 	const passwordForm = $derived(form?.password);
+	const emailForm = $derived(form?.email);
 	const sessionsError = $derived(
 		form?.sessions && 'error' in form.sessions ? form.sessions.error : null
 	);
@@ -28,6 +29,44 @@
 		<h1 class="text-lg font-semibold tracking-tight text-ink">Mon compte</h1>
 		<p class="text-ink-dim [overflow-wrap:anywhere]">{data.email}</p>
 	</div>
+
+	<Panel>
+		{#snippet header()}
+			<h2 class="rf-label">Adresse e-mail</h2>
+		{/snippet}
+		<form method="POST" action="?/email" use:enhance class="flex flex-col gap-4">
+			<p class="text-ink-dim">
+				Adresse actuelle : <span class="text-ink [overflow-wrap:anywhere]">{data.email}</span>
+			</p>
+			<div class="grid gap-4 sm:grid-cols-2">
+				<Field
+					label="Nouvelle adresse e-mail"
+					name="email"
+					type="email"
+					autocomplete="email"
+					help="Cette adresse sert à vous connecter et à recevoir les e-mails de test des profils d'envoi. Aucun e-mail de confirmation n'est envoyé : vérifiez-la bien."
+					required
+				/>
+				<Field
+					label="Mot de passe actuel"
+					name="password"
+					type="password"
+					autocomplete="current-password"
+					required
+				/>
+			</div>
+			{#if emailForm && 'error' in emailForm}
+				<ErrorNotice message={emailForm.error} />
+			{:else if emailForm && 'success' in emailForm}
+				<p class="text-ink" role="status">
+					Adresse e-mail modifiée. Vos autres sessions ont été fermées ({emailForm.revoked}).
+				</p>
+			{/if}
+			<Button type="submit" variant="primary" class="w-full md:w-auto md:self-start">
+				Changer l'adresse e-mail
+			</Button>
+		</form>
+	</Panel>
 
 	<Panel>
 		{#snippet header()}

@@ -154,3 +154,61 @@ test('page Audit : réservée au superadmin', async () => {
 	expect(data.total).toBe(1);
 	expect(data.entries[0].label).toBe('Connexion réussie');
 });
+
+function loginEvent(email: string, password: string) {
+	const body = new FormData();
+	body.set('email', email);
+	body.set('password', password);
+	return {
+		request: new Request('http://localhost/login', { method: 'POST', body }),
+		cookies: { set: vi.fn(), get: vi.fn(), delete: vi.fn() },
+		getClientAddress: () => '127.0.0.1'
+	} as never;
+}
+
+test('action email : succès, normalisation, autres sessions fermées, connexion avec la nouvelle adresse', async () => {
+	const mine = hashToken((await createSession(op.id)).token);
+	await createSession(op.id);
+	const res = await actions.email(
+		ev(op, mine, { email: '  New.Op@Example.test ', password: 'old-password-123' })
+	);
+	expect(res).toEqual({ email: { success: true, revoked: 1 } });
+	expect(db.select().from(users).where(eq(users.id, op.id)).get()?.email).toBe(
+		'new.op@example.test'
+	);
+	expect(db.select().from(sessions).where(eq(sessions.userId, op.id)).all()).toHaveLength(1);
+	const entry = db.select().from(auditLog).where(eq(auditLog.action, 'account.email_change')).get();
+	expect(entry).toBeTruthy();
+	expect(JSON.stringify(entry)).not.toContain('new.op@example.test');
+
+	const login = await import('../../login/+page.server');
+	await expect(
+		login.actions.default(loginEvent('new.op@example.test', 'old-password-123'))
+	).rejects.toMatchObject({ status: 303 });
+	expect(
+		await login.actions.default(loginEvent('op@example.test', 'old-password-123'))
+	).toMatchObject({ status: 400 });
+});
+
+test('action email : mot de passe incorrect, doublon, format invalide, adresse inchangée', async () => {
+	const sid = hashToken((await createSession(op.id)).token);
+	const run = (f: Record<string, string>) => actions.email(ev(op, sid, f));
+	expect(await run({ email: 'x@example.test', password: 'wrong' })).toMatchObject({
+		status: 400,
+		data: { email: { error: 'Mot de passe incorrect.' } }
+	});
+	expect(await run({ email: 'admin@example.test', password: 'wrong' })).toMatchObject({
+		data: { email: { error: 'Mot de passe incorrect.' } }
+	});
+	expect(await run({ email: 'ADMIN@example.test', password: 'old-password-123' })).toMatchObject({
+		status: 400,
+		data: { email: { error: 'Cette adresse ne peut pas être utilisée.' } }
+	});
+	expect(await run({ email: 'pas-une-adresse', password: 'old-password-123' })).toMatchObject({
+		data: { email: { error: 'Adresse e-mail invalide.' } }
+	});
+	expect(await run({ email: 'OP@example.test', password: 'old-password-123' })).toMatchObject({
+		data: { email: { error: "La nouvelle adresse doit être différente de l'actuelle." } }
+	});
+	expect(db.select().from(users).where(eq(users.id, op.id)).get()?.email).toBe('op@example.test');
+});
