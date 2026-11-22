@@ -142,6 +142,8 @@ export const scenarios = sqliteTable(
 		landingTemplate: text('landing_template'),
 		awarenessTemplate: text('awareness_template'),
 		enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
+		/** Archivé (supprimé mais encore référencé par des campagnes) : masqué des listes. */
+		archivedAt: integer('archived_at', { mode: 'timestamp' }),
 		registeredAt: integer('registered_at', { mode: 'timestamp' })
 			.notNull()
 			.default(sql`(unixepoch())`)

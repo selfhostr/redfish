@@ -1,5 +1,10 @@
 import { fail, redirect } from '@sveltejs/kit';
 import { audit } from '$lib/server/audit';
+import {
+	countCampaignsUsing,
+	deleteOrArchiveScenario,
+	restoreScenario
+} from '$lib/server/scenarios/delete';
 import { BundleImportError, importBundle } from '$lib/server/scenarios/bundle';
 import {
 	availableFilterValues,
@@ -18,11 +23,14 @@ import type { Actions, PageServerLoad } from './$types';
  */
 export const load: PageServerLoad = async ({ locals, url }) => {
 	if (!locals.user) throw redirect(303, '/login');
-	const all = listScenarioSummaries();
+	const showArchived = url.searchParams.get('archived') === '1';
+	const all = listScenarioSummaries(showArchived);
 	const filters = readFilters(url.searchParams);
 	return {
 		scenarios: filterScenarios(all, filters),
 		total: all.length,
+		showArchived,
+		usage: Object.fromEntries(all.map((s) => [s.key, countCampaignsUsing(s.id)])),
 		filters,
 		available: availableFilterValues(all)
 	};
@@ -57,5 +65,36 @@ export const actions: Actions = {
 			if (e instanceof BundleImportError) return fail(400, { error: e.message });
 			return fail(400, { error: e instanceof Error ? e.message : 'Import impossible.' });
 		}
+	},
+
+	/**
+	 * Supprime un scénario (global : superadmin uniquement). Jamais utilisé :
+	 * suppression réelle ; utilisé par des campagnes : archivage, pour ne pas
+	 * casser l'historique ni les rapports.
+	 */
+	delete: async ({ request, locals }) => {
+		const user = locals.user;
+		if (!user) return fail(401, { error: 'Non authentifié' });
+		if (user.role !== 'superadmin')
+			return fail(403, { error: 'Suppression réservée au superadmin' });
+		const key = String((await request.formData()).get('key') ?? '');
+		const outcome = deleteOrArchiveScenario(key);
+		if (outcome === 'not_found') return fail(404, { error: 'Scénario introuvable' });
+		audit(user, outcome === 'deleted' ? 'scenario.delete' : 'scenario.archive', {
+			targetType: 'scenario',
+			targetId: key
+		});
+		return { removed: outcome, key };
+	},
+
+	/** Restaure un scénario archivé (superadmin uniquement). */
+	restore: async ({ request, locals }) => {
+		const user = locals.user;
+		if (!user) return fail(401, { error: 'Non authentifié' });
+		if (user.role !== 'superadmin') return fail(403, { error: 'Action réservée au superadmin' });
+		const key = String((await request.formData()).get('key') ?? '');
+		if (!restoreScenario(key)) return fail(404, { error: 'Scénario introuvable' });
+		audit(user, 'scenario.restore', { targetType: 'scenario', targetId: key });
+		return { restored: true, key };
 	}
 };

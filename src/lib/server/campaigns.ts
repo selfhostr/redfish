@@ -5,6 +5,7 @@ import {
 	authorizations,
 	campaignRecipients,
 	campaigns,
+	scenarios,
 	sendingProfiles,
 	targetLists
 } from '$lib/server/db/schema';
@@ -93,6 +94,8 @@ export async function createCampaign(input: CampaignInput): Promise<Campaign> {
 		)
 		.get();
 	if (!profile) throw new Error("Profil d'envoi invalide");
+	const scenario = db.select().from(scenarios).where(eq(scenarios.id, input.scenarioId)).get();
+	if (!scenario || scenario.archivedAt) throw new Error('Scénario invalide');
 	return db
 		.insert(campaigns)
 		.values({

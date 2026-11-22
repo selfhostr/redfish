@@ -52,7 +52,7 @@ export const load: PageServerLoad = async ({ locals, cookies }) => {
 			.select()
 			.from(scenarios)
 			.all()
-			.filter((s) => s.enabled)
+			.filter((s) => s.enabled && !s.archivedAt)
 			.map((s) => ({
 				id: s.id,
 				key: s.key,

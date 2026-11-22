@@ -85,6 +85,13 @@
       "when": 1795323779483,
       "tag": "0011_staggered_sending",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1795326634110,
+      "tag": "0012_scenario_archive",
+      "breakpoints": true
     }
   ]
 }
