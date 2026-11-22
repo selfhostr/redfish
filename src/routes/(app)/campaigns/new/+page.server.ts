@@ -1,5 +1,5 @@
 import { fail, redirect } from '@sveltejs/kit';
-import { parseZonedDateTime } from '$lib/server/datetime';
+import { parseAuthorizationFields } from '$lib/server/authorization-input';
 import { utcToZonedInput } from '$lib/timezone';
 import { db } from '$lib/server/db';
 import { scenarios } from '$lib/server/db/schema';
@@ -79,15 +79,11 @@ export const actions: Actions = {
 		const sendingProfileId = str('sendingProfileId');
 		const targetListId = str('targetListId');
 		const trackingDomain = str('trackingDomain');
-		const reference = str('reference');
-		const approvedBy = str('approvedBy');
-		const tz = tenantTimezone(tenantId);
-		const validFrom = parseZonedDateTime(str('validFrom'), tz);
-		const validUntil = parseZonedDateTime(str('validUntil'), tz);
 		if (!name || !scenarioId || !sendingProfileId || !targetListId || !trackingDomain)
 			return fail(400, { error: 'Champs requis manquants' });
-		if (!reference || !approvedBy || !validFrom || !validUntil)
-			return fail(400, { error: 'Autorisation requise (référence, approbateur, période)' });
+		const auth = parseAuthorizationFields(str, tenantTimezone(tenantId));
+		if ('error' in auth) return fail(400, { error: auth.error });
+		const { reference, validFrom, validUntil, approvedBy } = auth;
 		const pace = parseSendingPace(data);
 		if ('error' in pace) return fail(400, { error: pace.error });
 

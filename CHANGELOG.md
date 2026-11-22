@@ -12,6 +12,8 @@ Format based on Keep a Changelog. Versions follow `0.MINOR.PATCH` until 1.0.
 
 ### Changed
 
+- Authorization errors on campaign creation and on « Ajouter l'autorisation » are now reported per field (« Date de fin invalide. », « Nom de l'approbateur requis. », end before start, …) instead of one generic message. The date fields are limited to years 2000-9999.
+
 - Switching client from the top bar always lands on the new client's dashboard. The dashboard is titled with the client's name and shows its contact, timezone and language with a « Paramètres » button. « Premiers pas » starts with « Compléter les paramètres du client » (done once a contact is set), before the recipient list, the sending profile and the first campaign. Creating a client lands on its settings page, with a « Continuer vers le tableau de bord » button.
 - The clients page (`/tenants`) is now a pure overview: a table comparing clients (language, campaigns, recipients, click rate, last campaign) with a link to each client's settings. It no longer offers switching client, which is done from the top-bar switcher only; « Clients » leaves the Administration menu and « Gérer les clients » in the switcher leads there.
 - Navigation: the client switcher comes first in the bar (active client, other clients, « Paramètres de ce client », « Gérer les clients »), followed only by the active client's screens (Tableau de bord, Campagnes, Destinataires, Profils d'envoi). Global screens move to an « Administration » menu (Clients, Scénarios, and for superadmins Utilisateurs and Journal d'audit), next to the account menu. The mobile menu has the same structure.
@@ -29,6 +31,8 @@ Format based on Keep a Changelog. Versions follow `0.MINOR.PATCH` until 1.0.
 - Staggered sending: a campaign can spread its e-mails over 1 hour to 30 days in random recipient order, optionally only during working hours (weekdays, client timezone). The campaign page shows sent / planned, the next send and the end of the window; the observation period starts after the last planned send, and closing a campaign cancels the remaining sends.
 
 ### Fixed
+
+- A mistyped five-figure year in an authorization date no longer produces a misleading « Autorisation requise » error: the invalid date is named precisely.
 
 - Campaigns are completed automatically after the observation window (or manually); tracking, manual reports and send retries stop once completed.
 - Permanently failed sends are marked failed with a redacted reason, excluded from rates and can be retried while the campaign is sending.
