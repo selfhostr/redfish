@@ -19,7 +19,7 @@ import {
 	tenants
 } from '$lib/server/db/schema';
 import { createAuthorization } from '../authorization';
-import { createCampaign } from '../campaigns';
+import { createCampaign, updateSendingPace } from '../campaigns';
 import { createTenant } from '../tenant';
 import { launchCampaign, STAGGER_MS } from './launch';
 
@@ -163,4 +163,67 @@ test('launch passes preflight with a builtin (on-disk) scenario', async () => {
 	db.update(scenarios).set({ source: 'builtin', path: dir }).run();
 	await authorize();
 	expect(await launchCampaign(campaignId, now)).toEqual({ recipients: 2 });
+});
+
+test('spread launch: one planned time per recipient, matching job, inside the window', async () => {
+	const list = db.select().from(targetLists).get()!;
+	for (let i = 0; i < 20; i++)
+		db.insert(targets)
+			.values({ listId: list.id, tenantId, firstName: 'n', lastName: 'n', email: `n${i}@x.test` })
+			.run();
+	await createAuthorization({
+		tenantId,
+		campaignId,
+		reference: 'ACC-2',
+		validFrom: new Date(now.getTime() - H),
+		validUntil: new Date(now.getTime() + 48 * H),
+		approvedBy: 'RK'
+	});
+	expect(
+		updateSendingPace(campaignId, {
+			spreadHours: 24,
+			workingHoursOnly: false,
+			workStartHour: 8,
+			workEndHour: 18
+		})
+	).toBe(true);
+	expect(await launchCampaign(campaignId, now)).toEqual({ recipients: 22 });
+	const recs = db.select().from(campaignRecipients).all();
+	const js = db.select().from(jobs).all();
+	expect(js).toHaveLength(22);
+	for (const r of recs) {
+		expect(r.plannedAt).toBeInstanceOf(Date);
+		const t = r.plannedAt!.getTime();
+		expect(t).toBeGreaterThanOrEqual(Math.floor(now.getTime() / 1000) * 1000);
+		expect(t).toBeLessThan(now.getTime() + 24 * H);
+		const job = js.find((j) => JSON.parse(j.payloadJson).recipientId === r.id)!;
+		expect(job.runAt.getTime()).toBe(t);
+	}
+	// Le rythme ne se modifie plus après le lancement.
+	expect(
+		updateSendingPace(campaignId, {
+			spreadHours: null,
+			workingHoursOnly: false,
+			workStartHour: 8,
+			workEndHour: 18
+		})
+	).toBe(false);
+});
+
+test('spread launch refuses when the authorization does not cover the whole window', async () => {
+	await authorize(); // valable une heure seulement
+	updateSendingPace(campaignId, {
+		spreadHours: 72,
+		workingHoursOnly: false,
+		workStartHour: 8,
+		workEndHour: 18
+	});
+	await expect(launchCampaign(campaignId, now)).rejects.toMatchObject({
+		code: 'window_unauthorized'
+	});
+	expect(db.select().from(campaignRecipients).all()).toHaveLength(0);
+	expect(db.select().from(jobs).all()).toHaveLength(0);
+	expect(db.select().from(campaigns).where(eq(campaigns.id, campaignId)).get()!.status).toBe(
+		'draft'
+	);
 });

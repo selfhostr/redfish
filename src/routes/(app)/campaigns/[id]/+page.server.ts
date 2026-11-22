@@ -6,7 +6,14 @@ import {
 } from '$lib/server/authorization';
 import { audit } from '$lib/server/audit';
 import { parseZonedDateTime } from '$lib/server/datetime';
-import { deleteCampaign, getCampaign, scheduleCampaign } from '$lib/server/campaigns';
+import {
+	deleteCampaign,
+	getCampaign,
+	parseSendingPace,
+	scheduleCampaign,
+	sendingProgress,
+	updateSendingPace
+} from '$lib/server/campaigns';
 import { completeCampaign } from '$lib/server/campaigns/completion';
 import { LaunchError, launchCampaign } from '$lib/server/campaigns/launch';
 import { listFailedRecipients, retryFailedSends } from '$lib/server/campaigns/retry';
@@ -43,7 +50,8 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 		canSend: await canSendCampaign(campaign.id),
 		preflight: await runPreflight(campaign.id),
 		funnel: await campaignFunnel(campaign.id),
-		failedRecipients: listFailedRecipients(campaign.id)
+		failedRecipients: listFailedRecipients(campaign.id),
+		progress: campaign.status === 'sending' ? sendingProgress(campaign.id) : null
 	};
 };
 
@@ -62,7 +70,8 @@ export const actions: Actions = {
 					empty_list: [422, 'La liste de cibles est vide : ajoutez des cibles avant de lancer.'],
 					bad_status: [409, 'Cette campagne a déjà été lancée.'],
 					not_found: [404, 'Campagne introuvable.'],
-					preflight_failed: [422, e.message]
+					preflight_failed: [422, e.message],
+					window_unauthorized: [422, e.message]
 				} as const;
 				const [status, message] = map[e.code];
 				return fail(status, { error: message });
@@ -70,6 +79,16 @@ export const actions: Actions = {
 			throw e;
 		}
 		audit(locals.user, 'campaign.launch', campaignRef(campaign));
+		return { success: true };
+	},
+	pace: async ({ request, locals, params }) => {
+		if (!locals.user) throw redirect(303, '/login');
+		const campaign = await loadCampaign(locals.user, params.id);
+		const pace = parseSendingPace(await request.formData());
+		if ('error' in pace) return fail(400, { error: pace.error });
+		if (!updateSendingPace(campaign.id, pace))
+			return fail(409, { error: "Le rythme d'envoi ne se modifie plus après le lancement." });
+		audit(locals.user, 'campaign.pace', { ...campaignRef(campaign), details: pace });
 		return { success: true };
 	},
 	retryFailed: async ({ locals, params }) => {
