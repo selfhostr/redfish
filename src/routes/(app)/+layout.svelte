@@ -2,31 +2,47 @@
 	import { page, navigating } from '$app/state';
 	import { afterNavigate } from '$app/navigation';
 	import { tick } from 'svelte';
-	import Button from '$lib/components/ui/Button.svelte';
+	import NavMenu from '$lib/components/NavMenu.svelte';
 	import Skeleton from '$lib/components/ui/Skeleton.svelte';
 	import Toast from '$lib/components/ui/Toast.svelte';
 	import { appPathname } from '$lib/base-path';
+	import { switchTarget } from '$lib/client-switch';
 	let { data, children } = $props();
 
-	// Listes et profils d'envoi dépendent du client : visibles seulement s'il y en a un d'actif.
-	const links = $derived([
-		{ href: '/dashboard', label: 'Tableau de bord' },
-		{ href: '/campaigns', label: 'Campagnes' },
+	type NavLink = { href: string; label: string; match: string[] };
+
+	// Entrées propres au client actif. Sans aucun client accessible, seul le tableau
+	// de bord reste : il affiche l'état vide « Créez votre premier client ».
+	const clientLinks: NavLink[] = $derived([
+		{ href: '/dashboard', label: 'Tableau de bord', match: ['/dashboard'] },
 		...(data.activeTenant
 			? [
-					{ href: '/lists', label: 'Listes' },
-					{ href: '/sending-profiles', label: "Profils d'envoi" }
-				]
-			: []),
-		{ href: '/tenants', label: 'Clients' },
-		{ href: '/scenarios', label: 'Scénarios' },
-		...(data.user.role === 'superadmin'
-			? [
-					{ href: '/users', label: 'Utilisateurs' },
-					{ href: '/audit', label: 'Audit' }
+					{ href: '/campaigns', label: 'Campagnes', match: ['/campaigns'] },
+					{ href: '/lists', label: 'Destinataires', match: ['/lists', '/privacy'] },
+					{ href: '/sending-profiles', label: "Profils d'envoi", match: ['/sending-profiles'] }
 				]
 			: [])
 	]);
+
+	// Administration : écrans globaux, indépendants du client actif.
+	const adminLinks: NavLink[] = $derived([
+		{ href: '/tenants', label: 'Clients', match: ['/tenants'] },
+		{ href: '/scenarios', label: 'Scénarios', match: ['/scenarios'] },
+		...(data.user.role === 'superadmin'
+			? [
+					{ href: '/users', label: 'Utilisateurs', match: ['/users'] },
+					{ href: '/audit', label: "Journal d'audit", match: ['/audit'] }
+				]
+			: [])
+	]);
+
+	const path = $derived(appPathname(page.url));
+	const under = (href: string) => path === href || path.startsWith(href + '/');
+	const isActive = (l: NavLink) => l.match.some(under);
+	const adminActive = $derived(adminLinks.some(isActive));
+	const accountActive = $derived(under('/account'));
+
+	const afterSwitch = $derived(switchTarget(path));
 
 	// Squelette affiché seulement après un court délai (évite le clignotement) ;
 	// la page reste montée pour ne pas perdre la saisie en cas d'échec.
@@ -53,7 +69,7 @@
 		if (!menuOpen) return;
 		const prev = document.body.style.overflow;
 		document.body.style.overflow = 'hidden';
-		tick().then(() => sheetEl?.querySelector<HTMLElement>('a, select, button')?.focus());
+		tick().then(() => sheetEl?.querySelector<HTMLElement>('a, button')?.focus());
 		return () => {
 			document.body.style.overflow = prev;
 		};
@@ -65,11 +81,6 @@
 			menuBtn?.focus();
 		}
 	}
-
-	const isActive = (href: string) => {
-		const path = appPathname(page.url);
-		return path === href || path.startsWith(href + '/');
-	};
 </script>
 
 <svelte:window onkeydown={onWindowKey} />
@@ -103,25 +114,36 @@
 	</a>
 {/snippet}
 
-{#snippet tenantForm(idp: string)}
+{#snippet checkMark()}
+	<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" focusable="false">
+		<path d="M3.5 8.5L6.5 11.5L12.5 4.5" stroke="currentColor" stroke-width="1.75" fill="none" />
+	</svg>
+{/snippet}
+
+<!-- Liste des clients accessibles : chaque entrée soumet POST /set-tenant. -->
+{#snippet clientChoices(itemClass: string)}
 	{#if data.tenants.length > 1}
-		<form method="POST" action="/set-tenant" class="tenant-switcher">
-			<input type="hidden" name="redirectTo" value={appPathname(page.url)} />
-			<label class="tenant-label" for="tenant-{idp}">
-				<span class="rf-eyebrow">Organisation</span>
-				<select
-					id="tenant-{idp}"
+		<form method="POST" action="/set-tenant" class="client-choices">
+			<input type="hidden" name="redirectTo" value={afterSwitch} />
+			<p class="rf-eyebrow group-label">Changer de client</p>
+			{#each data.tenants as t (t.id)}
+				{@const current = t.id === data.activeTenant?.id}
+				<button
+					type="submit"
 					name="tenantId"
-					class="tenant-select"
-					onchange={(e) => e.currentTarget.form?.requestSubmit()}
+					value={t.id}
+					class="{itemClass} client-choice"
+					class:current
+					aria-current={current ? 'true' : undefined}
 				>
-					{#each data.tenants as t (t.id)}
-						<option value={t.id} selected={t.id === data.activeTenant?.id}>{t.name}</option>
-					{/each}
-				</select>
-			</label>
-			<noscript><button type="submit" class="rf-btn rf-btn-ghost">Changer</button></noscript>
+					<span class="check" aria-hidden="true">
+						{#if current}{@render checkMark()}{/if}
+					</span>
+					<span class="client-choice-name">{t.name}</span>
+				</button>
+			{/each}
 		</form>
+		<hr class="sep" />
 	{/if}
 {/snippet}
 
@@ -153,17 +175,32 @@
 				<span>Menu</span>
 			</button>
 		</div>
-		<nav class="nav">
+		<nav class="nav" aria-label="Navigation principale">
 			{@render brandLink()}
 
+			{#if data.activeTenant}
+				<NavMenu id="client-menu" triggerClass="client-trigger">
+					{#snippet trigger()}
+						<span class="sr-only">Client actif :</span>
+						<span class="rf-eyebrow client-eyebrow" aria-hidden="true">Client</span>
+						<span class="client-name">{data.activeTenant!.name}</span>
+					{/snippet}
+					{@render clientChoices('menu-item')}
+					<a href="/tenants/{data.activeTenant.id}" class="menu-item">Paramètres de ce client</a>
+					<a href="/tenants" class="menu-item">Gérer les clients</a>
+				</NavMenu>
+			{:else}
+				<a href="/tenants" class="nav-link no-client">Aucun client · Créer un client</a>
+			{/if}
+
 			<ul class="nav-links">
-				{#each links as l (l.href)}
+				{#each clientLinks as l (l.href)}
 					<li>
 						<a
 							href={l.href}
-							aria-current={isActive(l.href) ? 'page' : undefined}
+							aria-current={isActive(l) ? 'page' : undefined}
 							class="nav-link"
-							class:active={isActive(l.href)}
+							class:active={isActive(l)}
 						>
 							{l.label}
 						</a>
@@ -172,11 +209,36 @@
 			</ul>
 
 			<div class="nav-end">
-				{@render tenantForm('nav')}
-				<a href="/account" class="user-email" title="Mon compte">{data.user.email}</a>
-				<form method="POST" action="/logout">
-					<Button type="submit" variant="ghost" size="sm">Déconnexion</Button>
-				</form>
+				<NavMenu id="admin-menu" align="end" active={adminActive}>
+					{#snippet trigger()}Administration{/snippet}
+					{#each adminLinks as l (l.href)}
+						<a
+							href={l.href}
+							class="menu-item"
+							class:active={isActive(l)}
+							aria-current={isActive(l) ? 'page' : undefined}
+						>
+							{l.label}
+						</a>
+					{/each}
+				</NavMenu>
+				<NavMenu id="account-menu" align="end" active={accountActive}>
+					{#snippet trigger()}
+						<span class="sr-only">Compte :</span>
+						<span class="user-email">{data.user.email}</span>
+					{/snippet}
+					<a
+						href="/account"
+						class="menu-item"
+						class:active={accountActive}
+						aria-current={accountActive ? 'page' : undefined}
+					>
+						Mon compte
+					</a>
+					<form method="POST" action="/logout">
+						<button type="submit" class="menu-item">Déconnexion</button>
+					</form>
+				</NavMenu>
 			</div>
 		</nav>
 	</header>
@@ -190,29 +252,67 @@
 				aria-label="Fermer le menu"
 				onclick={() => (menuOpen = false)}
 			></button>
-			<div class="sheet" id="mobile-menu" bind:this={sheetEl}>
-				<ul class="sheet-links">
-					{#each links as l (l.href)}
+			<nav class="sheet" id="mobile-menu" aria-label="Navigation principale" bind:this={sheetEl}>
+				<section class="sheet-section">
+					<h2 class="rf-eyebrow sheet-heading">Client</h2>
+					{#if data.activeTenant}
+						{#if data.tenants.length === 1}
+							<p class="sheet-current">{data.activeTenant.name}</p>
+						{/if}
+						{@render clientChoices('sheet-link')}
+						<a href="/tenants/{data.activeTenant.id}" class="sheet-link">Paramètres de ce client</a>
+						<a href="/tenants" class="sheet-link">Gérer les clients</a>
+					{:else}
+						<a href="/tenants" class="sheet-link">Aucun client · Créer un client</a>
+					{/if}
+				</section>
+				<ul class="sheet-links sheet-section">
+					{#each clientLinks as l (l.href)}
 						<li>
 							<a
 								href={l.href}
 								class="sheet-link"
-								class:active={isActive(l.href)}
-								aria-current={isActive(l.href) ? 'page' : undefined}
+								class:active={isActive(l)}
+								aria-current={isActive(l) ? 'page' : undefined}
 							>
 								{l.label}
 							</a>
 						</li>
 					{/each}
 				</ul>
-				<div class="sheet-account">
-					{@render tenantForm('sheet')}
-					<a href="/account" class="user-email" title="Mon compte">{data.user.email}</a>
+				<section class="sheet-section">
+					<h2 class="rf-eyebrow sheet-heading">Administration</h2>
+					<ul class="sheet-links">
+						{#each adminLinks as l (l.href)}
+							<li>
+								<a
+									href={l.href}
+									class="sheet-link"
+									class:active={isActive(l)}
+									aria-current={isActive(l) ? 'page' : undefined}
+								>
+									{l.label}
+								</a>
+							</li>
+						{/each}
+					</ul>
+				</section>
+				<section class="sheet-section">
+					<h2 class="rf-eyebrow sheet-heading">Compte</h2>
+					<p class="sheet-current user-email">{data.user.email}</p>
+					<a
+						href="/account"
+						class="sheet-link"
+						class:active={accountActive}
+						aria-current={accountActive ? 'page' : undefined}
+					>
+						Mon compte
+					</a>
 					<form method="POST" action="/logout">
-						<Button type="submit" variant="ghost" class="sheet-logout">Déconnexion</Button>
+						<button type="submit" class="sheet-link">Déconnexion</button>
 					</form>
-				</div>
-			</div>
+				</section>
+			</nav>
 		</div>
 	{/if}
 
@@ -265,7 +365,7 @@
 		display: flex;
 		flex-wrap: wrap;
 		align-items: center;
-		gap: 1.25rem;
+		gap: 0.75rem 1rem;
 		padding: 0.625rem 1.5rem;
 	}
 
@@ -281,6 +381,22 @@
 	.brand-mark {
 		display: block;
 		flex: none;
+	}
+
+	/* Sélecteur de client : encadré pour le distinguer des entrées de menu. */
+	.nav :global(.client-trigger) {
+		border-color: var(--c-line-strong);
+		color: var(--c-ink);
+	}
+	.client-name {
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		font-weight: 500;
+	}
+	.no-client {
+		border: 1px dashed var(--c-line-strong);
 	}
 
 	.nav-links {
@@ -316,35 +432,73 @@
 		display: flex;
 		flex-wrap: wrap;
 		align-items: center;
-		gap: 1rem;
+		gap: 0.25rem;
 	}
 
-	.tenant-switcher {
+	/* Entrées des menus déroulants. */
+	.menu-item {
 		display: flex;
 		align-items: center;
 		gap: 0.5rem;
+		width: 100%;
+		padding: 0.4375rem 0.625rem;
+		border: 0;
+		border-radius: var(--r-flat);
+		background: transparent;
+		color: var(--c-ink-dim);
+		font: inherit;
+		text-align: left;
+		text-decoration: none;
+		cursor: pointer;
 	}
-	.tenant-label {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.5rem;
-	}
-	.tenant-select {
+	.menu-item:hover,
+	.menu-item:focus-visible,
+	.menu-item.active,
+	.menu-item.current {
 		background: var(--c-surface-2);
-		border: 1px solid var(--c-line-strong);
-		border-radius: var(--r-btn);
-		padding: 0.3125rem 0.5rem;
 		color: var(--c-ink);
-		font-family: var(--font-ui);
-		font-size: 0.8125rem;
 	}
-	.tenant-select:focus {
-		outline: none;
-		border-color: var(--c-ink-dim);
+	.group-label {
+		padding: 0.375rem 0.625rem 0.25rem;
+	}
+	.client-choice-name {
+		min-width: 0;
+		overflow-wrap: anywhere;
+	}
+	.check {
+		display: inline-flex;
+		flex: none;
+		width: 14px;
+		color: var(--c-signal);
+	}
+	.sep {
+		margin: 0.375rem 0;
+		border: 0;
+		border-top: 1px solid var(--c-line);
 	}
 
 	.user-email {
-		color: var(--c-ink-dim);
+		color: inherit;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	/* Largeur intermédiaire : la barre tient sur une ligne. */
+	@media (max-width: 1099px) {
+		.nav {
+			column-gap: 0.5rem;
+			padding-inline: 1rem;
+		}
+		.client-eyebrow {
+			display: none;
+		}
+		.nav .client-name {
+			max-width: 14rem;
+		}
+		.nav .user-email {
+			max-width: 11rem;
+		}
 	}
 
 	@media (max-width: 767px) {
@@ -412,53 +566,53 @@
 			border-bottom: 1px solid var(--c-line-strong);
 			padding: 0.5rem 1rem 1rem;
 		}
+		.sheet-section {
+			display: flex;
+			flex-direction: column;
+			padding: 0.5rem 0;
+			border-bottom: 1px solid var(--c-line);
+		}
+		.sheet-section:last-child {
+			border-bottom: 0;
+		}
+		.sheet-heading {
+			margin: 0;
+			padding: 0.25rem 0.75rem;
+		}
+		.sheet-current {
+			padding: 0.5rem 0.75rem;
+			color: var(--c-ink);
+			font-weight: 500;
+			overflow-wrap: anywhere;
+			white-space: normal;
+		}
 		.sheet-links {
 			list-style: none;
 			margin: 0;
-			padding: 0;
+			padding: 0.25rem 0;
 		}
 		.sheet-link {
 			display: flex;
 			align-items: center;
+			gap: 0.5rem;
+			width: 100%;
 			min-height: 48px;
 			padding: 0 0.75rem;
+			border: 0;
 			border-radius: var(--r-flat);
+			background: transparent;
 			color: var(--c-ink-dim);
-			text-decoration: none;
+			font: inherit;
 			font-size: 0.9375rem;
+			text-align: left;
+			text-decoration: none;
+			cursor: pointer;
 		}
-		.sheet-link.active {
+		.sheet-link.active,
+		.sheet-link.current {
 			background: var(--c-surface-2);
 			color: var(--c-ink);
 			box-shadow: inset 2px 0 0 var(--c-ink);
-		}
-		.sheet-account {
-			display: flex;
-			flex-direction: column;
-			gap: 0.75rem;
-			margin-top: 0.5rem;
-			padding: 0.75rem 0.75rem 0;
-			border-top: 1px solid var(--c-line);
-		}
-		.sheet-account .tenant-switcher,
-		.sheet-account .tenant-label {
-			display: flex;
-			flex-direction: column;
-			align-items: stretch;
-			gap: 0.375rem;
-			width: 100%;
-		}
-		.tenant-select {
-			width: 100%;
-			min-height: 44px;
-			font-size: 16px;
-		}
-		.user-email {
-			overflow-wrap: anywhere;
-		}
-		.sheet-account :global(.sheet-logout) {
-			width: 100%;
-			min-height: 44px;
 		}
 		.nav-skeleton {
 			padding: 1rem;

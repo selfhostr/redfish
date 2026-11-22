@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { page } from '$app/state';
-	import ClientHeader from '$lib/components/ClientHeader.svelte';
 	import { localNext } from '$lib/return-path';
 	import { Button, EmptyState, ErrorNotice, Field, Panel } from '$lib/components/ui';
 	import type { ActionData, PageData } from './$types';
@@ -11,17 +10,22 @@
 </script>
 
 <main class="mx-auto flex max-w-3xl flex-col gap-6 px-4 py-6 md:px-6 md:py-8">
-	<ClientHeader />
-	<h2 class="text-lg font-semibold tracking-tight text-ink">Listes de destinataires</h2>
+	<div class="flex flex-wrap items-center justify-between gap-3">
+		<h1 class="text-2xl font-semibold tracking-tight text-ink">Destinataires</h1>
+		<Button href="/privacy" variant="ghost" size="sm" class="max-sm:w-full">
+			Données personnelles (RGPD)
+		</Button>
+	</div>
 
 	<p class="text-ink-dim">
 		Chaque liste regroupe les personnes ciblées par vos campagnes. Ouvrez une liste pour consulter
-		ou importer ses destinataires.
+		ou importer ses destinataires. Pour répondre à une demande d'accès ou d'effacement, passez par
+		les données personnelles.
 	</p>
 
 	<Panel flush>
 		{#snippet header()}
-			<h2 class="rf-label">Listes</h2>
+			<h2 class="rf-label">Listes de destinataires</h2>
 		{/snippet}
 		{#if data.lists.length === 0}
 			<EmptyState

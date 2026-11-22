@@ -28,16 +28,51 @@ test('login then client creation', async ({ page }) => {
 	await page.getByRole('button', { name: 'Nouveau client' }).click();
 	await page.getByLabel('Nom', { exact: true }).fill('Client E2E SA');
 	await page.getByRole('button', { name: 'Créer le client' }).click();
-	await expect(page).toHaveURL(/\/tenants\/[^/]+$/);
-	await expect(page.getByRole('heading', { name: 'Client E2E SA' })).toBeVisible();
+	// The new client becomes the active one and the dashboard shows its first steps.
+	await expect(page).toHaveURL(/\/dashboard$/);
+	await expect(page.getByRole('button', { name: 'Client actif : Client E2E SA' })).toBeVisible();
+	await expect(page.getByRole('heading', { name: 'Premiers pas' })).toBeVisible();
+});
+
+test('the navigation separates the client from the administration', async ({ page }) => {
+	await login(page);
+	await page.goto('/dashboard');
+	const nav = page.getByRole('navigation', { name: 'Navigation principale' });
+	await expect(nav.getByRole('link', { name: 'Destinataires' })).toBeVisible();
+	// Global screens sit in the Administration menu, closed by default.
+	const admin = nav.getByRole('button', { name: 'Administration' });
+	await expect(admin).toHaveAttribute('aria-expanded', 'false');
+	await expect(nav.getByRole('link', { name: 'Scénarios' })).toBeHidden();
+	await admin.click();
+	await expect(admin).toHaveAttribute('aria-expanded', 'true');
+	await expect(nav.getByRole('link', { name: 'Scénarios' })).toBeVisible();
+	// An operator does not see the superadmin screens.
+	await expect(nav.getByRole('link', { name: 'Utilisateurs' })).toHaveCount(0);
+	await page.keyboard.press('Escape');
+	await expect(admin).toHaveAttribute('aria-expanded', 'false');
+	await expect(admin).toBeFocused();
+	// Personal data is reached from the recipients page, and back.
+	await nav.getByRole('link', { name: 'Destinataires' }).click();
+	await page.getByRole('link', { name: 'Données personnelles (RGPD)' }).click();
+	await expect(page).toHaveURL(/\/privacy$/);
+	await expect(nav.getByRole('link', { name: 'Destinataires' })).toHaveAttribute(
+		'aria-current',
+		'page'
+	);
+	await page.getByRole('link', { name: 'Retour aux destinataires' }).click();
+	await expect(page).toHaveURL(/\/lists$/);
 });
 
 test('campaign list and report for the demo data', async ({ page }) => {
 	await login(page);
 	await page.goto('/campaigns');
 	await expect(page.getByRole('heading', { name: 'Campagnes' })).toBeVisible();
-	// The active organization may be a client created by another test: pick the demo one.
-	await page.getByLabel('Organisation').selectOption({ label: 'Fiduciaire Alpina SA' });
+	// The active client may be one created by another test: pick the demo one.
+	await page.getByRole('button', { name: /^Client actif :/ }).click();
+	await page.getByRole('button', { name: 'Fiduciaire Alpina SA', exact: true }).click();
+	await expect(
+		page.getByRole('button', { name: 'Client actif : Fiduciaire Alpina SA' })
+	).toBeVisible();
 	const campaign = page.getByRole('link', { name: /Sensibilisation Q4/ }).first();
 	await expect(campaign).toBeVisible();
 	await campaign.click();
