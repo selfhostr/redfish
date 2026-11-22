@@ -61,6 +61,18 @@ test('the navigation separates the client from the administration', async ({ pag
 	);
 	await page.getByRole('link', { name: 'Retour aux destinataires' }).click();
 	await expect(page).toHaveURL(/\/lists$/);
+
+	// Mobile drawer: the page behind is locked and the sheet scrolls down to the logout button.
+	await page.setViewportSize({ width: 390, height: 844 });
+	await page.getByRole('button', { name: 'Ouvrir le menu' }).click();
+	const drawer = page.locator('#mobile-menu');
+	await expect(drawer).toBeVisible();
+	expect(await page.evaluate(() => getComputedStyle(document.body).overflow)).toBe('hidden');
+	const logout = drawer.getByRole('button', { name: 'Déconnexion' });
+	await logout.scrollIntoViewIfNeeded();
+	await expect(logout).toBeInViewport();
+	await expect(drawer.getByRole('link', { name: 'Mon compte' })).toBeVisible();
+	expect(await page.evaluate(() => window.scrollY)).toBe(0);
 });
 
 test('campaign list and report for the demo data', async ({ page }) => {
@@ -79,6 +91,18 @@ test('campaign list and report for the demo data', async ({ page }) => {
 	await page.getByRole('link', { name: 'Rapport', exact: true }).click();
 	await expect(page.getByRole('heading', { name: /Rapport de campagne/ })).toBeVisible();
 	await expect(page.getByRole('row', { name: /^Destinataires 12$/ })).toBeVisible();
+
+	// Opening the settings of another client (created above) keeps the active client.
+	const active = page.getByRole('button', { name: 'Client actif : Fiduciaire Alpina SA' });
+	await page.goto('/tenants');
+	await page
+		.getByRole('listitem')
+		.filter({ hasText: 'Client E2E SA' })
+		.getByRole('link', { name: 'Paramètres' })
+		.click();
+	await expect(page.getByRole('heading', { name: 'Client E2E SA' })).toBeVisible();
+	await expect(page.getByRole('button', { name: 'Travailler sur ce client' })).toBeVisible();
+	await expect(active).toBeVisible();
 });
 
 test('a tracking link click is recorded then redirected', async ({ request }) => {

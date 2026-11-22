@@ -559,7 +559,7 @@
 		}
 		.sheet {
 			position: relative;
-			max-height: 100%;
+			max-height: calc(100dvh - 3.25rem);
 			overflow-y: auto;
 			overscroll-behavior: contain;
 			background: var(--c-surface-1);
