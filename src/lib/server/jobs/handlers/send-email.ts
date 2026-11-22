@@ -11,7 +11,11 @@ import {
 import { canSendCampaign } from '$lib/server/authorization';
 import { renderEmail } from '$lib/server/scenarios/render';
 import type { RenderCtx } from '$lib/server/scenarios/render';
-import { registerFailureHandler, registerHandler } from '$lib/server/jobs/queue';
+import {
+	registerFailureHandler,
+	registerHandler,
+	registerRetryHandler
+} from '$lib/server/jobs/queue';
 import { buildTransport } from '$lib/server/mail/mailer';
 
 /** Les cinq URLs de tracking de l'opérateur injectées dans l'e-mail/la page. */
@@ -123,7 +127,7 @@ export async function sendRecipient(recipientId: string): Promise<void> {
 	});
 
 	db.update(campaignRecipients)
-		.set({ sendStatus: 'sent', sentAt: new Date() })
+		.set({ sendStatus: 'sent', sentAt: new Date(), sendError: null })
 		.where(eq(campaignRecipients.id, recipientId))
 		.run();
 	db.insert(events).values({ campaignRecipientId: recipientId, type: 'sent' }).run();
@@ -140,6 +144,19 @@ export function describeSendError(err: unknown): string {
 		.replace(/\b[A-Za-z0-9+/_-]{32,}={0,2}/g, '***');
 	msg = msg.trim() || 'Erreur inconnue';
 	return msg.length > 200 ? `${msg.slice(0, 197)}...` : msg;
+}
+
+/**
+ * Enregistre le dernier motif (assaini) d'une tentative échouée qui sera
+ * réessayée : le destinataire reste « pending », l'interface peut l'afficher.
+ */
+export function recordRecipientRetry(recipientId: string, err: unknown): void {
+	db.update(campaignRecipients)
+		.set({ sendError: describeSendError(err) })
+		.where(
+			and(eq(campaignRecipients.id, recipientId), eq(campaignRecipients.sendStatus, 'pending'))
+		)
+		.run();
 }
 
 /** Marque le destinataire en échec définitif (sauf s'il est déjà envoyé/ignoré). */
@@ -159,4 +176,7 @@ registerHandler<{ recipientId: string }>('send-email', (payload) =>
 );
 registerFailureHandler<{ recipientId: string }>('send-email', (payload, err) =>
 	markRecipientFailed(payload.recipientId, err)
+);
+registerRetryHandler<{ recipientId: string }>('send-email', (payload, err) =>
+	recordRecipientRetry(payload.recipientId, err)
 );

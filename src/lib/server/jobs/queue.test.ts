@@ -14,7 +14,9 @@ import {
 	enqueue,
 	LEASE_MS,
 	MAX_ATTEMPTS,
+	registerFailureHandler,
 	registerHandler,
+	registerRetryHandler,
 	runDueJobs
 } from './queue';
 
@@ -117,4 +119,24 @@ test('a stale worker cannot overwrite a job reclaimed by another', async () => {
 	const row = get(job.id);
 	expect(row.status).toBe('running');
 	expect(row.lockedAt!.getTime()).toBe(Math.floor(t1.getTime() / 1000) * 1000);
+});
+
+test('the retry hook runs on each retried failure, the failure hook only at the end', async () => {
+	registerHandler('hooked', async () => {
+		throw new Error('nope');
+	});
+	const onRetry = vi.fn();
+	const onFail = vi.fn();
+	registerRetryHandler('hooked', onRetry);
+	registerFailureHandler('hooked', onFail);
+	const job = await enqueue('hooked', { a: 1 });
+	let now = new Date(Date.now() + 1000);
+	for (let i = 0; i < MAX_ATTEMPTS; i++) {
+		await runDueJobs(now);
+		now = new Date(get(job.id).runAt.getTime() + 1000);
+	}
+	expect(onRetry).toHaveBeenCalledTimes(MAX_ATTEMPTS - 1);
+	expect(onRetry.mock.calls[0][0]).toEqual({ a: 1 });
+	expect(onRetry.mock.calls[0][2]).toBe(1);
+	expect(onFail).toHaveBeenCalledTimes(1);
 });
