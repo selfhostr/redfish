@@ -1,5 +1,10 @@
 import { fail, redirect } from '@sveltejs/kit';
-import { createSendingProfile, listSendingProfiles } from '$lib/server/sending-profiles';
+import {
+	createSendingProfile,
+	listSendingProfiles,
+	parseProfileFields,
+	updateSendingProfile
+} from '$lib/server/sending-profiles';
 import { sendTestEmail, verifyProfile } from '$lib/server/sending-profile-test';
 import { rateLimit } from '$lib/server/ratelimit';
 import { activeTenantId } from '$lib/server/active-tenant';
@@ -59,20 +64,10 @@ export const actions: Actions = {
 		if (!locals.user) throw redirect(303, '/login');
 		const user = locals.user;
 		const data = await request.formData();
-		const str = (k: string) => String(data.get(k) ?? '').trim();
-		const name = str('name');
-		const host = str('host');
-		const port = Number(str('port'));
-		const username = str('username');
-		const password = String(data.get('password') ?? '');
-		const fromName = str('fromName');
-		const fromAddress = str('fromAddress');
+		const parsed = parseProfileFields(data);
+		if (!parsed.ok) return fail(400, { error: parsed.error });
+		const { name, host, port, username, password, fromName, fromAddress } = parsed.fields;
 		const global = data.get('global') === 'on';
-
-		if (!name || !host || !username || !password || !fromName || !fromAddress)
-			return fail(400, { error: 'Tous les champs sont requis' });
-		if (!Number.isInteger(port) || port < 1 || port > 65535)
-			return fail(400, { error: 'Port invalide' });
 
 		let tenantId: string | null = null;
 		if (global) {
@@ -101,5 +96,15 @@ export const actions: Actions = {
 			details: { name, host, global }
 		});
 		return { success: true };
+	},
+	update: async ({ request, locals }) => {
+		if (!locals.user) throw redirect(303, '/login');
+		const data = await request.formData();
+		const profileId = String(data.get('profileId') ?? '');
+		const parsed = parseProfileFields(data, { passwordOptional: true });
+		if (!parsed.ok) return fail(400, { editError: parsed.error, editId: profileId });
+		const r = await updateSendingProfile(locals.user, profileId, parsed.fields);
+		if (!r.ok) return fail(r.status, { editError: r.error, editId: profileId });
+		return { editOk: 'Profil modifié', editId: profileId };
 	}
 };

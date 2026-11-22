@@ -25,6 +25,8 @@
 		['fromName', 'Nom expéditeur', 'text'],
 		['fromAddress', 'Adresse expéditeur', 'email']
 	];
+	const editFields = fields.filter(([n]) => n !== 'password');
+	let editing = $state<string | null>(null);
 </script>
 
 <main class="mx-auto flex max-w-3xl flex-col gap-6 px-4 py-6 md:px-6 md:py-8">
@@ -76,7 +78,53 @@
 									/>
 									<Button type="submit" size="sm">Envoyer un e-mail de test</Button>
 								</form>
+								<Button size="sm" onclick={() => (editing = editing === p.id ? null : p.id)}>
+									Modifier
+								</Button>
 							</div>
+							{#if editing === p.id || form?.editId === p.id}
+								<form
+									method="POST"
+									action="?/update"
+									use:enhance={() =>
+										async ({ result, update }) => {
+											await update({ reset: false });
+											if (result.type === 'success') editing = null;
+										}}
+									class="flex flex-col gap-4 rounded-md border border-line p-3"
+								>
+									<input type="hidden" name="profileId" value={p.id} />
+									<div class="grid gap-4 sm:grid-cols-2">
+										{#each editFields as [name, label, type] (name)}
+											<Field
+												{label}
+												{name}
+												{type}
+												required
+												autocomplete="off"
+												value={String(p[name as keyof typeof p] ?? '')}
+											/>
+										{/each}
+										<Field
+											label="Mot de passe"
+											name="password"
+											type="password"
+											autocomplete="new-password"
+											help="Laisser vide pour conserver le mot de passe actuel."
+										/>
+									</div>
+									{#if form?.editId === p.id && form.editError}
+										<ErrorNotice message={form.editError} />
+									{/if}
+									<div class="flex gap-2">
+										<Button type="submit" variant="primary" size="sm">Enregistrer</Button>
+										<Button size="sm" onclick={() => (editing = null)}>Annuler</Button>
+									</div>
+								</form>
+							{/if}
+							{#if form?.editOk && form.editId === p.id}
+								<p class="text-sm text-ink" role="status">{form.editOk}</p>
+							{/if}
 							{#if form?.profileId === p.id}
 								{#if form.testError}
 									<ErrorNotice message={form.testError} />
