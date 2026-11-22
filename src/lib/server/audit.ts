@@ -12,6 +12,7 @@ export const AUDIT_ACTIONS = {
 	'auth.login.success': 'Connexion réussie',
 	'auth.login.failure': 'Connexion échouée',
 	'auth.password.change': 'Mot de passe modifié',
+	'account.email_change': 'Adresse e-mail modifiée',
 	'auth.2fa.enable': '2FA activée',
 	'auth.2fa.disable': '2FA désactivée',
 	'auth.2fa.reset': '2FA réinitialisée par un superadmin',

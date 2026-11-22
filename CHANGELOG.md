@@ -6,6 +6,7 @@ Format based on Keep a Changelog. Versions follow `0.MINOR.PATCH` until 1.0.
 
 ### Added
 
+- Users can change their login e-mail address from `/account` (current password required, no confirmation e-mail). Other sessions are closed; the audit log records `account.email_change` without the addresses. This lets the default `admin@redfish.local` account receive sending-profile test e-mails.
 - Scenario deletion (superadmin): a scenario used by no campaign is deleted; one used by campaigns is archived instead, hidden from the scenario list and the campaign picker but kept in existing campaigns and reports. Archived scenarios can be shown and restored from the scenario list.
 
 ### Changed

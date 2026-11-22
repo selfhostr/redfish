@@ -4,6 +4,7 @@
 
 Reached from the account menu (your email, at the end of the navigation bar) → « Mon compte » (`/account`).
 
+- **E-mail address**: the login address can be changed with the current password. It is normalised (trimmed, lowercase) and must be unused; no confirmation e-mail is sent. Every other session is closed. The addresses are not written to the audit log. Sending-profile test e-mails go to this address.
 - **Password**: the current password is required, and the new one must be at least 12 characters long. After the change, every other session of the account is closed.
 - **Active sessions**: list of sessions (truncated User-Agent, opened, last activity). Any session other than the current one can be revoked, or all of them at once. The IP address is never stored.
 - Actions that check a secret (password, code) are limited to 5 attempts per 15 minutes per account.

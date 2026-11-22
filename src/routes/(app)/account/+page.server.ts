@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 import {
 	MIN_PASSWORD_LENGTH,
 	beginTotpEnrolment,
+	changeEmail,
 	changePassword,
 	confirmTotpEnrolment,
 	disableTotp,
@@ -77,6 +78,31 @@ export const actions: Actions = {
 		}
 		audit(user, 'auth.password.change', { details: { revokedSessions: res.revoked } });
 		return { password: { success: true, revoked: res.revoked } };
+	},
+
+	email: async ({ request, locals }) => {
+		const user = requireUser(locals);
+		if (!rateLimit(`account:secret:${user.id}`, SECRET_LIMIT).ok)
+			return fail(429, { email: { error: TOO_MANY } });
+		const data = await request.formData();
+		const res = await changeEmail(
+			user.id,
+			String(data.get('password') ?? ''),
+			String(data.get('email') ?? ''),
+			locals.sessionId ?? null
+		);
+		if (!res.ok) {
+			const messages = {
+				invalid: 'Adresse e-mail invalide.',
+				bad_password: 'Mot de passe incorrect.',
+				same: "La nouvelle adresse doit être différente de l'actuelle.",
+				unavailable: 'Cette adresse ne peut pas être utilisée.'
+			};
+			return fail(400, { email: { error: messages[res.error] } });
+		}
+		// Pas d'adresse dans le journal : seul le fait du changement est tracé.
+		audit(user, 'account.email_change', { details: { revokedSessions: res.revoked } });
+		return { email: { success: true, revoked: res.revoked } };
 	},
 
 	revokeSession: async ({ request, locals }) => {
