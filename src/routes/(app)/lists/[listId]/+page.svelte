@@ -2,6 +2,7 @@
 	import { enhance } from '$app/forms';
 	import { page } from '$app/state';
 	import { localNext } from '$lib/return-path';
+	import { EMAIL_NAME_WARNING, looksLikeEmail } from '$lib/email-name';
 	import {
 		Button,
 		CopyButton,
@@ -18,6 +19,9 @@
 	const next = $derived(localNext(page.url.searchParams.get('next')));
 
 	let editing = $state<string | null>(null);
+	let renaming = $state(false);
+	let confirmingDelete = $state(false);
+	let draftName = $state('');
 
 	const fields: [string, string, string][] = [
 		['email', 'E-mail', 'email'],
@@ -103,11 +107,98 @@
 
 <main class="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-6 md:px-6 md:py-8">
 	<div class="flex flex-wrap items-center justify-between gap-3">
-		<h1 class="text-2xl font-semibold tracking-tight [overflow-wrap:anywhere] text-ink">
-			{data.list.name}
-		</h1>
-		<Button href="/lists" variant="ghost" size="sm">Toutes les listes</Button>
+		{#if renaming}
+			<form
+				method="POST"
+				action="?/rename"
+				class="flex grow flex-col gap-2 sm:flex-row sm:items-end"
+				use:enhance={() =>
+					async ({ update }) => {
+						await update({ reset: false });
+						renaming = false;
+					}}
+			>
+				<Field
+					class="grow"
+					label="Nom de la liste"
+					name="name"
+					required
+					bind:value={draftName}
+					placeholder="ex. Comptabilité, Direction…"
+				/>
+				<span class="flex gap-2">
+					<Button type="submit" variant="primary" size="sm">Enregistrer</Button>
+					<Button type="button" variant="ghost" size="sm" onclick={() => (renaming = false)}>
+						Annuler
+					</Button>
+				</span>
+			</form>
+		{:else}
+			<h1 class="text-2xl font-semibold tracking-tight [overflow-wrap:anywhere] text-ink">
+				{data.list.name}
+				{#if data.list.archivedAt}<Plate variant="neutral">Archivée</Plate>{/if}
+			</h1>
+			<span class="flex flex-wrap gap-2">
+				<Button
+					variant="ghost"
+					size="sm"
+					onclick={() => {
+						draftName = data.list.name;
+						renaming = true;
+					}}
+				>
+					Renommer
+				</Button>
+				{#if !data.list.archivedAt}
+					<Button variant="ghost" size="sm" onclick={() => (confirmingDelete = true)}>
+						Supprimer la liste
+					</Button>
+				{/if}
+				<Button href="/lists" variant="ghost" size="sm">Toutes les listes</Button>
+			</span>
+		{/if}
 	</div>
+
+	{#if renaming && looksLikeEmail(draftName)}
+		<p class="text-ink-dim" role="status">{EMAIL_NAME_WARNING}</p>
+	{/if}
+
+	{#if data.list.archivedAt}
+		<Panel>
+			<form method="POST" action="?/restoreList" use:enhance class="flex flex-col gap-3">
+				<p class="text-ink">
+					Cette liste est archivée : elle n'apparaît plus dans les choix de campagne.
+				</p>
+				<Button type="submit" variant="secondary" class="sm:self-start">Restaurer la liste</Button>
+			</form>
+		</Panel>
+	{/if}
+
+	{#if confirmingDelete}
+		<Panel>
+			<form method="POST" action="?/deleteList" use:enhance class="flex flex-col gap-3">
+				<p class="text-ink">
+					{#if data.usage > 0}
+						Cette liste est utilisée par {data.usage}
+						{data.usage > 1 ? 'campagnes' : 'campagne'} : elle sera archivée (masquée de la page Destinataires
+						et du choix pour les nouvelles campagnes) mais restera visible dans les campagnes et rapports
+						existants.
+					{:else}
+						Supprimer définitivement cette liste et tous ses destinataires ? Elle n'est utilisée par
+						aucune campagne. Cette action est irréversible.
+					{/if}
+				</p>
+				<div class="flex gap-3 max-md:flex-col">
+					<Button type="submit" variant="danger" class="max-md:w-full">
+						{data.usage > 0 ? 'Archiver' : 'Supprimer définitivement'}
+					</Button>
+					<Button variant="ghost" class="max-md:w-full" onclick={() => (confirmingDelete = false)}>
+						Annuler
+					</Button>
+				</div>
+			</form>
+		</Panel>
+	{/if}
 
 	{#if next}
 		<div

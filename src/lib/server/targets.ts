@@ -1,7 +1,8 @@
 import { parse } from 'csv-parse/sync';
-import { and, count, eq } from 'drizzle-orm';
+import { and, count, eq, isNull } from 'drizzle-orm';
 import { db } from '$lib/server/db';
-import { targetLists, targets } from '$lib/server/db/schema';
+import { campaigns, targetLists, targets } from '$lib/server/db/schema';
+export { EMAIL_NAME_WARNING, looksLikeEmail } from '$lib/email-name';
 import type { Target, TargetList } from '$lib/server/db/schema';
 
 export type TargetInput = {
@@ -34,8 +35,75 @@ export async function createList(tenantId: string, name: string): Promise<Target
 	return db.insert(targetLists).values({ tenantId, name }).returning().get();
 }
 
-export async function listLists(tenantId: string): Promise<TargetList[]> {
-	return db.select().from(targetLists).where(eq(targetLists.tenantId, tenantId)).all();
+/** Listes du tenant ; les archivées sont masquées sauf demande explicite. */
+export async function listLists(tenantId: string, includeArchived = false): Promise<TargetList[]> {
+	return db
+		.select()
+		.from(targetLists)
+		.where(
+			includeArchived
+				? eq(targetLists.tenantId, tenantId)
+				: and(eq(targetLists.tenantId, tenantId), isNull(targetLists.archivedAt))
+		)
+		.all();
+}
+
+export type ListDeleteOutcome = 'deleted' | 'archived' | 'not_found';
+
+/** Nombre de campagnes qui utilisent cette liste. */
+export function countCampaignsUsingList(listId: string): number {
+	return db.select({ n: count() }).from(campaigns).where(eq(campaigns.targetListId, listId)).get()!
+		.n;
+}
+
+/**
+ * Supprime une liste du tenant jamais utilisée (ses destinataires avec) ; l'archive
+ * si des campagnes l'utilisent, pour ne pas casser l'historique ni les rapports.
+ */
+export function deleteOrArchiveList(listId: string, tenantId: string): ListDeleteOutcome {
+	return db.transaction((tx) => {
+		const l = tx
+			.select()
+			.from(targetLists)
+			.where(and(eq(targetLists.id, listId), eq(targetLists.tenantId, tenantId)))
+			.get();
+		if (!l) return 'not_found';
+		const used = tx
+			.select({ n: count() })
+			.from(campaigns)
+			.where(eq(campaigns.targetListId, l.id))
+			.get()!.n;
+		if (used === 0) {
+			// Aucune campagne : aucun envoi, événement ni job ne référence ces cibles.
+			tx.delete(targets).where(eq(targets.listId, l.id)).run();
+			tx.delete(targetLists).where(eq(targetLists.id, l.id)).run();
+			return 'deleted';
+		}
+		tx.update(targetLists).set({ archivedAt: new Date() }).where(eq(targetLists.id, l.id)).run();
+		return 'archived';
+	});
+}
+
+/** Restaure une liste archivée du tenant. Renvoie false si elle n'existe pas. */
+export function restoreList(listId: string, tenantId: string): boolean {
+	return (
+		db
+			.update(targetLists)
+			.set({ archivedAt: null })
+			.where(and(eq(targetLists.id, listId), eq(targetLists.tenantId, tenantId)))
+			.run().changes > 0
+	);
+}
+
+/** Renomme une liste du tenant. Renvoie false si elle n'existe pas. */
+export function renameList(listId: string, tenantId: string, name: string): boolean {
+	return (
+		db
+			.update(targetLists)
+			.set({ name })
+			.where(and(eq(targetLists.id, listId), eq(targetLists.tenantId, tenantId)))
+			.run().changes > 0
+	);
 }
 
 /** Nombre de cibles par liste du tenant (les listes vides sont absentes de la map). */

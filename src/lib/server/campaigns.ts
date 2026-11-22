@@ -83,6 +83,7 @@ export type CampaignInput = {
 export async function createCampaign(input: CampaignInput): Promise<Campaign> {
 	const list = db.select().from(targetLists).where(eq(targetLists.id, input.targetListId)).get();
 	if (!list || list.tenantId !== input.tenantId) throw new Error('Liste de cibles invalide');
+	if (list.archivedAt) throw new Error('Cette liste est archivée : choisissez une autre liste');
 	const profile = db
 		.select()
 		.from(sendingProfiles)

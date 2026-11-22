@@ -8,6 +8,7 @@ Format based on Keep a Changelog. Versions follow `0.MINOR.PATCH` until 1.0.
 
 - Users can change their login e-mail address from `/account` (current password required, no confirmation e-mail). Other sessions are closed; the audit log records `account.email_change` without the addresses. This lets the default `admin@redfish.local` account receive sending-profile test e-mails.
 - Scenario deletion (superadmin): a scenario used by no campaign is deleted; one used by campaigns is archived instead, hidden from the scenario list and the campaign picker but kept in existing campaigns and reports. Archived scenarios can be shown and restored from the scenario list.
+- Recipient lists can be deleted from « Destinataires » and from the list page, after an inline confirmation. A list used by no campaign is deleted with its recipients; one used by campaigns is archived instead (hidden from the page and the campaign picker, kept in existing campaigns and reports; new campaigns cannot use it). Archived lists can be shown and restored. Lists can also be renamed. The creation form is clearer (« Nom de la liste », recipients are added afterwards) and gently warns when the name looks like an e-mail address. Audit: `list.delete`, `list.archive`, `list.restore`, `list.rename`.
 
 ### Changed
 
