@@ -245,6 +245,24 @@ test('with no authorization at all, status is skipped and nothing is sent', asyn
 	).toBe('skipped');
 });
 
+test('a paused campaign is not sent and the recipient stays pending (resumable)', async () => {
+	authorize();
+	db.update(campaigns).set({ status: 'paused' }).where(eq(campaigns.id, campaignId)).run();
+	await sendRecipient(recipientId);
+
+	expect(sentMessages).toHaveLength(0);
+	const rec = db
+		.select()
+		.from(campaignRecipients)
+		.where(eq(campaignRecipients.id, recipientId))
+		.get()!;
+	// Reste « pending » (et NON « skipped ») : il sera remis en file à la reprise.
+	expect(rec.sendStatus).toBe('pending');
+	expect(
+		db.select().from(events).where(eq(events.campaignRecipientId, recipientId)).all()
+	).toHaveLength(0);
+});
+
 test('an invalid headersJson does not block the send (no custom headers applied)', async () => {
 	authorize();
 	// L'opérateur a saisi un JSON malformé (non validé à la création) : l'envoi

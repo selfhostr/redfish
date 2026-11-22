@@ -60,6 +60,12 @@ export async function sendRecipient(recipientId: string): Promise<void> {
 	const campaign = db.select().from(campaigns).where(eq(campaigns.id, recipient.campaignId)).get();
 	if (!campaign) throw new Error('Campagne introuvable');
 
+	// Campagne en pause : ne rien envoyer et NE PAS toucher au destinataire. Il
+	// reste « pending » pour être remis en file à la reprise (cf. resumeCampaign).
+	// La pause supprime déjà les jobs en file ; ce garde-fou couvre un job qui
+	// tournait déjà à l'instant de la mise en pause.
+	if (campaign.status === 'paused') return;
+
 	// Campagne clôturée (arrêtée) avant l'heure planifiée : plus aucun envoi.
 	if (campaign.status !== 'sending') {
 		db.update(campaignRecipients)

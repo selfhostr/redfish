@@ -17,6 +17,7 @@ import {
 } from '$lib/server/campaigns';
 import { completeCampaign } from '$lib/server/campaigns/completion';
 import { LaunchError, launchCampaign } from '$lib/server/campaigns/launch';
+import { editPausedCampaign, pauseCampaign, resumeCampaign } from '$lib/server/campaigns/pause';
 import {
 	listFailedRecipients,
 	listRetryingRecipients,
@@ -59,7 +60,10 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 		failedRecipients: listFailedRecipients(campaign.id),
 		retryingRecipients: listRetryingRecipients(campaign.id),
 		maxAttempts: MAX_ATTEMPTS,
-		progress: campaign.status === 'sending' ? sendingProgress(campaign.id) : null
+		progress:
+			campaign.status === 'sending' || campaign.status === 'paused'
+				? sendingProgress(campaign.id)
+				: null
 	};
 };
 
@@ -109,6 +113,47 @@ export const actions: Actions = {
 		audit(locals.user, 'campaign.retry_failed', {
 			...campaignRef(campaign),
 			details: { count: n }
+		});
+		return { success: true };
+	},
+	pause: async ({ locals, params }) => {
+		if (!locals.user) throw redirect(303, '/login');
+		const campaign = await loadCampaign(locals.user, params.id);
+		if (campaign.status !== 'sending')
+			return fail(409, { error: "Seule une campagne en cours d'envoi peut être mise en pause." });
+		if (!pauseCampaign(campaign.id))
+			return fail(409, { error: "Seule une campagne en cours d'envoi peut être mise en pause." });
+		audit(locals.user, 'campaign.pause', campaignRef(campaign));
+		return { success: true };
+	},
+	resume: async ({ locals, params }) => {
+		if (!locals.user) throw redirect(303, '/login');
+		const campaign = await loadCampaign(locals.user, params.id);
+		if (campaign.status !== 'paused')
+			return fail(409, { error: 'Seule une campagne en pause peut être reprise.' });
+		if (!resumeCampaign(campaign.id))
+			return fail(409, { error: 'Seule une campagne en pause peut être reprise.' });
+		audit(locals.user, 'campaign.resume', campaignRef(campaign));
+		return { success: true };
+	},
+	edit: async ({ request, locals, params }) => {
+		if (!locals.user) throw redirect(303, '/login');
+		const campaign = await loadCampaign(locals.user, params.id);
+		if (campaign.status !== 'paused')
+			return fail(409, { error: 'La campagne doit être en pause pour être modifiée.' });
+		const data = await request.formData();
+		const pace = parseSendingPace(data);
+		if ('error' in pace) return fail(400, { error: pace.error });
+		const res = editPausedCampaign(campaign.id, {
+			trackingDomain: String(data.get('trackingDomain') ?? ''),
+			awarenessMessage: String(data.get('awarenessMessage') ?? ''),
+			pace
+		});
+		if (!res.ok) return fail(400, { error: res.error });
+		// Audit : seulement les NOMS des champs modifiés (aucun contenu / secret).
+		audit(locals.user, 'campaign.edit', {
+			...campaignRef(campaign),
+			details: { fields: res.changed }
 		});
 		return { success: true };
 	},

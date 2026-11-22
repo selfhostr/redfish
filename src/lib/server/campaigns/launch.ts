@@ -1,8 +1,10 @@
 import { randomBytes } from 'node:crypto';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { formatZoned } from '$lib/timezone';
 import { campaignRecipients, campaigns, jobs, targets } from '$lib/server/db/schema';
+import type { Campaign } from '$lib/server/db/schema';
+import type { DbTx } from '$lib/server/jobs/queue';
 import { canSendCampaign, listAuthorizations } from '../authorization';
 import { isValidEmail } from '../targets';
 import { tenantTimezone } from '../tenant';
@@ -34,6 +36,69 @@ export class LaunchError extends Error {
 export const STAGGER_MS = 3_000;
 
 const newToken = () => randomBytes(32).toString('base64url');
+
+/** Fenêtre d'heures ouvrées d'une campagne, ou null si l'étalement est à toute heure. */
+function campaignWorkingHours(
+	c: Pick<Campaign, 'workingHoursOnly' | 'workStartHour' | 'workEndHour'>
+) {
+	return c.workingHoursOnly
+		? {
+				startHour: c.workStartHour ?? DEFAULT_WORK_START_HOUR,
+				endHour: c.workEndHour ?? DEFAULT_WORK_END_HOUR
+			}
+		: null;
+}
+
+/**
+ * (Re)planifie et met en file les envois des destinataires encore « pending »
+ * d'une campagne, dans une transaction déjà ouverte. Applique le rythme d'envoi
+ * courant (étalement / heures ouvrées) à partir de `now` : chaque destinataire
+ * reçoit une nouvelle heure planifiée et un job `send-email` dû à cette heure.
+ * Utilisé par la reprise (`resumeCampaign`), où les destinataires existent déjà
+ * et où la fenêtre doit repartir de l'instant de reprise. Renvoie le nombre de
+ * destinataires remis en file.
+ */
+export function enqueuePendingSends(
+	tx: DbTx,
+	campaign: Campaign,
+	timeZone: string,
+	now: Date
+): number {
+	const pending = tx
+		.select({ id: campaignRecipients.id })
+		.from(campaignRecipients)
+		.where(
+			and(
+				eq(campaignRecipients.campaignId, campaign.id),
+				eq(campaignRecipients.sendStatus, 'pending')
+			)
+		)
+		.all();
+	if (pending.length === 0) return 0;
+	const plan = planSends({
+		items: pending,
+		start: now,
+		spreadHours: campaign.spreadHours,
+		workingHours: campaignWorkingHours(campaign),
+		timeZone,
+		minGapMs: STAGGER_MS
+	});
+	for (const { item, at } of plan) {
+		tx.update(campaignRecipients)
+			.set({ plannedAt: at })
+			.where(eq(campaignRecipients.id, item.id))
+			.run();
+		tx.insert(jobs)
+			.values({
+				type: 'send-email',
+				payloadJson: JSON.stringify({ recipientId: item.id }),
+				runAt: at,
+				status: 'queued'
+			})
+			.run();
+	}
+	return pending.length;
+}
 
 /**
  * Lance une campagne : re-vérifie l'autorisation, mélange les cibles, planifie
@@ -81,12 +146,7 @@ export async function launchCampaign(
 				items: list,
 				start: now,
 				spreadHours: fresh.spreadHours,
-				workingHours: fresh.workingHoursOnly
-					? {
-							startHour: fresh.workStartHour ?? DEFAULT_WORK_START_HOUR,
-							endHour: fresh.workEndHour ?? DEFAULT_WORK_END_HOUR
-						}
-					: null,
+				workingHours: campaignWorkingHours(fresh),
 				timeZone,
 				minGapMs: STAGGER_MS
 			});

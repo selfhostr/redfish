@@ -204,7 +204,7 @@ export const campaigns = sqliteTable(
 		targetListId: text('target_list_id')
 			.notNull()
 			.references(() => targetLists.id),
-		status: text('status', { enum: ['draft', 'scheduled', 'sending', 'completed'] })
+		status: text('status', { enum: ['draft', 'scheduled', 'sending', 'paused', 'completed'] })
 			.notNull()
 			.default('draft'),
 		trackingDomain: text('tracking_domain').notNull(),
@@ -226,7 +226,7 @@ export const campaigns = sqliteTable(
 		index('campaigns_tenant_idx').on(t.tenantId),
 		check(
 			'campaigns_status_check',
-			sql`${t.status} in ('draft', 'scheduled', 'sending', 'completed')`
+			sql`${t.status} in ('draft', 'scheduled', 'sending', 'paused', 'completed')`
 		)
 	]
 );

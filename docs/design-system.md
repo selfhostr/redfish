@@ -13,7 +13,7 @@ Tailwind utilities: `bg-`, `text-`, `border-` + `canvas`, `surface-1`, `surface-
 - `Button`: `variant` primary|secondary|ghost|danger, `size` sm|md, `href`, `type`, `disabled`.
 - `Panel`, `Field`, `Tabs`, `Skeleton` (`width`, `height`, `radius`).
 - `Plate`: `variant` signal|advisory|warning|info|neutral; dot + word + colour.
-- `StatusPill`: a campaign `status` (draft, scheduled, sending, completed; neutral fallback).
+- `StatusPill`: a campaign `status` (draft, scheduled, sending, paused, completed; neutral fallback).
 - `EmptyState`, `ErrorNotice`: empty and error states.
 - `Toast` (mounted once in the layout) and `toast(message, kind?, durationMs?)`; kind signal|advisory|warning|info. Call it on the client only (handlers, onMount, $effect), never during SSR or in a load function: the state is shared between requests.
 - `LocalTime`: `value` (Date|string|number, UTC), `mode` datetime|date. UTC on server render, local fr-CH time with a short zone (for example "20.11.26 17:07 UTC+1") after mount (title = UTC), "n/a" when empty.
