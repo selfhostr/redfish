@@ -4,6 +4,12 @@ Format based on Keep a Changelog. Versions follow `0.MINOR.PATCH` until 1.0.
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-11-22
+
+### Changed
+
+- The mail module source files (`src/lib/server/mail/module.ts`, `mailer.ts`) now state the authorized-use context in their header: send-only locked-down SMTP, defensive use only, written agreement required, no credential captured. No behavior change.
+
 ## [0.3.0] - 2026-11-22
 
 ### Added
