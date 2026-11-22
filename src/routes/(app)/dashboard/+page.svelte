@@ -4,19 +4,16 @@
 	import { Button, Panel, EmptyState, CopyButton } from '$lib/components/ui';
 	import { funnelLabels } from '$lib/funnel-labels';
 	import { categoryLabel, difficultyLabel, localeLabel } from '$lib/scenario-labels';
+	import { onboardingSteps, showOnboarding } from '$lib/onboarding';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
 
 	const tenantName = $derived(data.activeTenant?.name ?? '');
 
-	// « Premiers pas » du client actif, affichés tant qu'une étape reste à faire.
-	const steps = $derived([
-		{ done: data.listCount > 0, label: 'Créer une liste de destinataires', href: '/lists' },
-		{ done: data.profileCount > 0, label: "Ajouter un profil d'envoi", href: '/sending-profiles' },
-		{ done: data.campaignCount > 0, label: 'Lancer une première campagne', href: '/campaigns/new' }
-	]);
-	const onboarded = $derived(steps.every((s) => s.done));
+	// « Premiers pas » du client actif, seulement tant qu'il n'a lancé aucune campagne.
+	const steps = $derived(onboardingSteps(data));
+	const onboarding = $derived(showOnboarding(data));
 
 	const pct = (num: number, den: number) => (den > 0 ? Math.round((num / den) * 100) : 0);
 	const ratePct = (num: number, den: number) => (den > 0 ? `${pct(num, den)} %` : 'n/d');
@@ -112,7 +109,7 @@
 		>
 			<Button variant="primary" href="/tenants">Créer un client</Button>
 		</EmptyState>
-	{:else if !onboarded}
+	{:else if onboarding}
 		<Panel>
 			{#snippet header()}
 				<h2 class="rf-eyebrow">Premiers pas</h2>

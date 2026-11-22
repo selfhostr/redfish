@@ -11,7 +11,7 @@ import { tenants, userTenants, users } from '$lib/server/db/schema';
 import type { User } from '$lib/server/db/schema';
 import { createUser } from '$lib/server/auth';
 import { createTenant } from '$lib/server/tenant';
-import { actions } from './+page.server';
+import { actions, load } from './+page.server';
 
 let superadmin: User;
 let operator: User;
@@ -98,4 +98,44 @@ test('action update : operator non lié -> 403', async () => {
 	await expect(upd(operator, other.id, { contactName: 'X' })).rejects.toMatchObject({
 		status: 403
 	});
+});
+
+const view = (user: User, id: string, activeId?: string) =>
+	Promise.resolve(
+		load({
+			locals: { user },
+			params: { id },
+			cookies: { get: () => activeId, delete: () => {} }
+		} as unknown as Parameters<typeof load>[0])
+	);
+
+test('load : operator non lié -> 403, aucune donnée du client', async () => {
+	const other = await createTenant({ name: 'Autre', contactName: 'Secret' });
+	await expect(view(operator, other.id)).rejects.toMatchObject({ status: 403 });
+});
+
+test('load : client inexistant -> 403 ou 404', async () => {
+	const err = await view(operator, 'inexistant').catch((e: { status: number }) => e);
+	expect([403, 404]).toContain((err as { status: number }).status);
+});
+
+test('load : operator lié voit les paramètres de son client actif', async () => {
+	const res = (await view(operator, tenantId)) as { isActive: boolean; tenant: { id: string } };
+	expect(res.tenant.id).toBe(tenantId);
+	expect(res.isActive).toBe(true);
+});
+
+test("load : superadmin voit les paramètres d'un client qui n'est pas l'actif", async () => {
+	const other = await createTenant({ name: 'Autre' });
+	const res = (await view(superadmin, other.id, tenantId)) as {
+		isActive: boolean;
+		tenant: { id: string };
+	};
+	expect(res.tenant.id).toBe(other.id);
+	expect(res.isActive).toBe(false);
+});
+
+test('action delete : operator -> 403 aussi sur un client non lié', async () => {
+	const other = await createTenant({ name: 'Autre' });
+	await expect(del(operator, other.id, 'Autre')).rejects.toMatchObject({ status: 403 });
 });
