@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import StatusPill from '$lib/components/StatusPill.svelte';
 	import { Button, EmptyState, ErrorNotice, Field, LocalTime } from '$lib/components/ui';
 	import type { ActionData, PageData } from './$types';
 
@@ -120,54 +119,54 @@
 			message="Un client est l'entreprise que vous sensibilisez : ses destinataires, profils d'envoi et campagnes sont isolés des autres clients. Créez le premier pour commencer."
 		/>
 	{:else}
-		<ul class="grid gap-4 md:grid-cols-2">
-			{#each data.overviews as t (t.id)}
-				<li class="flex flex-col gap-4 rounded-md border border-line bg-surface-1 p-4">
-					<div class="flex items-start justify-between gap-3">
-						<h2 class="min-w-0 text-base font-semibold [overflow-wrap:anywhere] text-ink">
-							{t.name}
-						</h2>
-						<span class="font-mono text-xs text-ink-dim uppercase">{t.locale}</span>
-					</div>
-					<dl class="grid grid-cols-3 gap-2">
-						<div>
-							<dt class="rf-label">Campagnes</dt>
-							<dd class="text-ink">{t.campaignCount}</dd>
-						</div>
-						<div>
-							<dt class="rf-label">Destinataires</dt>
-							<dd class="text-ink">{t.recipientCount}</dd>
-						</div>
-						<div>
-							<dt class="rf-label">Taux de clic</dt>
-							<dd class="text-ink">{pct(t.lastClickRate)}</dd>
-						</div>
-					</dl>
-					<p class="flex flex-wrap items-center gap-x-2 gap-y-1 text-ink-dim">
-						{#if t.lastCampaign}
-							<span class="min-w-0 [overflow-wrap:anywhere]">{t.lastCampaign.name}</span>
-							<StatusPill status={t.lastCampaign.status} />
-							<LocalTime value={t.lastCampaign.createdAt} />
-						{:else}
-							Aucune campagne
-						{/if}
-					</p>
-					<div class="mt-auto flex flex-col gap-2 sm:flex-row sm:items-center">
-						{#if t.id === data.activeTenant?.id}
-							<span class="text-signal max-sm:text-center sm:mr-auto">Client actif</span>
-						{:else}
-							<form method="POST" action="/set-tenant" class="contents">
-								<input type="hidden" name="tenantId" value={t.id} />
-								<input type="hidden" name="redirectTo" value="/dashboard" />
-								<Button type="submit" variant="secondary" class="max-sm:w-full">
-									Travailler sur ce client
-								</Button>
-							</form>
-						{/if}
-						<Button href="/tenants/{t.id}" variant="ghost" class="max-sm:w-full">Paramètres</Button>
-					</div>
-				</li>
-			{/each}
-		</ul>
+		<div class="overflow-x-auto rounded-md border border-line bg-surface-1">
+			<table class="w-full min-w-[44rem] text-left">
+				<caption class="sr-only">Vue d'ensemble des clients</caption>
+				<thead>
+					<tr class="border-b border-line">
+						<th scope="col" class="rf-label px-4 py-2 font-normal">Client</th>
+						<th scope="col" class="rf-label px-4 py-2 font-normal">Langue</th>
+						<th scope="col" class="rf-label px-4 py-2 text-right font-normal">Campagnes</th>
+						<th scope="col" class="rf-label px-4 py-2 text-right font-normal">Destinataires</th>
+						<th scope="col" class="rf-label px-4 py-2 text-right font-normal">Taux de clic</th>
+						<th scope="col" class="rf-label px-4 py-2 font-normal">Dernière campagne</th>
+						<th scope="col" class="px-4 py-2"><span class="sr-only">Actions</span></th>
+					</tr>
+				</thead>
+				<tbody>
+					{#each data.overviews as t (t.id)}
+						<tr class="border-b border-line last:border-b-0">
+							<th scope="row" class="px-4 py-2.5 font-medium [overflow-wrap:anywhere] text-ink">
+								<a href="/tenants/{t.id}" class="hover:underline">{t.name}</a>
+								{#if t.id === data.activeTenant?.id}
+									<span
+										class="ml-2 inline-block size-2 rounded-full bg-signal align-middle"
+										title="Client actif"
+										role="img"
+										aria-label="Client actif"
+									></span>
+								{/if}
+							</th>
+							<td class="px-4 py-2.5 font-mono text-xs text-ink-dim uppercase">{t.locale}</td>
+							<td class="px-4 py-2.5 text-right text-ink tabular-nums">{t.campaignCount}</td>
+							<td class="px-4 py-2.5 text-right text-ink tabular-nums">{t.recipientCount}</td>
+							<td class="px-4 py-2.5 text-right text-ink tabular-nums">{pct(t.lastClickRate)}</td>
+							<td class="px-4 py-2.5 text-ink-dim">
+								{#if t.lastCampaign}
+									<LocalTime value={t.lastCampaign.createdAt} />
+								{:else}
+									—
+								{/if}
+							</td>
+							<td class="px-4 py-2.5 text-right">
+								<a href="/tenants/{t.id}" class="text-ink-dim hover:text-ink hover:underline">
+									Paramètres
+								</a>
+							</td>
+						</tr>
+					{/each}
+				</tbody>
+			</table>
+		</div>
 	{/if}
 </main>

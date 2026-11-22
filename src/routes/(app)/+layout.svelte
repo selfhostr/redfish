@@ -26,7 +26,6 @@
 
 	// Administration : écrans globaux, indépendants du client actif.
 	const adminLinks: NavLink[] = $derived([
-		{ href: '/tenants', label: 'Clients', match: ['/tenants'] },
 		{ href: '/scenarios', label: 'Scénarios', match: ['/scenarios'] },
 		...(data.user.role === 'superadmin'
 			? [
@@ -40,6 +39,7 @@
 	const under = (href: string) => path === href || path.startsWith(href + '/');
 	const isActive = (l: NavLink) => l.match.some(under);
 	const adminActive = $derived(adminLinks.some(isActive));
+	const clientsActive = $derived(under('/tenants'));
 	const accountActive = $derived(under('/account'));
 
 	const afterSwitch = $derived(switchTarget(path));
@@ -179,7 +179,7 @@
 			{@render brandLink()}
 
 			{#if data.activeTenant}
-				<NavMenu id="client-menu" triggerClass="client-trigger">
+				<NavMenu id="client-menu" triggerClass="client-trigger" active={clientsActive}>
 					{#snippet trigger()}
 						<span class="sr-only">Client actif :</span>
 						<span class="rf-eyebrow client-eyebrow" aria-hidden="true">Client</span>
@@ -187,10 +187,24 @@
 					{/snippet}
 					{@render clientChoices('menu-item')}
 					<a href="/tenants/{data.activeTenant.id}" class="menu-item">Paramètres de ce client</a>
-					<a href="/tenants" class="menu-item">Gérer les clients</a>
+					<a
+						href="/tenants"
+						class="menu-item"
+						class:active={path === '/tenants'}
+						aria-current={path === '/tenants' ? 'page' : undefined}
+					>
+						Gérer les clients
+					</a>
 				</NavMenu>
 			{:else}
-				<a href="/tenants" class="nav-link no-client">Aucun client · Créer un client</a>
+				<a
+					href="/tenants"
+					class="nav-link no-client"
+					class:active={clientsActive}
+					aria-current={path === '/tenants' ? 'page' : undefined}
+				>
+					Aucun client · Créer un client
+				</a>
 			{/if}
 
 			<ul class="nav-links">
@@ -261,7 +275,14 @@
 						{/if}
 						{@render clientChoices('sheet-link')}
 						<a href="/tenants/{data.activeTenant.id}" class="sheet-link">Paramètres de ce client</a>
-						<a href="/tenants" class="sheet-link">Gérer les clients</a>
+						<a
+							href="/tenants"
+							class="sheet-link"
+							class:active={path === '/tenants'}
+							aria-current={path === '/tenants' ? 'page' : undefined}
+						>
+							Gérer les clients
+						</a>
 					{:else}
 						<a href="/tenants" class="sheet-link">Aucun client · Créer un client</a>
 					{/if}

@@ -10,6 +10,7 @@ Format based on Keep a Changelog. Versions follow `0.MINOR.PATCH` until 1.0.
 
 ### Changed
 
+- The clients page (`/tenants`) is now a pure overview: a table comparing clients (language, campaigns, recipients, click rate, last campaign) with a link to each client's settings. It no longer offers switching client, which is done from the top-bar switcher only; « Clients » leaves the Administration menu and « Gérer les clients » in the switcher leads there.
 - Navigation: the client switcher comes first in the bar (active client, other clients, « Paramètres de ce client », « Gérer les clients »), followed only by the active client's screens (Tableau de bord, Campagnes, Destinataires, Profils d'envoi). Global screens move to an « Administration » menu (Clients, Scénarios, and for superadmins Utilisateurs and Journal d'audit), next to the account menu. The mobile menu has the same structure.
 - The client page tabs are gone. `/tenants/[id]` is now « Paramètres du client » (identity, contact, timezone, deletion) and no longer requires switching to that client; switching is done with the switcher or « Travailler sur ce client ». The dashboard shows the « Premiers pas » checklist until the client has a list, a sending profile and a campaign, and invites to create a first client when there is none.
 - « Listes » is renamed « Destinataires » in the interface; « Données personnelles (RGPD) » is reached from that page.

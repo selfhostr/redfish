@@ -46,6 +46,8 @@ test('the navigation separates the client from the administration', async ({ pag
 	await admin.click();
 	await expect(admin).toHaveAttribute('aria-expanded', 'true');
 	await expect(nav.getByRole('link', { name: 'Scénarios' })).toBeVisible();
+	// Clients are managed from the switcher, not from the Administration menu.
+	await expect(nav.locator('#admin-menu').getByRole('link', { name: 'Clients' })).toHaveCount(0);
 	// An operator does not see the superadmin screens.
 	await expect(nav.getByRole('link', { name: 'Utilisateurs' })).toHaveCount(0);
 	await page.keyboard.press('Escape');
@@ -96,7 +98,7 @@ test('campaign list and report for the demo data', async ({ page }) => {
 	const active = page.getByRole('button', { name: 'Client actif : Fiduciaire Alpina SA' });
 	await page.goto('/tenants');
 	await page
-		.getByRole('listitem')
+		.getByRole('row')
 		.filter({ hasText: 'Client E2E SA' })
 		.getByRole('link', { name: 'Paramètres' })
 		.click();
