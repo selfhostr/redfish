@@ -323,6 +323,84 @@
 					</dd>
 				{/if}
 			</dl>
+			{#if data.campaign.status === 'sending'}
+				<form
+					method="POST"
+					action="?/pause"
+					use:enhance={({ cancel }) => {
+						if (
+							!confirm(
+								'Mettre la campagne en pause ? Les envois encore en attente sont suspendus ; vous pourrez modifier quelques réglages puis reprendre.'
+							)
+						)
+							cancel();
+					}}
+					class="mt-4"
+				>
+					<Button type="submit" variant="secondary" class="max-md:w-full">Mettre en pause</Button>
+				</form>
+			{/if}
+		</Panel>
+	{/if}
+
+	{#if data.campaign.status === 'paused'}
+		<Panel>
+			{#snippet header()}
+				<h2 class="rf-eyebrow">Campagne en pause</h2>
+			{/snippet}
+			<div class="flex flex-col gap-5">
+				<p class="text-ink-dim">
+					Les envois sont suspendus. Vous pouvez ajuster le domaine de tracking, le message de
+					sensibilisation et le rythme d'envoi, puis reprendre. À la reprise, les destinataires
+					encore en attente sont replanifiés à partir de maintenant.
+				</p>
+
+				<form method="POST" action="?/edit" use:enhance class="flex flex-col gap-4">
+					<Field
+						label="Domaine de tracking"
+						name="trackingDomain"
+						value={data.campaign.trackingDomain}
+						required
+						help={`Seuls les destinataires pas encore envoyés utiliseront ce domaine.${
+							data.progress && data.progress.sent > 0
+								? ` ${data.progress.sent} destinataire(s) déjà envoyé(s) garderont l'ancien domaine.`
+								: ''
+						}`}
+					/>
+					<Field label="Message de sensibilisation (optionnel)" id="field-awarenessMessage">
+						{#snippet input()}
+							<textarea
+								id="field-awarenessMessage"
+								name="awarenessMessage"
+								rows="3"
+								class="rf-input w-full max-w-full min-w-0"
+								>{data.campaign.awarenessMessage ?? ''}</textarea
+							>
+						{/snippet}
+					</Field>
+					<SendingPaceFields
+						spreadHours={data.campaign.spreadHours}
+						workingHoursOnly={data.campaign.workingHoursOnly}
+						workStartHour={data.campaign.workStartHour}
+						workEndHour={data.campaign.workEndHour}
+						timezone={data.timezone}
+					/>
+					<Button type="submit" variant="secondary" class="max-md:w-full sm:self-start">
+						Enregistrer les modifications
+					</Button>
+				</form>
+
+				<form
+					method="POST"
+					action="?/resume"
+					use:enhance={({ cancel }) => {
+						if (!confirm('Reprendre la campagne ? Les envois en attente repartent dès maintenant.'))
+							cancel();
+					}}
+				>
+					<Button type="submit" variant="primary" class="max-md:w-full">Reprendre l'envoi</Button>
+				</form>
+			</div>
 		</Panel>
 	{/if}
 

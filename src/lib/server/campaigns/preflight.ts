@@ -86,6 +86,15 @@ const hostOf = (v: string): string | null => {
 };
 
 /**
+ * Domaine de tracking valide : non vide et analysable en hôte (le même contrôle
+ * que le pré-lancement, cf. `hostOf`). Réutilisé par l'édition d'une campagne en
+ * pause pour refuser un domaine invalide avant de l'enregistrer.
+ */
+export function isValidTrackingDomain(v: string): boolean {
+	return hostOf(v.trim()) !== null;
+}
+
+/**
  * Contrôle de pré-lancement : fonction sans accès base ni horloge cachée. Les
  * erreurs bloquent le lancement, les avertissements non. Appelée à l'affichage
  * (page campagne) ET au lancement (`launchCampaign`), donc non contournable.

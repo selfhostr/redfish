@@ -24,7 +24,7 @@ Reached from the account menu (your email, at the end of the navigation bar) →
 
 Table `audit_log`: date, actor (id and frozen email), organization, action, object and JSON details. Written in one line from actions: `audit(user, 'campaign.launch', { tenantId, targetType, targetId })`. A failed write is reported in the logs without cancelling the action.
 
-Logged actions: successful or failed login (the email typed is never written), recovery code used, password changed, sessions revoked, 2FA enabled or disabled, client created, updated or deleted, scenario created or imported, sending profile created, campaign created, authorized, scheduled, sending pace changed, launched or deleted, targets imported or added, anonymisation by retention. The identifiers `scenario.delete`, `campaign.cancel` and `sending_profile.update`/`delete` are reserved for actions that do not exist in the interface yet.
+Logged actions: successful or failed login (the email typed is never written), recovery code used, password changed, sessions revoked, 2FA enabled or disabled, client created, updated or deleted, scenario created or imported, sending profile created, campaign created, authorized, scheduled, sending pace changed, launched, paused, resumed, edited while paused, or deleted, targets imported or added, anonymisation by retention. The identifiers `scenario.delete`, `campaign.cancel` and `sending_profile.update`/`delete` are reserved for actions that do not exist in the interface yet.
 
 The `/audit` page (« Administration » menu → « Journal d'audit »; read-only, filters by action group, actor, organization and dates, 50 entries per page) is reserved for superadmins. The `operator` role has no administration rights, so there is no view limited to one organization.
 
