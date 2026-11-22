@@ -358,6 +358,42 @@
 		</div>
 	</Panel>
 
+	{#if data.retryingRecipients.length > 0}
+		<Panel flush>
+			{#snippet header()}
+				<h2 class="rf-eyebrow">{data.retryingRecipients.length} envois en cours de réessai</h2>
+			{/snippet}
+			<p class="px-4 pt-4 text-ink-dim">
+				L'envoi à ces destinataires a échoué ; il est réessayé automatiquement (jusqu'à {data.maxAttempts}
+				tentatives). Vous n'avez rien à faire pour l'instant.
+			</p>
+			<div class="overflow-x-auto">
+				<table class="mt-3 w-full text-left text-sm">
+					<thead class="border-y border-line bg-surface-2">
+						<tr>
+							<th class="rf-label px-4 py-3 font-medium">Destinataire</th>
+							<th class="rf-label px-4 py-3 font-medium">Dernier motif</th>
+							<th class="rf-label px-4 py-3 font-medium">Tentatives</th>
+						</tr>
+					</thead>
+					<tbody class="divide-y divide-line">
+						{#each data.retryingRecipients as r (r.id)}
+							<tr>
+								<td class="px-4 py-3 text-ink">{r.name ? `${r.name} · ` : ''}{r.email}</td>
+								<td class="px-4 py-3 break-words text-ink-dim">{r.reason}</td>
+								<td class="px-4 py-3 text-ink-dim">
+									{r.attempts === null
+										? 'réessai en cours'
+										: `${r.attempts} / ${data.maxAttempts}, réessai en cours`}
+								</td>
+							</tr>
+						{/each}
+					</tbody>
+				</table>
+			</div>
+		</Panel>
+	{/if}
+
 	{#if data.funnel.failed > 0}
 		<Panel flush>
 			{#snippet header()}

@@ -50,6 +50,25 @@ export function registerFailureHandler<T = any>(
 	failureHandlers.set(type, fn as FailureHandler);
 }
 
+type RetryHandler = (payload: unknown, err: unknown, attempts: number) => void;
+const retryHandlers = new Map<string, RetryHandler>();
+
+/** Hook appelé à chaque échec d'une tentative qui sera réessayée (pas à l'échec définitif). */
+export function registerRetryHandler<T = any>(
+	type: string,
+	fn: (payload: T, err: unknown, attempts: number) => void
+) {
+	retryHandlers.set(type, fn as RetryHandler);
+}
+
+function notifyRetry(type: string, payloadJson: string, err: unknown, attempts: number) {
+	try {
+		retryHandlers.get(type)?.(JSON.parse(payloadJson), err, attempts);
+	} catch (e) {
+		console.error(`retry hook for ${type} failed:`, e);
+	}
+}
+
 function notifyFailed(type: string, payloadJson: string, err: unknown) {
 	try {
 		failureHandlers.get(type)?.(JSON.parse(payloadJson), err);
@@ -161,6 +180,7 @@ export async function runDueJobs(now = new Date()): Promise<{ ran: number; faile
 				.where(fence)
 				.run();
 			if (attempts >= MAX_ATTEMPTS) notifyFailed(job.type, job.payloadJson, err);
+			else notifyRetry(job.type, job.payloadJson, err, attempts);
 			failed++;
 		}
 	}
