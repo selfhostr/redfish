@@ -1,0 +1,277 @@
+#!/usr/bin/env bash
+# Interactive installer for a production VPS (Debian/Ubuntu or similar).
+# Run it from the repository root: ./install.sh
+# It never uses sudo. Safe to re-run: an existing .env is only replaced after
+# confirmation, and a backup is kept.
+set -euo pipefail
+
+TOTAL=8
+STEP=0
+ENV_FILE=".env"
+
+if [ -t 1 ]; then
+  C_BLUE=$'\033[1;34m'; C_GREEN=$'\033[32m'; C_RED=$'\033[31m'
+  C_YELLOW=$'\033[33m'; C_RESET=$'\033[0m'
+else
+  C_BLUE=""; C_GREEN=""; C_RED=""; C_YELLOW=""; C_RESET=""
+fi
+
+step() { STEP=$((STEP + 1)); printf '\n%s==> [%d/%d] %s%s\n' "$C_BLUE" "$STEP" "$TOTAL" "$1" "$C_RESET"; }
+ok()   { printf '  %s[ok]%s %s\n' "$C_GREEN" "$C_RESET" "$1"; }
+info() { printf '  %s\n' "$1"; }
+warn() { printf '  %s[warn]%s %s\n' "$C_YELLOW" "$C_RESET" "$1"; }
+fail() { printf '  %s[error]%s %s\n' "$C_RED" "$C_RESET" "$1" >&2; exit 1; }
+
+# ask VAR "prompt" [default]: read a non-secret value, re-asking while empty.
+ask() {
+  local __var=$1 __prompt=$2 __def=${3:-} __val=""
+  while :; do
+    if [ -n "$__def" ]; then
+      read -r -p "  $__prompt [$__def]: " __val || fail "Input closed."
+      __val=${__val:-$__def}
+    else
+      read -r -p "  $__prompt: " __val || fail "Input closed."
+    fi
+    if [ -z "$__val" ]; then warn "A value is required."; continue; fi
+    if ! safe_value "$__val"; then continue; fi
+    break
+  done
+  printf -v "$__var" '%s' "$__val"
+}
+
+# yesno "prompt" [default y|n]
+yesno() {
+  local __def=${2:-n} __a __hint="y/N"
+  [ "$__def" = y ] && __hint="Y/n"
+  read -r -p "  $1 [$__hint]: " __a || fail "Input closed."
+  __a=${__a:-$__def}
+  case "$__a" in [yY]|[yY][eE][sS]|[oO]|[oO][uU][iI]) return 0 ;; *) return 1 ;; esac
+}
+
+# Values are written single-quoted in .env: refuse characters that cannot be
+# represented safely there.
+safe_value() {
+  case "$1" in
+    *\'*|*$'\n'*|*$'\r'*) warn "Single quotes and line breaks are not allowed."; return 1 ;;
+  esac
+  return 0
+}
+
+# ask_secret VAR "prompt": masked input with confirmation.
+ask_secret() {
+  local __var=$1 __prompt=$2 __a __b
+  while :; do
+    read -r -s -p "  $__prompt: " __a || fail "Input closed."; echo
+    read -r -s -p "  Confirm: " __b || fail "Input closed."; echo
+    [ -n "$__a" ] || { warn "A value is required."; continue; }
+    [ "$__a" = "$__b" ] || { warn "Values do not match."; continue; }
+    safe_value "$__a" || continue
+    break
+  done
+  printf -v "$__var" '%s' "$__a"
+}
+
+env_get() { # env_get FILE KEY: last value of KEY, quotes stripped
+  local line
+  line=$(grep -E "^$2=" "$1" 2>/dev/null | tail -n 1 || true)
+  line=${line#*=}
+  line=${line#\'}; line=${line%\'}
+  line=${line#\"}; line=${line%\"}
+  printf '%s' "$line"
+}
+
+# ---------------------------------------------------------------- 1. Preflight
+step "Preflight checks"
+[ -f docker-compose.yml ] || fail "docker-compose.yml not found. Run ./install.sh from the repository root."
+ok "Repository root detected"
+command -v docker >/dev/null 2>&1 || fail "docker is not installed. See https://docs.docker.com/engine/install/"
+if ! docker info >/dev/null 2>&1; then
+  fail "'docker info' failed. Either the daemon is not running, or your user lacks permission (add it to the 'docker' group and log in again, or run this script as root). This script does not use sudo."
+fi
+ok "Docker is usable by $(id -un)"
+docker compose version >/dev/null 2>&1 || fail "The 'docker compose' v2 plugin is missing. Install docker-compose-plugin."
+ok "Docker Compose plugin found"
+command -v openssl >/dev/null 2>&1 || fail "openssl is required (apt install openssl)."
+command -v curl >/dev/null 2>&1 || fail "curl is required (apt install curl)."
+ok "openssl and curl found"
+if [ -f "$ENV_FILE" ] || [ -d data ]; then
+  warn "An existing installation was detected (.env and/or ./data). Re-running is safe; nothing is replaced without confirmation."
+fi
+
+# ------------------------------------------------------------- 2. Secret key
+step "Secret key"
+SECRET_KEY=""
+if [ -f "$ENV_FILE" ]; then
+  SECRET_KEY=$(env_get "$ENV_FILE" REDFISH_SECRET_KEY)
+fi
+if [ -n "$SECRET_KEY" ]; then
+  ok "Keeping the existing REDFISH_SECRET_KEY from .env (not displayed)"
+else
+  SECRET_KEY=$(openssl rand -base64 32)
+  [ -n "$SECRET_KEY" ] || fail "Could not generate a key with openssl."
+  ok "Generated a new REDFISH_SECRET_KEY (not displayed; stored in .env)"
+fi
+
+# --------------------------------------------------------------- 3. Questions
+step "Configuration"
+info "DASHBOARD_HOST and TRACKING_HOST are both mandatory and must be two DIFFERENT host names"
+info "(operator dashboard vs public tracking pages), e.g. redfish.example.org and go.example.org."
+while :; do
+  ask DASHBOARD_HOST "Dashboard host name"
+  ask TRACKING_HOST "Tracking host name"
+  [ "$DASHBOARD_HOST" != "$TRACKING_HOST" ] && break
+  warn "The two hosts must be different. Please enter them again."
+done
+ask ORIGIN "Public URL of the dashboard (ORIGIN)" "https://$DASHBOARD_HOST"
+ADDRESS_HEADER=""
+if yesno "Behind a reverse proxy / Cloudflare Tunnel?" y; then
+  ask ADDRESS_HEADER "Client IP header (ADDRESS_HEADER)" "CF-Connecting-IP"
+  XFF_DEPTH=""
+  if [ "$(printf '%s' "$ADDRESS_HEADER" | tr '[:upper:]' '[:lower:]')" = "x-forwarded-for" ]; then
+    ask XFF_DEPTH "Number of trusted proxies (XFF_DEPTH)" "1"
+  fi
+fi
+XFF_DEPTH=${XFF_DEPTH:-}
+ok "Configuration collected"
+
+# --------------------------------------------------------------- 4. Write .env
+step "Writing .env"
+if [ -f "$ENV_FILE" ]; then
+  if ! yesno ".env already exists. Overwrite it (a backup is made first)?" n; then
+    fail "Aborted: .env left untouched."
+  fi
+  BACKUP="$ENV_FILE.bak.$(date +%Y%m%d%H%M%S)"
+  cp -p "$ENV_FILE" "$BACKUP"
+  chmod 600 "$BACKUP"
+  ok "Backup saved to $BACKUP"
+fi
+
+TMP_ENV=$(mktemp "$ENV_FILE.XXXXXX")
+trap 'rm -f "$TMP_ENV"' EXIT
+chmod 600 "$TMP_ENV"
+{
+  echo "# Generated by install.sh on $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  echo "REDFISH_SECRET_KEY='$SECRET_KEY'"
+  echo "DATABASE_URL='file:./data/redfish.db'"
+  echo "ORIGIN='$ORIGIN'"
+  echo "DASHBOARD_HOST='$DASHBOARD_HOST'"
+  echo "TRACKING_HOST='$TRACKING_HOST'"
+  [ -n "$ADDRESS_HEADER" ] && echo "ADDRESS_HEADER='$ADDRESS_HEADER'"
+  [ -n "$XFF_DEPTH" ] && echo "XFF_DEPTH='$XFF_DEPTH'"
+  true
+} > "$TMP_ENV"
+mv -f "$TMP_ENV" "$ENV_FILE"
+chmod 600 "$ENV_FILE"
+trap - EXIT
+ok ".env written (mode 600)"
+
+step "Optional built-in sending module"
+MAIL=0
+MAIL_DOMAIN=""; MAIL_HOSTNAME=""; MAIL_DKIM_SELECTOR=""; MAIL_SMTP_USER=""; MAIL_SMTP_PASSWORD=""
+if yesno "Enable the built-in sending module now? (requires outbound port 25 to be open)" n; then
+  MAIL=1
+  ask MAIL_DOMAIN "Sending domain (MAIL_DOMAIN)"
+  ask MAIL_HOSTNAME "Mail host name (MAIL_HOSTNAME; must match the server's PTR)" "mail.$MAIL_DOMAIN"
+  ask MAIL_DKIM_SELECTOR "DKIM selector" "redfish"
+  ask MAIL_SMTP_USER "SMTP user" "redfish"
+  if yesno "Generate a strong SMTP password?" y; then
+    MAIL_SMTP_PASSWORD=$(openssl rand -base64 24)
+    ok "SMTP password generated (not displayed; stored in .env)"
+  else
+    while :; do
+      ask_secret MAIL_SMTP_PASSWORD "SMTP password (at least 20 characters)"
+      [ "${#MAIL_SMTP_PASSWORD}" -ge 20 ] && break
+      warn "The password must be at least 20 characters."
+    done
+  fi
+  ok "Mail module will be started with the 'mail' profile"
+else
+  info "Skipped. See docs/self-hosted-sending.md to enable it later."
+fi
+
+if [ "$MAIL" = 1 ]; then
+  {
+    echo "MAIL_DOMAIN='$MAIL_DOMAIN'"
+    echo "MAIL_HOSTNAME='$MAIL_HOSTNAME'"
+    echo "MAIL_DKIM_SELECTOR='$MAIL_DKIM_SELECTOR'"
+    echo "MAIL_SMTP_USER='$MAIL_SMTP_USER'"
+    echo "MAIL_SMTP_PASSWORD='$MAIL_SMTP_PASSWORD'"
+  } >> "$ENV_FILE"
+  ok "Mail variables added to .env"
+fi
+
+
+# ---------------------------------------------------------------- 6. Start
+step "Starting the services"
+PROFILE_ARGS=()
+[ "$MAIL" = 1 ] && PROFILE_ARGS=(--profile mail)
+info "Pulling images (this can take a few minutes)..."
+docker compose ${PROFILE_ARGS[@]+"${PROFILE_ARGS[@]}"} pull || fail "docker compose pull failed."
+ok "Images pulled"
+info "Starting containers (migrations run automatically at startup)..."
+docker compose ${PROFILE_ARGS[@]+"${PROFILE_ARGS[@]}"} up -d || fail "docker compose up failed."
+ok "Containers started"
+
+# -------------------------------------------------------------- 7. Health
+step "Waiting for the application"
+HEALTH_URL="http://localhost:3000/health"
+DEADLINE=$((SECONDS + 120))
+SPIN='|/-\'
+i=0
+HEALTHY=0
+while [ "$SECONDS" -lt "$DEADLINE" ]; do
+  if curl -fsS --max-time 3 "$HEALTH_URL" 2>/dev/null | grep -q '"status":"ok"'; then
+    HEALTHY=1; break
+  fi
+  if [ -t 1 ]; then printf '\r  %s waiting for %s ' "${SPIN:i%4:1}" "$HEALTH_URL"; fi
+  i=$((i + 1))
+  sleep 2
+done
+[ -t 1 ] && printf '\r\033[K'
+if [ "$HEALTHY" != 1 ]; then
+  fail "The application did not become healthy within 120 s. Inspect: docker compose logs web"
+fi
+ok "Application is healthy ($HEALTH_URL)"
+
+# ---------------------------------------------------- 8. First operator
+step "First operator account"
+ask SEED_EMAIL "Operator e-mail"
+ask_secret SEED_PASSWORD "Operator password"
+if docker compose run --rm -e SEED_EMAIL="$SEED_EMAIL" -e SEED_PASSWORD="$SEED_PASSWORD" web node build/seed.js; then
+  ok "Operator account created"
+else
+  warn "The seed command failed (the account may already exist). Re-run it manually if needed:"
+  info "docker compose run --rm -e SEED_EMAIL=... -e SEED_PASSWORD='...' web node build/seed.js"
+fi
+unset SEED_PASSWORD
+
+# --------------------------------------------------------------- Summary
+printf '\n%sInstallation complete.%s\n\n' "$C_GREEN" "$C_RESET"
+cat <<SUMMARY
+  Dashboard:  $ORIGIN
+
+  DNS: make both names resolve to this server (A/AAAA records pointing at the
+  server, or CNAME / Cloudflare Tunnel routes, depending on your hosting) and
+  have your reverse proxy forward the original Host header, with HTTPS:
+    - $DASHBOARD_HOST   (operator dashboard)
+    - $TRACKING_HOST   (public tracking pages)
+
+  Data: ./data (SQLite database). Back it up regularly; the 'backup' compose
+  profile provides continuous Litestream replication (see docs/deployment.md).
+SUMMARY
+if [ "$MAIL" = 1 ]; then
+  cat <<SUMMARY
+
+  Mail module enabled. Next steps:
+    - publish the DKIM record shown on the "Délivrabilité" page (selector: $MAIL_DKIM_SELECTOR);
+    - make sure the server's PTR (reverse DNS) matches $MAIL_HOSTNAME.
+    Details: docs/self-hosted-sending.md
+SUMMARY
+else
+  cat <<'SUMMARY'
+
+  Mail module not enabled. To add it later: set the MAIL_* variables in .env
+  and run: docker compose --profile mail up -d
+  (see docs/self-hosted-sending.md).
+SUMMARY
+fi

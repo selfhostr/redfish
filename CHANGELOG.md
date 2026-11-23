@@ -4,6 +4,10 @@ Format based on Keep a Changelog. Versions follow `0.MINOR.PATCH` until 1.0.
 
 ## [Unreleased]
 
+### Added
+
+- Interactive `install.sh` for production VPS installs: preflight checks, secret key generation, guided `.env` creation (host isolation, `ORIGIN`, client IP header, optional mail module), image pull and start, health wait and first operator creation. Re-runnable; an existing `.env` is only replaced after confirmation, with a backup.
+
 ## [0.3.2] - 2026-11-23
 
 ### Security
