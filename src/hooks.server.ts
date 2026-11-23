@@ -30,16 +30,28 @@ function buildCsp(nonce: string): string {
 	].join('; ');
 }
 
+/**
+ * En-têtes de sécurité communs à toutes les réponses. `no-referrer` : les jetons de
+ * tracking figurent dans l'URL (`/t/...`) et ne doivent jamais fuiter via Referer.
+ */
+function applySecurityHeaders(headers: Headers, csp: string): void {
+	headers.set('content-security-policy', csp);
+	headers.set('referrer-policy', 'no-referrer');
+	headers.set('x-content-type-options', 'nosniff');
+}
+
 export const handle: Handle = async ({ event, resolve }) => {
 	const nonce = randomBytes(16).toString('base64');
 	const csp = buildCsp(nonce);
 
 	// Isolation des hôtes : un chemin servi sur le mauvais hôte n'existe pas.
 	if (!hostAllows(event.url.host, event.url.pathname, hostConfigFromEnv())) {
-		return new Response('Not found', {
+		const notFound = new Response('Not found', {
 			status: 404,
-			headers: { 'content-type': 'text/plain', 'content-security-policy': csp }
+			headers: { 'content-type': 'text/plain' }
 		});
+		applySecurityHeaders(notFound.headers, csp);
+		return notFound;
 	}
 
 	const token = event.cookies.get(SESSION_COOKIE);
@@ -62,6 +74,6 @@ export const handle: Handle = async ({ event, resolve }) => {
 		transformPageChunk: ({ html }) =>
 			html.replace(/<script(?![^>]*\bnonce=)(?=[\s>])/g, `<script nonce="${nonce}"`)
 	});
-	response.headers.set('content-security-policy', csp);
+	applySecurityHeaders(response.headers, csp);
 	return response;
 };
