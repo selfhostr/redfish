@@ -4,6 +4,8 @@ Format based on Keep a Changelog. Versions follow `0.MINOR.PATCH` until 1.0.
 
 ## [Unreleased]
 
+## [0.3.2] - 2026-11-23
+
 ### Security
 
 - In production, startup now fails unless both `DASHBOARD_HOST` and `TRACKING_HOST` are set, so host isolation can no longer be silently disabled by omitting them. Development (both unset) is unchanged.
