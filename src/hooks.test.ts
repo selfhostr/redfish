@@ -87,7 +87,7 @@ describe('CSP', () => {
 
 describe('en-têtes de sécurité', () => {
 	const expectHeaders = (res: Response) => {
-		expect(res.headers.get('referrer-policy')).toBe('no-referrer');
+		expect(res.headers.get('referrer-policy')).toBe('strict-origin-when-cross-origin');
 		expect(res.headers.get('x-content-type-options')).toBe('nosniff');
 	};
 	test('réponse normale', async () => {

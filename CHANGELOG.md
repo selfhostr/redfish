@@ -7,7 +7,7 @@ Format based on Keep a Changelog. Versions follow `0.MINOR.PATCH` until 1.0.
 ### Security
 
 - In production, startup now fails unless both `DASHBOARD_HOST` and `TRACKING_HOST` are set, so host isolation can no longer be silently disabled by omitting them. Development (both unset) is unchanged.
-- Every response, including the unknown-host 404, now carries `Referrer-Policy: no-referrer` (tracking tokens live in the `/t/...` URL and must not leak via `Referer`) and `X-Content-Type-Options: nosniff`.
+- Every response, including the unknown-host 404, now carries `Referrer-Policy: strict-origin-when-cross-origin` (tracking tokens live in the `/t/...` URL: this sends only the origin, never the path, to another origin, so the token never leaks via `Referer`) and `X-Content-Type-Options: nosniff`. `no-referrer` is avoided because it makes browsers send `Origin: null` on native form submissions, which breaks adapter-node's CSRF protection.
 
 ## [0.3.1] - 2026-11-22
 

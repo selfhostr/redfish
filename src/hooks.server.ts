@@ -31,12 +31,18 @@ function buildCsp(nonce: string): string {
 }
 
 /**
- * En-têtes de sécurité communs à toutes les réponses. `no-referrer` : les jetons de
- * tracking figurent dans l'URL (`/t/...`) et ne doivent jamais fuiter via Referer.
+ * En-têtes de sécurité communs à toutes les réponses.
+ *
+ * `strict-origin-when-cross-origin` : les jetons de tracking figurent dans l'URL
+ * (`/t/...`) ; cette politique ne transmet que l'ORIGINE (jamais le chemin, donc
+ * jamais le jeton) vers une autre origine, et rien en clair→chiffré. On évite
+ * `no-referrer`, qui pousse le navigateur à envoyer `Origin: null` sur les
+ * soumissions de formulaire natives et fait alors échouer la protection CSRF
+ * d'adapter-node (« Cross-site POST form submissions are forbidden »).
  */
 function applySecurityHeaders(headers: Headers, csp: string): void {
 	headers.set('content-security-policy', csp);
-	headers.set('referrer-policy', 'no-referrer');
+	headers.set('referrer-policy', 'strict-origin-when-cross-origin');
 	headers.set('x-content-type-options', 'nosniff');
 }
 
