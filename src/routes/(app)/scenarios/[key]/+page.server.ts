@@ -17,6 +17,8 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 	const preview = await renderScenarioPreview(scenario);
 	return {
 		scenario: summary,
+		// Éditable en place seulement si importé (un builtin, lu sur disque, est en lecture seule).
+		editable: scenario.source !== 'builtin' && scenario.path === null,
 		preview
 	};
 };

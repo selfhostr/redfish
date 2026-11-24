@@ -6,6 +6,7 @@
 
 	let { data }: { data: PageData } = $props();
 	const s = $derived(data.scenario);
+	const canEdit = $derived(data.user.role === 'superadmin' && data.editable);
 </script>
 
 <main class="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-6 md:px-6 md:py-8">
@@ -13,9 +14,16 @@
 
 	<div class="flex flex-wrap items-center justify-between gap-3">
 		<h1 class="text-2xl font-semibold [overflow-wrap:anywhere] text-ink">{s.title}</h1>
-		<Button href="/scenarios/{encodeURIComponent(s.key)}/export" download variant="secondary">
-			Exporter
-		</Button>
+		<div class="flex items-center gap-2">
+			{#if canEdit}
+				<Button href="/scenarios/{encodeURIComponent(s.key)}/edit" variant="primary">
+					Modifier
+				</Button>
+			{/if}
+			<Button href="/scenarios/{encodeURIComponent(s.key)}/export" download variant="secondary">
+				Exporter
+			</Button>
+		</div>
 	</div>
 
 	<p class="text-ink-dim">
