@@ -22,6 +22,7 @@ export const AUDIT_ACTIONS = {
 	'client.update': 'Client modifié',
 	'client.delete': 'Client supprimé',
 	'scenario.create': 'Scénario créé',
+	'scenario.update': 'Scénario modifié',
 	'scenario.import': 'Scénario importé',
 	'scenario.delete': 'Scénario supprimé',
 	'scenario.archive': 'Scénario archivé',
