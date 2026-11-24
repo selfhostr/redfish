@@ -52,6 +52,11 @@
 			<tr><th>{funnelLabels.reported}</th><td>{r.counts.reported} ({pct(r.rates.report)})</td></tr>
 		</tbody>
 	</table>
+	<p class="mt-2 text-sm">
+		Le taux d'ouverture est un plancher : l'ouverture repose sur un pixel que de nombreux clients
+		mail (Outlook, Office 365) bloquent par défaut. Un clic ou une interaction compte comme une
+		ouverture ; une ouverture sans clic peut passer inaperçue.
+	</p>
 
 	<h2 class="mt-6 text-lg font-medium">Points d'attention</h2>
 	<p class="text-sm">Éléments à surveiller relevés dans les résultats.</p>

@@ -4,8 +4,13 @@ Format based on Keep a Changelog. Versions follow `0.MINOR.PATCH` until 1.0.
 
 ## [Unreleased]
 
+### Added
+
+- The campaign report and the client dashboard now explain the open rate: it is a lower bound because open tracking relies on a pixel that Outlook/Office 365 block by default, and a click is counted as an open.
+
 ### Changed
 
+- The per-recipient breakdown on a campaign report now reflects human activity only: an automated scan (spam/security filter) no longer advances a recipient's stage, matching the funnel counts.
 - Campaign metrics are now a monotonic funnel: an open is inferred from any deeper action (click, page interaction, form submission or awareness view), so « Taux d'ouverture » is always at least the click rate and no longer reads 0 % when a recipient clicked but their mail client blocked the open pixel. The per-client dashboard, the campaign report and the trends chart all reflect it. Reporting the e-mail does not imply an open.
 
 ## [0.4.0] - 2026-11-24
