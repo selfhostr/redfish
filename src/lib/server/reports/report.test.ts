@@ -141,6 +141,18 @@ test('taux calculés sur les envois réussis, échecs comptés à part', async (
 	expect(r.details?.filter((d) => d.stage === 'Envoi en échec').length).toBe(1);
 });
 
+test("détail : un scan automatisé ne fait pas avancer l'étape du destinataire", async () => {
+	ev(0, 'sent');
+	ev(0, 'opened', true);
+	ev(0, 'clicked', true);
+	ev(1, 'sent');
+	ev(1, 'clicked');
+	const r = await buildReport(campaignId, { anonymize: false });
+	const stages = r.details?.map((d) => d.stage);
+	expect(stages?.filter((s) => s === 'Lien cliqué').length).toBe(1);
+	expect(stages?.filter((s) => s === 'Envoyé').length).toBe(1);
+});
+
 test('campagne sans destinataire : taux à 0', async () => {
 	db.delete(events).run();
 	db.delete(campaignRecipients).run();

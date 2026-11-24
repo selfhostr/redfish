@@ -176,6 +176,11 @@
 				</div>
 			{/each}
 		</section>
+		<p class="text-xs text-ink-dim">
+			Le taux d'ouverture est un plancher : l'ouverture repose sur un pixel que de nombreux clients
+			mail (Outlook, Office 365) bloquent par défaut. Un clic ou une interaction compte comme une
+			ouverture ; une ouverture sans clic peut passer inaperçue.
+		</p>
 
 		{#if data.featured}
 			<p class="text-ink-dim">

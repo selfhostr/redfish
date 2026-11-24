@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { campaignRecipients, events, targets } from '$lib/server/db/schema';
 import { getCampaign } from '$lib/server/campaigns';
@@ -139,7 +139,7 @@ export async function buildReport(
 			.select({ rid: events.campaignRecipientId, type: events.type })
 			.from(events)
 			.innerJoin(campaignRecipients, eq(events.campaignRecipientId, campaignRecipients.id))
-			.where(eq(campaignRecipients.campaignId, campaignId))
+			.where(and(eq(campaignRecipients.campaignId, campaignId), eq(events.isAutomated, false)))
 			.all();
 		const seen = new Map<string, Set<string>>();
 		for (const e of evs) (seen.get(e.rid) ?? seen.set(e.rid, new Set()).get(e.rid)!).add(e.type);
