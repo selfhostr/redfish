@@ -4,6 +4,8 @@ Format based on Keep a Changelog. Versions follow `0.MINOR.PATCH` until 1.0.
 
 ## [Unreleased]
 
+## [0.5.2] - 2026-11-24
+
 ### Added
 
 - An imported scenario can now be edited in place (« Modifier ») from its page: the same form as creation, prefilled, with the same security validation. The key cannot be changed and shipped (builtin) scenarios stay read-only. A note reminds that editing affects not-yet-sent e-mails of running campaigns, not already-recorded reports. Audit: `scenario.update`.
