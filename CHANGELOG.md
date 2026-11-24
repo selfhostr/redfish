@@ -8,6 +8,13 @@ Format based on Keep a Changelog. Versions follow `0.MINOR.PATCH` until 1.0.
 
 - Interactive `install.sh` for production VPS installs: preflight checks, secret key generation, guided `.env` creation (host isolation, `ORIGIN`, client IP header, optional mail module), image pull and start, health wait and first operator creation. Re-runnable; an existing `.env` is only replaced after confirmation, with a backup.
 
+### Changed
+
+- The `install.sh` preflight now offers to install missing prerequisites automatically (curl, openssl, Docker via get.docker.com and the Compose v2 plugin) after confirmation, instead of failing. Needs root or `sudo`; falls back to the manual instructions otherwise.
+- `install.sh` now makes `./data` (and the files directly in it, never `./data/mail`) owned by uid 1000 before starting the stack, so the non-root containers can create the SQLite database when the installer runs as root (fixes `SQLITE_CANTOPEN` and an unhealthy `web`).
+- `install.sh` now creates the first account with the `superadmin` role instead of `operator`, so it can reach the Administration pages.
+- `install.sh` reverse proxy prompt now names Caddy, nginx, Traefik and Cloudflare Tunnel, and the client IP header defaults to `X-Forwarded-For` (use `CF-Connecting-IP` behind Cloudflare), so recipient IPs are no longer all seen as `127.0.0.1`.
+
 ### Security
 
 - The production Compose file now publishes the `web` service on `127.0.0.1:3000` only, instead of all interfaces, so the dashboard is no longer reachable in clear HTTP on the host's public IP when it sits behind a reverse proxy. A proxy on another host overrides the bind and filters at the firewall.

@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 # Interactive installer for a production VPS (Debian/Ubuntu or similar).
 # Run it from the repository root: ./install.sh
-# It never uses sudo. Safe to re-run: an existing .env is only replaced after
-# confirmation, and a backup is kept.
+# Missing prerequisites (curl, openssl, Docker + Compose plugin) can be installed
+# after confirmation; this needs root (run as root, or sudo must be available).
+# Safe to re-run: an existing .env is only replaced after confirmation, and a
+# backup is kept.
 set -euo pipefail
 
 TOTAL=8
@@ -80,20 +82,80 @@ env_get() { # env_get FILE KEY: last value of KEY, quotes stripped
   printf '%s' "$line"
 }
 
+# as_root CMD...: run a command as root (directly, or through sudo).
+as_root() {
+  if [ "$(id -u)" -eq 0 ]; then
+    "$@"
+  elif command -v sudo >/dev/null 2>&1; then
+    sudo "$@"
+  else
+    fail "Root privileges are required to install packages. Re-run this script as root."
+  fi
+}
+
+# pkg_install PKG...: install packages with the detected package manager.
+pkg_install() {
+  local pm=""
+  for m in apt-get dnf yum zypper pacman; do
+    if command -v "$m" >/dev/null 2>&1; then pm=$m; break; fi
+  done
+  case "$pm" in
+    apt-get) as_root apt-get update && as_root apt-get install -y "$@" ;;
+    dnf|yum) as_root "$pm" install -y "$@" ;;
+    zypper)  as_root zypper --non-interactive install "$@" ;;
+    pacman)  as_root pacman -S --noconfirm --needed "$@" ;;
+    *) return 1 ;;
+  esac
+}
+
+# ensure_tool CMD PKG HELP: install a missing tool via the package manager, after confirmation.
+ensure_tool() {
+  command -v "$1" >/dev/null 2>&1 && return 0
+  yesno "$1 is not installed. Install it now?" y || fail "$1 is required. $3"
+  pkg_install "$2" || fail "Could not install $1 automatically. $3"
+  command -v "$1" >/dev/null 2>&1 || fail "$1 is still not available after installation. $3"
+  ok "$1 installed"
+}
+
 # ---------------------------------------------------------------- 1. Preflight
 step "Preflight checks"
 [ -f docker-compose.yml ] || fail "docker-compose.yml not found. Run ./install.sh from the repository root."
 ok "Repository root detected"
-command -v docker >/dev/null 2>&1 || fail "docker is not installed. See https://docs.docker.com/engine/install/"
+ensure_tool curl curl "Install it manually (e.g. apt install curl)."
+ensure_tool openssl openssl "Install it manually (e.g. apt install openssl)."
+ok "openssl and curl found"
+DOCKER_INSTALLED=0
+if ! command -v docker >/dev/null 2>&1; then
+  yesno "docker is not installed. Install it now (official script from https://get.docker.com)?" y \
+    || fail "docker is not installed. See https://docs.docker.com/engine/install/"
+  curl -fsSL https://get.docker.com | as_root sh || fail "Docker installation failed. See https://docs.docker.com/engine/install/"
+  command -v docker >/dev/null 2>&1 || fail "docker is still not available after installation. See https://docs.docker.com/engine/install/"
+  if command -v systemctl >/dev/null 2>&1 && [ -d /run/systemd/system ]; then
+    as_root systemctl enable --now docker || warn "Could not enable/start the docker service."
+  fi
+  DOCKER_INSTALLED=1
+  ok "Docker installed"
+fi
+if ! docker compose version >/dev/null 2>&1; then
+  yesno "The 'docker compose' v2 plugin is not installed. Install it now?" y \
+    || fail "The 'docker compose' v2 plugin is missing. Install docker-compose-plugin."
+  COMPOSE_PKG=docker-compose-plugin
+  if command -v zypper >/dev/null 2>&1 || command -v pacman >/dev/null 2>&1; then COMPOSE_PKG=docker-compose; fi
+  if ! pkg_install "$COMPOSE_PKG" 2>/dev/null; then
+    info "Package install failed or unavailable; trying the official Docker script."
+    curl -fsSL https://get.docker.com | as_root sh || fail "Could not install the Compose plugin. Install docker-compose-plugin."
+  fi
+  docker compose version >/dev/null 2>&1 || fail "The 'docker compose' v2 plugin is still missing. Install docker-compose-plugin."
+  ok "Docker Compose plugin installed"
+fi
+ok "Docker Compose plugin found"
 if ! docker info >/dev/null 2>&1; then
-  fail "'docker info' failed. Either the daemon is not running, or your user lacks permission (add it to the 'docker' group and log in again, or run this script as root). This script does not use sudo."
+  if [ "$DOCKER_INSTALLED" = 1 ] && [ "$(id -u)" -ne 0 ]; then
+    fail "Docker was just installed, but your user cannot use it yet. Run 'sudo usermod -aG docker \$USER', log out and back in, then re-run this script (or re-run it as root)."
+  fi
+  fail "'docker info' failed. Either the daemon is not running, or your user lacks permission (add it to the 'docker' group and log in again, or run this script as root)."
 fi
 ok "Docker is usable by $(id -un)"
-docker compose version >/dev/null 2>&1 || fail "The 'docker compose' v2 plugin is missing. Install docker-compose-plugin."
-ok "Docker Compose plugin found"
-command -v openssl >/dev/null 2>&1 || fail "openssl is required (apt install openssl)."
-command -v curl >/dev/null 2>&1 || fail "curl is required (apt install curl)."
-ok "openssl and curl found"
 if [ -f "$ENV_FILE" ] || [ -d data ]; then
   warn "An existing installation was detected (.env and/or ./data). Re-running is safe; nothing is replaced without confirmation."
 fi
@@ -124,8 +186,9 @@ while :; do
 done
 ask ORIGIN "Public URL of the dashboard (ORIGIN)" "https://$DASHBOARD_HOST"
 ADDRESS_HEADER=""
-if yesno "Behind a reverse proxy / Cloudflare Tunnel?" y; then
-  ask ADDRESS_HEADER "Client IP header (ADDRESS_HEADER)" "CF-Connecting-IP"
+if yesno "Behind a reverse proxy (Caddy, nginx, Traefik, Cloudflare Tunnel...)? Almost always yes in production" y; then
+  info "Standard proxies (Caddy, nginx, Traefik) use X-Forwarded-For. If you use Cloudflare (orange cloud or Tunnel), enter CF-Connecting-IP."
+  ask ADDRESS_HEADER "Client IP header (ADDRESS_HEADER)" "X-Forwarded-For"
   XFF_DEPTH=""
   if [ "$(printf '%s' "$ADDRESS_HEADER" | tr '[:upper:]' '[:lower:]')" = "x-forwarded-for" ]; then
     ask XFF_DEPTH "Number of trusted proxies (XFF_DEPTH)" "1"
@@ -205,6 +268,13 @@ fi
 step "Starting the services"
 PROFILE_ARGS=()
 [ "$MAIL" = 1 ] && PROFILE_ARGS=(--profile mail)
+# The web/worker containers run as the non-root 'node' user (uid 1000) and must
+# be able to create the SQLite database in the ./data bind mount. Only data/ and
+# the files directly in it are chowned: never recurse into data/mail (the mail
+# module runs as root and OpenSMTPD is strict about the DKIM key permissions).
+mkdir -p data
+as_root chown 1000:1000 data
+as_root find data -maxdepth 1 -type f -exec chown 1000:1000 {} +
 info "Pulling images (this can take a few minutes)..."
 docker compose ${PROFILE_ARGS[@]+"${PROFILE_ARGS[@]}"} pull || fail "docker compose pull failed."
 ok "Images pulled"
@@ -233,15 +303,16 @@ if [ "$HEALTHY" != 1 ]; then
 fi
 ok "Application is healthy ($HEALTH_URL)"
 
-# ---------------------------------------------------- 8. First operator
-step "First operator account"
-ask SEED_EMAIL "Operator e-mail"
-ask_secret SEED_PASSWORD "Operator password"
-if docker compose run --rm -e SEED_EMAIL="$SEED_EMAIL" -e SEED_PASSWORD="$SEED_PASSWORD" web node build/seed.js; then
-  ok "Operator account created"
+# ------------------------------------------------- 8. First administrator
+step "First administrator account"
+info "This account is created with the superadmin role (access to the Administration pages)."
+ask SEED_EMAIL "Administrator e-mail"
+ask_secret SEED_PASSWORD "Administrator password"
+if docker compose run --rm -e SEED_EMAIL="$SEED_EMAIL" -e SEED_PASSWORD="$SEED_PASSWORD" -e SEED_ROLE=superadmin web node build/seed.js; then
+  ok "Administrator account created"
 else
   warn "The seed command failed (the account may already exist). Re-run it manually if needed:"
-  info "docker compose run --rm -e SEED_EMAIL=... -e SEED_PASSWORD='...' web node build/seed.js"
+  info "docker compose run --rm -e SEED_EMAIL=... -e SEED_PASSWORD='...' -e SEED_ROLE=superadmin web node build/seed.js"
 fi
 unset SEED_PASSWORD
 
