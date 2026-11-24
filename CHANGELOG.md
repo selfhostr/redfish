@@ -4,6 +4,8 @@ Format based on Keep a Changelog. Versions follow `0.MINOR.PATCH` until 1.0.
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-11-24
+
 ### Added
 
 - The campaign report and the client dashboard now explain the open rate: it is a lower bound because open tracking relies on a pixel that Outlook/Office 365 block by default, and a click is counted as an open.
