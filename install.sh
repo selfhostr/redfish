@@ -186,8 +186,9 @@ while :; do
 done
 ask ORIGIN "Public URL of the dashboard (ORIGIN)" "https://$DASHBOARD_HOST"
 ADDRESS_HEADER=""
-if yesno "Behind a reverse proxy / Cloudflare Tunnel?" y; then
-  ask ADDRESS_HEADER "Client IP header (ADDRESS_HEADER)" "CF-Connecting-IP"
+if yesno "Behind a reverse proxy (Caddy, nginx, Traefik, Cloudflare Tunnel...)? Almost always yes in production" y; then
+  info "Standard proxies (Caddy, nginx, Traefik) use X-Forwarded-For. If you use Cloudflare (orange cloud or Tunnel), enter CF-Connecting-IP."
+  ask ADDRESS_HEADER "Client IP header (ADDRESS_HEADER)" "X-Forwarded-For"
   XFF_DEPTH=""
   if [ "$(printf '%s' "$ADDRESS_HEADER" | tr '[:upper:]' '[:lower:]')" = "x-forwarded-for" ]; then
     ask XFF_DEPTH "Number of trusted proxies (XFF_DEPTH)" "1"
@@ -267,6 +268,13 @@ fi
 step "Starting the services"
 PROFILE_ARGS=()
 [ "$MAIL" = 1 ] && PROFILE_ARGS=(--profile mail)
+# The web/worker containers run as the non-root 'node' user (uid 1000) and must
+# be able to create the SQLite database in the ./data bind mount. Only data/ and
+# the files directly in it are chowned: never recurse into data/mail (the mail
+# module runs as root and OpenSMTPD is strict about the DKIM key permissions).
+mkdir -p data
+as_root chown 1000:1000 data
+as_root find data -maxdepth 1 -type f -exec chown 1000:1000 {} +
 info "Pulling images (this can take a few minutes)..."
 docker compose ${PROFILE_ARGS[@]+"${PROFILE_ARGS[@]}"} pull || fail "docker compose pull failed."
 ok "Images pulled"
@@ -295,15 +303,16 @@ if [ "$HEALTHY" != 1 ]; then
 fi
 ok "Application is healthy ($HEALTH_URL)"
 
-# ---------------------------------------------------- 8. First operator
-step "First operator account"
-ask SEED_EMAIL "Operator e-mail"
-ask_secret SEED_PASSWORD "Operator password"
-if docker compose run --rm -e SEED_EMAIL="$SEED_EMAIL" -e SEED_PASSWORD="$SEED_PASSWORD" web node build/seed.js; then
-  ok "Operator account created"
+# ------------------------------------------------- 8. First administrator
+step "First administrator account"
+info "This account is created with the superadmin role (access to the Administration pages)."
+ask SEED_EMAIL "Administrator e-mail"
+ask_secret SEED_PASSWORD "Administrator password"
+if docker compose run --rm -e SEED_EMAIL="$SEED_EMAIL" -e SEED_PASSWORD="$SEED_PASSWORD" -e SEED_ROLE=superadmin web node build/seed.js; then
+  ok "Administrator account created"
 else
   warn "The seed command failed (the account may already exist). Re-run it manually if needed:"
-  info "docker compose run --rm -e SEED_EMAIL=... -e SEED_PASSWORD='...' web node build/seed.js"
+  info "docker compose run --rm -e SEED_EMAIL=... -e SEED_PASSWORD='...' -e SEED_ROLE=superadmin web node build/seed.js"
 fi
 unset SEED_PASSWORD
 
