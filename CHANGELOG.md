@@ -4,6 +4,10 @@ Format based on Keep a Changelog. Versions follow `0.MINOR.PATCH` until 1.0.
 
 ## [Unreleased]
 
+### Changed
+
+- Campaign metrics are now a monotonic funnel: an open is inferred from any deeper action (click, page interaction, form submission or awareness view), so « Taux d'ouverture » is always at least the click rate and no longer reads 0 % when a recipient clicked but their mail client blocked the open pixel. The per-client dashboard, the campaign report and the trends chart all reflect it. Reporting the e-mail does not imply an open.
+
 ## [0.4.0] - 2026-11-24
 
 ### Added
