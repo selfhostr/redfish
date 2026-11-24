@@ -106,7 +106,7 @@ test('funnel counts distinct recipients per stage; human excludes automated', as
 		awarenessViewed: 1,
 		reported: 1,
 		human: {
-			opened: 1,
+			opened: 2,
 			clicked: 2,
 			pageInteraction: 1,
 			formSubmitted: 1,
@@ -120,4 +120,43 @@ test('funnel is all zero without events and ignores other campaigns', async () =
 	const f = await campaignFunnel(campaignId);
 	expect(f.recipients).toBe(3);
 	expect(f.sent + f.opened + f.clicked + f.human.clicked).toBe(0);
+});
+
+test('a click alone implies an open', async () => {
+	ev(0, 'clicked');
+	const f = await campaignFunnel(campaignId);
+	expect(f.opened).toBe(1);
+	expect(f.clicked).toBe(1);
+	expect(f.human.opened).toBe(1);
+	expect(f.human.clicked).toBe(1);
+});
+
+test('a report alone does not imply an open', async () => {
+	ev(0, 'reported');
+	const f = await campaignFunnel(campaignId);
+	expect(f.reported).toBe(1);
+	expect(f.opened).toBe(0);
+	expect(f.human.opened).toBe(0);
+});
+
+test('funnel is monotonic on a realistic mix', async () => {
+	ev(0, 'opened');
+	ev(1, 'clicked');
+	ev(1, 'page_interaction');
+	ev(2, 'form_submitted');
+	for (const f of [await campaignFunnel(campaignId)].flatMap((x) => [x, x.human])) {
+		expect(f.opened).toBeGreaterThanOrEqual(f.clicked);
+		expect(f.clicked).toBeGreaterThanOrEqual(f.pageInteraction);
+		expect(f.pageInteraction).toBeGreaterThanOrEqual(f.formSubmitted);
+	}
+});
+
+test('scanner click and open count in raw but not in human', async () => {
+	ev(0, 'opened', true);
+	ev(1, 'clicked', true);
+	const f = await campaignFunnel(campaignId);
+	expect(f.opened).toBe(2);
+	expect(f.clicked).toBe(1);
+	expect(f.human.opened).toBe(0);
+	expect(f.human.clicked).toBe(0);
 });
