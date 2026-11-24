@@ -41,7 +41,10 @@ function isShared(pathname: string): boolean {
 export function hostAllows(host: string, pathname: string, cfg: HostConfig): boolean {
 	const kind = classifyHost(host, cfg);
 	if (kind === 'any') return true;
-	if (kind === 'unknown') return false;
+	// Chemins neutres (sonde de santé, assets du framework, favicon) : servis quel
+	// que soit l'hôte, y compris un hôte inconnu — p. ex. le healthcheck du
+	// conteneur qui interroge 127.0.0.1. Ils ne révèlent rien de l'isolation.
 	if (isShared(pathname)) return true;
+	if (kind === 'unknown') return false;
 	return kind === 'tracking' ? isTrackingPath(pathname) : !isTrackingPath(pathname);
 }

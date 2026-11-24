@@ -15,6 +15,10 @@ Format based on Keep a Changelog. Versions follow `0.MINOR.PATCH` until 1.0.
 - `install.sh` now creates the first account with the `superadmin` role instead of `operator`, so it can reach the Administration pages.
 - `install.sh` reverse proxy prompt now names Caddy, nginx, Traefik and Cloudflare Tunnel, and the client IP header defaults to `X-Forwarded-For` (use `CF-Connecting-IP` behind Cloudflare), so recipient IPs are no longer all seen as `127.0.0.1`.
 
+### Fixed
+
+- Two-host deployment behind a reverse proxy now works end to end. Shared paths (`/health`, framework assets, favicon) are served on any `Host`, so the container health check (which hits `127.0.0.1`) no longer gets a 404 and `web` stays healthy. The installer no longer sets `ORIGIN`: with host isolation a single fixed origin made adapter-node resolve every request to the dashboard host, so tracking links returned « Not found » on the tracking host. Behind a proxy the installer now sets `HOST_HEADER`/`PROTOCOL_HEADER`, and the deliverability preflight accepts `HOST_HEADER` as an alternative to `ORIGIN`.
+
 ### Security
 
 - The production Compose file now publishes the `web` service on `127.0.0.1:3000` only, instead of all interfaces, so the dashboard is no longer reachable in clear HTTP on the host's public IP when it sits behind a reverse proxy. A proxy on another host overrides the bind and filters at the firewall.

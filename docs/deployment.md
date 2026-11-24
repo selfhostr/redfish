@@ -20,9 +20,12 @@ and is not sent over HTTP.
 
 ## Variables to set
 
-- `ORIGIN`: the exact public URL of the dashboard, for example
-  `https://redfish.example.org` (an adapter-node option; without it, POST forms
-  are rejected).
+- Do not set `ORIGIN`: with two hosts, adapter-node would pin every request to
+  that single origin and the tracking host would return 404 on `/t/...`. Set
+  `HOST_HEADER=x-forwarded-host` and `PROTOCOL_HEADER=x-forwarded-proto` instead
+  (adapter-node options), so the origin is derived per request. The reverse
+  proxy must forward the original `Host` / these headers (Caddy, nginx, Traefik
+  and Cloudflare do by default).
 - `DASHBOARD_HOST` / `TRACKING_HOST`: two distinct host names, for example
   `redfish.example.org` and `go.example.org`. The proxy routes both to the same
   app and must forward the original `Host` header. See
@@ -53,7 +56,8 @@ app directly: otherwise a client could forge its IP.
 
 ```sh
 # .env
-ORIGIN=https://redfish.example.org
+HOST_HEADER=x-forwarded-host
+PROTOCOL_HEADER=x-forwarded-proto
 ADDRESS_HEADER=CF-Connecting-IP
 ```
 
