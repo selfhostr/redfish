@@ -45,9 +45,10 @@ export function buildTrackingUrls(base: string, token: string): TrackingUrls {
  * jamais de l'utilisateur). Re-vérifie l'autorisation à l'instant d'envoi
  * (défense TOCTOU, report de Plan 1 / Task 3) : si l'envoi n'est plus autorisé,
  * marque le destinataire `skipped` et sort sans rien envoyer. Sinon rend
- * l'e-mail avec les URLs de tracking, l'envoie en SMTP (From = fromName/
- * fromAddress + en-têtes personnalisés du profil), marque `sent` et enregistre
- * un événement `sent`. Une erreur SMTP est propagée (→ réessai du job).
+ * l'e-mail avec les URLs de tracking, l'envoie en SMTP (From : nom affiché =
+ * celui du scénario s'il est renseigné, sinon celui du profil ; l'adresse est
+ * toujours celle du profil ; + en-têtes personnalisés du profil), marque `sent`
+ * et enregistre un événement `sent`. Une erreur SMTP est propagée (→ réessai du job).
  */
 export async function sendRecipient(recipientId: string): Promise<void> {
 	const recipient = db
@@ -124,8 +125,13 @@ export async function sendRecipient(recipientId: string): Promise<void> {
 		}
 	}
 	// Une erreur SMTP remonte ici : le handler la propage → le job sera réessayé.
+	// Nom affiché : celui du scénario s'il est renseigné, sinon celui du profil.
+	// L'adresse d'expéditeur reste toujours celle du profil (SPF/DKIM/DMARC).
 	await transport.sendMail({
-		from: { name: profile.fromName, address: profile.fromAddress },
+		from: {
+			name: scenario.fromName?.trim() || profile.fromName,
+			address: profile.fromAddress
+		},
 		to: target.email,
 		subject,
 		html,

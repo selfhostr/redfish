@@ -142,3 +142,19 @@ test('HOST_HEADER défini supprime l’avertissement ORIGIN', async () => {
 	const r = await evaluatePreflight(base({ origin: undefined, hostHeader: 'x-forwarded-host' }));
 	expect(r.items.some((i) => i.message.includes('ORIGIN'))).toBe(false);
 });
+
+test('resolves the displayed sender: scenario name over profile name, profile address', async () => {
+	// Sans fromName sur le scénario : on retombe sur le nom du profil.
+	const r1 = await evaluatePreflight(base());
+	expect(msgs(r1, 'info').join(' ')).toContain(
+		'Expéditeur affiché aux destinataires : « F » <f@example.test>'
+	);
+
+	// Avec un fromName sur le scénario : il l'emporte, l'adresse reste celle du profil.
+	const r2 = await evaluatePreflight(
+		base({ scenario: { ...scenario, fromName: 'Service informatique' } as Scenario })
+	);
+	expect(msgs(r2, 'info').join(' ')).toContain(
+		'Expéditeur affiché aux destinataires : « Service informatique » <f@example.test>'
+	);
+});
