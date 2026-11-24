@@ -1,5 +1,15 @@
 # Production deployment
 
+## Guided install
+
+On a fresh Debian/Ubuntu VPS with Docker and the Compose v2 plugin, run
+`./install.sh` from the repository root. It asks for the two host names, the
+public URL and the proxy header, generates `REDFISH_SECRET_KEY`, writes a
+`chmod 600` `.env` (backing up any existing one), optionally enables the mail
+module, starts the stack, waits for `/health` and creates the first operator.
+It never uses `sudo` and can be re-run safely. The sections below describe the
+same settings for a manual install.
+
 The `runtime` image listens on plain HTTP on port 3000, so HTTPS must be
 provided by a reverse proxy in front of it (Cloudflare Tunnel, Caddy, Traefik,
 nginx...). This is mandatory: the session cookie is `Secure` outside development
