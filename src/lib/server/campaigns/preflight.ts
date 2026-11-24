@@ -46,6 +46,8 @@ export type PreflightInput = {
 	now: Date;
 	/** Valeur de ORIGIN (SvelteKit adapter-node), si définie. */
 	origin?: string;
+	/** Valeur de HOST_HEADER (adapter-node) : alternative à ORIGIN derrière un proxy. */
+	hostHeader?: string;
 	hosts?: HostConfig;
 	/** Rendu injectable (tests) ; par défaut le vrai pipeline MJML/gabarits. */
 	renderers?: ScenarioRenderers;
@@ -201,11 +203,11 @@ export async function evaluatePreflight(input: PreflightInput): Promise<Prefligh
 				'Le tracking partage l’hôte du tableau de bord (origine commune).'
 			);
 	}
-	if (!input.origin?.trim())
+	if (!input.origin?.trim() && !input.hostHeader?.trim())
 		add(
 			'tracking',
 			'warning',
-			'ORIGIN n’est pas défini : les envois de formulaires peuvent être refusés derrière un proxy.'
+			'Ni ORIGIN ni HOST_HEADER ne sont définis : derrière un proxy, adapter-node ne pourra pas déterminer l’origine et les envois de formulaires peuvent être refusés.'
 		);
 
 	const errors = items.filter((i) => i.severity === 'error').length;
@@ -249,6 +251,7 @@ export async function runPreflight(
 			.all(),
 		now,
 		origin: env.ORIGIN,
+		hostHeader: env.HOST_HEADER,
 		hosts: hostConfigFromEnv(env)
 	});
 }

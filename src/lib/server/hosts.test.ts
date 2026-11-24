@@ -26,6 +26,14 @@ describe('classifyHost', () => {
 });
 
 describe('hostAllows', () => {
+	test('chemins partagés servis même sur un hôte inconnu (healthcheck 127.0.0.1)', () => {
+		expect(hostAllows('127.0.0.1:3000', '/health', both)).toBe(true);
+		expect(hostAllows('127.0.0.1:3000', '/_app/immutable/a.js', both)).toBe(true);
+		expect(hostAllows('127.0.0.1:3000', '/favicon.ico', both)).toBe(true);
+		// mais l'app et le tracking restent verrouillés sur un hôte inconnu
+		expect(hostAllows('127.0.0.1:3000', '/login', both)).toBe(false);
+		expect(hostAllows('127.0.0.1:3000', '/t/p/x', both)).toBe(false);
+	});
 	test('dashboard refuse /t/', () => {
 		expect(hostAllows('dash.example.org', '/t/p/x', both)).toBe(false);
 		expect(hostAllows('dash.example.org', '/login', both)).toBe(true);

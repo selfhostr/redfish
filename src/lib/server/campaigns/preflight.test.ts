@@ -137,3 +137,8 @@ test('tracking: missing domain blocks; ORIGIN and host mismatches warn', async (
 	expect(r.ok).toBe(true);
 	expect(r.warnings).toBe(3);
 });
+
+test('HOST_HEADER défini supprime l’avertissement ORIGIN', async () => {
+	const r = await evaluatePreflight(base({ origin: undefined, hostHeader: 'x-forwarded-host' }));
+	expect(r.items.some((i) => i.message.includes('ORIGIN'))).toBe(false);
+});
