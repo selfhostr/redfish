@@ -4,6 +4,14 @@ Format based on Keep a Changelog. Versions follow `0.MINOR.PATCH` until 1.0.
 
 ## [Unreleased]
 
+### Added
+
+- The scenario editor, the sending-profile form and the campaign pre-launch checks now state clearly where the displayed sender name comes from and which one applies; the preflight shows the exact sender (« name » <address>) that recipients will see.
+
+### Changed
+
+- A scenario's sender name (« Nom d'expéditeur ») now applies to the sent e-mail, taking precedence over the sending profile's name for that scenario; the sender address still always comes from the profile (so SPF/DKIM/DMARC stay aligned). Previously the scenario name only affected the preview.
+
 ## [0.5.0] - 2026-11-24
 
 ### Added

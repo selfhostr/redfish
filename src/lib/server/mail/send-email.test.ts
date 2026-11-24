@@ -200,6 +200,29 @@ test('sendRecipient sends to the target with rendered subject + tracking URLs, r
 	expect(evs[0].type).toBe('sent');
 });
 
+test("a scenario fromName overrides the profile's display name (address stays the profile's)", async () => {
+	authorize();
+	db.update(scenarios).set({ fromName: 'Service informatique' }).run();
+	await sendRecipient(recipientId);
+
+	expect(sentMessages).toHaveLength(1);
+	// Le nom affiché est celui du scénario ; l'adresse reste toujours celle du profil.
+	expect(sentMessages[0].from).toEqual({
+		name: 'Service informatique',
+		address: 'it@acme.test'
+	});
+});
+
+test("an empty scenario fromName falls back to the profile's display name", async () => {
+	authorize();
+	// fromName vide (espaces) : on retombe sur le nom du profil, adresse du profil.
+	db.update(scenarios).set({ fromName: '   ' }).run();
+	await sendRecipient(recipientId);
+
+	expect(sentMessages).toHaveLength(1);
+	expect(sentMessages[0].from).toEqual({ name: 'Équipe IT', address: 'it@acme.test' });
+});
+
 test('the SMTP password never appears in any logged output', async () => {
 	authorize();
 	const spies = [

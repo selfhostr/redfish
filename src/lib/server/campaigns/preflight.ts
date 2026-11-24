@@ -166,6 +166,16 @@ export async function evaluatePreflight(input: PreflightInput): Promise<Prefligh
 			add('scenario', 'info', `Scénario « ${s.title} » activé, gabarits rendus sans erreur.`);
 	}
 
+	// Expéditeur résolu : nom du scénario s'il est renseigné, sinon celui du
+	// profil ; l'adresse reste toujours celle du profil. Affiché seulement quand
+	// profil et scénario sont présents.
+	if (p && s)
+		add(
+			'profile',
+			'info',
+			`Expéditeur affiché aux destinataires : « ${s.fromName?.trim() || p.fromName} » <${p.fromAddress}>`
+		);
+
 	// Autorisation et calendrier
 	const covers = (at: Date) =>
 		input.authorizations.some(

@@ -194,6 +194,11 @@
 							bind:value={fields.fromName}
 							placeholder="Facultatif"
 						/>
+						<span class="text-xs text-ink-dim">
+							Nom affiché de l'expéditeur pour ce scénario (ex. « Service informatique »). Laissé
+							vide, c'est le nom du profil d'envoi qui s'applique. L'adresse e-mail provient
+							toujours du profil d'envoi.
+						</span>
 					</label>
 					<div class="flex flex-col gap-1.5 md:col-span-2">
 						<label class="rf-label" for="field-subject">Sujet de l'e-mail</label>

@@ -16,14 +16,24 @@
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 	const next = $derived(localNext(page.url.searchParams.get('next')));
 
-	const fields: [string, string, string][] = [
+	const fields: [string, string, string, string?][] = [
 		['name', 'Nom', 'text'],
 		['host', 'Hôte SMTP', 'text'],
 		['port', 'Port', 'number'],
 		['username', 'Utilisateur', 'text'],
 		['password', 'Mot de passe', 'password'],
-		['fromName', 'Nom expéditeur', 'text'],
-		['fromAddress', 'Adresse expéditeur', 'email']
+		[
+			'fromName',
+			'Nom expéditeur',
+			'text',
+			'Nom affiché par défaut. Un scénario peut imposer le sien à la place.'
+		],
+		[
+			'fromAddress',
+			'Adresse expéditeur',
+			'email',
+			"C'est toujours cette adresse qui sert d'expéditeur, quel que soit le scénario."
+		]
 	];
 	const editFields = fields.filter(([n]) => n !== 'password');
 	let editing = $state<string | null>(null);
@@ -101,11 +111,12 @@
 								>
 									<input type="hidden" name="profileId" value={p.id} />
 									<div class="grid gap-4 sm:grid-cols-2">
-										{#each editFields as [name, label, type] (name)}
+										{#each editFields as [name, label, type, help] (name)}
 											<Field
 												{label}
 												{name}
 												{type}
+												{help}
 												required
 												autocomplete="off"
 												value={String(p[name as keyof typeof p] ?? '')}
@@ -152,8 +163,8 @@
 		<form method="POST" action="?/create" use:enhance class="flex flex-col gap-4">
 			<p class="text-ink-dim">Tous les champs sont obligatoires.</p>
 			<div class="grid gap-4 sm:grid-cols-2">
-				{#each fields as [name, label, type] (name)}
-					<Field {label} {name} {type} required autocomplete="off" />
+				{#each fields as [name, label, type, help] (name)}
+					<Field {label} {name} {type} {help} required autocomplete="off" />
 				{/each}
 			</div>
 			<p class="text-sm text-ink-dim">

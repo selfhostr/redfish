@@ -54,6 +54,11 @@
 			<dd class="text-ink">
 				{data.preview.fromName}
 				<span class="font-mono text-ink-dim">&lt;{data.preview.fromAddress}&gt;</span>
+				<span class="mt-1 block text-xs text-ink-dim">
+					Nom affiché de l'expéditeur pour ce scénario (ex. « Service informatique »). Laissé vide,
+					c'est le nom du profil d'envoi qui s'applique. L'adresse e-mail provient toujours du
+					profil d'envoi.
+				</span>
 			</dd>
 		</dl>
 	</Panel>
