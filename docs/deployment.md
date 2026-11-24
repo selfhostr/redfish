@@ -2,12 +2,13 @@
 
 ## Guided install
 
-On a fresh Debian/Ubuntu VPS with Docker and the Compose v2 plugin, run
+On a fresh VPS (Debian/Ubuntu or similar), run
 `./install.sh` from the repository root. It asks for the two host names, the
 public URL and the proxy header, generates `REDFISH_SECRET_KEY`, writes a
 `chmod 600` `.env` (backing up any existing one), optionally enables the mail
 module, starts the stack, waits for `/health` and creates the first operator.
-It never uses `sudo` and can be re-run safely. The sections below describe the
+Missing prerequisites (curl, openssl, Docker and the Compose v2 plugin) are installed
+after confirmation, which needs root or `sudo`; it can be re-run safely. The sections below describe the
 same settings for a manual install.
 
 The `runtime` image listens on plain HTTP on port 3000, so HTTPS must be

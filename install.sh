@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 # Interactive installer for a production VPS (Debian/Ubuntu or similar).
 # Run it from the repository root: ./install.sh
-# It never uses sudo. Safe to re-run: an existing .env is only replaced after
-# confirmation, and a backup is kept.
+# Missing prerequisites (curl, openssl, Docker + Compose plugin) can be installed
+# after confirmation; this needs root (run as root, or sudo must be available).
+# Safe to re-run: an existing .env is only replaced after confirmation, and a
+# backup is kept.
 set -euo pipefail
 
 TOTAL=8
@@ -80,20 +82,80 @@ env_get() { # env_get FILE KEY: last value of KEY, quotes stripped
   printf '%s' "$line"
 }
 
+# as_root CMD...: run a command as root (directly, or through sudo).
+as_root() {
+  if [ "$(id -u)" -eq 0 ]; then
+    "$@"
+  elif command -v sudo >/dev/null 2>&1; then
+    sudo "$@"
+  else
+    fail "Root privileges are required to install packages. Re-run this script as root."
+  fi
+}
+
+# pkg_install PKG...: install packages with the detected package manager.
+pkg_install() {
+  local pm=""
+  for m in apt-get dnf yum zypper pacman; do
+    if command -v "$m" >/dev/null 2>&1; then pm=$m; break; fi
+  done
+  case "$pm" in
+    apt-get) as_root apt-get update && as_root apt-get install -y "$@" ;;
+    dnf|yum) as_root "$pm" install -y "$@" ;;
+    zypper)  as_root zypper --non-interactive install "$@" ;;
+    pacman)  as_root pacman -S --noconfirm --needed "$@" ;;
+    *) return 1 ;;
+  esac
+}
+
+# ensure_tool CMD PKG HELP: install a missing tool via the package manager, after confirmation.
+ensure_tool() {
+  command -v "$1" >/dev/null 2>&1 && return 0
+  yesno "$1 is not installed. Install it now?" y || fail "$1 is required. $3"
+  pkg_install "$2" || fail "Could not install $1 automatically. $3"
+  command -v "$1" >/dev/null 2>&1 || fail "$1 is still not available after installation. $3"
+  ok "$1 installed"
+}
+
 # ---------------------------------------------------------------- 1. Preflight
 step "Preflight checks"
 [ -f docker-compose.yml ] || fail "docker-compose.yml not found. Run ./install.sh from the repository root."
 ok "Repository root detected"
-command -v docker >/dev/null 2>&1 || fail "docker is not installed. See https://docs.docker.com/engine/install/"
+ensure_tool curl curl "Install it manually (e.g. apt install curl)."
+ensure_tool openssl openssl "Install it manually (e.g. apt install openssl)."
+ok "openssl and curl found"
+DOCKER_INSTALLED=0
+if ! command -v docker >/dev/null 2>&1; then
+  yesno "docker is not installed. Install it now (official script from https://get.docker.com)?" y \
+    || fail "docker is not installed. See https://docs.docker.com/engine/install/"
+  curl -fsSL https://get.docker.com | as_root sh || fail "Docker installation failed. See https://docs.docker.com/engine/install/"
+  command -v docker >/dev/null 2>&1 || fail "docker is still not available after installation. See https://docs.docker.com/engine/install/"
+  if command -v systemctl >/dev/null 2>&1 && [ -d /run/systemd/system ]; then
+    as_root systemctl enable --now docker || warn "Could not enable/start the docker service."
+  fi
+  DOCKER_INSTALLED=1
+  ok "Docker installed"
+fi
+if ! docker compose version >/dev/null 2>&1; then
+  yesno "The 'docker compose' v2 plugin is not installed. Install it now?" y \
+    || fail "The 'docker compose' v2 plugin is missing. Install docker-compose-plugin."
+  COMPOSE_PKG=docker-compose-plugin
+  if command -v zypper >/dev/null 2>&1 || command -v pacman >/dev/null 2>&1; then COMPOSE_PKG=docker-compose; fi
+  if ! pkg_install "$COMPOSE_PKG" 2>/dev/null; then
+    info "Package install failed or unavailable; trying the official Docker script."
+    curl -fsSL https://get.docker.com | as_root sh || fail "Could not install the Compose plugin. Install docker-compose-plugin."
+  fi
+  docker compose version >/dev/null 2>&1 || fail "The 'docker compose' v2 plugin is still missing. Install docker-compose-plugin."
+  ok "Docker Compose plugin installed"
+fi
+ok "Docker Compose plugin found"
 if ! docker info >/dev/null 2>&1; then
-  fail "'docker info' failed. Either the daemon is not running, or your user lacks permission (add it to the 'docker' group and log in again, or run this script as root). This script does not use sudo."
+  if [ "$DOCKER_INSTALLED" = 1 ] && [ "$(id -u)" -ne 0 ]; then
+    fail "Docker was just installed, but your user cannot use it yet. Run 'sudo usermod -aG docker \$USER', log out and back in, then re-run this script (or re-run it as root)."
+  fi
+  fail "'docker info' failed. Either the daemon is not running, or your user lacks permission (add it to the 'docker' group and log in again, or run this script as root)."
 fi
 ok "Docker is usable by $(id -un)"
-docker compose version >/dev/null 2>&1 || fail "The 'docker compose' v2 plugin is missing. Install docker-compose-plugin."
-ok "Docker Compose plugin found"
-command -v openssl >/dev/null 2>&1 || fail "openssl is required (apt install openssl)."
-command -v curl >/dev/null 2>&1 || fail "curl is required (apt install curl)."
-ok "openssl and curl found"
 if [ -f "$ENV_FILE" ] || [ -d data ]; then
   warn "An existing installation was detected (.env and/or ./data). Re-running is safe; nothing is replaced without confirmation."
 fi

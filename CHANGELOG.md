@@ -8,6 +8,10 @@ Format based on Keep a Changelog. Versions follow `0.MINOR.PATCH` until 1.0.
 
 - Interactive `install.sh` for production VPS installs: preflight checks, secret key generation, guided `.env` creation (host isolation, `ORIGIN`, client IP header, optional mail module), image pull and start, health wait and first operator creation. Re-runnable; an existing `.env` is only replaced after confirmation, with a backup.
 
+### Changed
+
+- The `install.sh` preflight now offers to install missing prerequisites automatically (curl, openssl, Docker via get.docker.com and the Compose v2 plugin) after confirmation, instead of failing. Needs root or `sudo`; falls back to the manual instructions otherwise.
+
 ### Security
 
 - The production Compose file now publishes the `web` service on `127.0.0.1:3000` only, instead of all interfaces, so the dashboard is no longer reachable in clear HTTP on the host's public IP when it sits behind a reverse proxy. A proxy on another host overrides the bind and filters at the firewall.
