@@ -4,6 +4,8 @@ Format based on Keep a Changelog. Versions follow `0.MINOR.PATCH` until 1.0.
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-11-24
+
 ### Added
 
 - The scenario editor, the sending-profile form and the campaign pre-launch checks now state clearly where the displayed sender name comes from and which one applies; the preflight shows the exact sender (« name » <address>) that recipients will see.
