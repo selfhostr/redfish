@@ -12,8 +12,12 @@ services:
       target: runtime
     env_file: .env
     restart: unless-stopped
+    # Publié uniquement sur la boucle locale : en production, l'accès passe par un
+    # reverse proxy TLS (Caddy, nginx…) sur le même hôte. On évite ainsi d'exposer
+    # le tableau de bord en HTTP clair sur l'IP publique (contournement du TLS).
+    # Proxy sur une autre machine : remplacer par '0.0.0.0:3000:3000' et filtrer au pare-feu.
     ports:
-      - '3000:3000'
+      - '127.0.0.1:3000:3000'
     volumes:
       - ./data:/app/data
 
