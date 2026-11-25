@@ -4,6 +4,14 @@ Format based on Keep a Changelog. Versions follow `0.MINOR.PATCH` until 1.0.
 
 ## [Unreleased]
 
+### Changed
+
+- New application shell, aligned with the other selfhostr apps: a sidebar on the left (foldable to an icon rail with Ctrl B / ⌘B, remembered), the active client switcher at its top, Documentation and GitHub links and the account menu at its foot, and a top bar with a breadcrumb. On phones and tablets the same sidebar opens as a drawer.
+- Fewer menu entries: related pages are grouped under one entry with tabs (Destinataires: Listes and Données personnelles (RGPD); Profils d'envoi: Profils and Délivrabilité; Utilisateurs: Utilisateurs and Journal d'audit).
+- Every page now uses the full width of the window, with the same header (title, one-sentence summary, actions on the right) and a single type scale: labels are no longer set in uppercase monospace, buttons and fields share the same heights, missing values read « — ».
+- Pages reorganised for clarity: campaign creation and campaign detail in two columns with the main action at the top, sending profiles as aligned rows with the new-profile form on demand, deliverability checks with status chips, users as a table with the 2FA status, fully clickable table rows.
+- The browser tab now shows the page name and « redfish ».
+
 ## [0.5.2] - 2026-11-24
 
 ### Added

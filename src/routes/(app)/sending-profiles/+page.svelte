@@ -8,6 +8,7 @@
 		EmptyState,
 		ErrorNotice,
 		Field,
+		Page,
 		Panel,
 		Plate
 	} from '$lib/components/ui';
@@ -37,51 +38,107 @@
 	];
 	const editFields = fields.filter(([n]) => n !== 'password');
 	let editing = $state<string | null>(null);
+	// Le formulaire de création s'ouvre à la demande, ou de lui-même s'il revient en erreur.
+	let creating = $state(false);
+	$effect(() => {
+		if (form?.error || (form?.success && next)) creating = true;
+	});
+	const summary = $derived(
+		data.profiles.length === 0
+			? "Aucun profil d'envoi : ajoutez un serveur SMTP pour pouvoir envoyer."
+			: `${data.profiles.length} profil${data.profiles.length > 1 ? 's' : ''} d'envoi : serveur SMTP et expéditeur utilisés pour envoyer les e-mails d'une campagne.`
+	);
 </script>
 
-<main class="mx-auto flex max-w-3xl flex-col gap-6 px-4 py-6 md:px-6 md:py-8">
-	<h1 class="text-2xl font-semibold tracking-tight text-ink">Profils d'envoi</h1>
+<Page title="Profils d'envoi" description={summary}>
+	{#snippet actions()}
+		{#if !creating}
+			<Button variant="primary" class="max-md:w-full" onclick={() => (creating = true)}>
+				Nouveau profil
+			</Button>
+		{/if}
+	{/snippet}
 
-	<p class="text-ink-dim">
-		Un profil d'envoi décrit le serveur SMTP et l'expéditeur utilisés pour envoyer les e-mails d'une
-		campagne.
-	</p>
+	{#if creating}
+		<Panel>
+			{#snippet header()}
+				<h2 class="rf-title">Nouveau profil</h2>
+				<Button variant="ghost" size="sm" onclick={() => (creating = false)}>Fermer</Button>
+			{/snippet}
+			<form method="POST" action="?/create" use:enhance class="flex flex-col gap-4">
+				<p class="rf-meta">Tous les champs sont obligatoires.</p>
+				<div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+					{#each fields as [name, label, type, help] (name)}
+						<Field {label} {name} {type} {help} required autocomplete="off" />
+					{/each}
+				</div>
+				<p class="rf-meta">
+					Avec l'hôte « mail » (module d'envoi intégré), l'adresse expéditeur doit utiliser le
+					domaine du module, sinon DMARC échouera.
+				</p>
+				<details class="rounded-btn border border-line px-3 py-2">
+					<summary class="min-h-8 cursor-pointer text-ink-dim">Options avancées</summary>
+					<label class="mt-2 flex min-h-8 items-center gap-2">
+						<input type="checkbox" name="global" class="h-4 w-4" />
+						<span class="text-ink">Profil global (superadmin)</span>
+					</label>
+				</details>
+				{#if form?.error}
+					<ErrorNotice message={form.error} />
+				{/if}
+				<div class="flex flex-col gap-2 sm:flex-row">
+					<Button type="submit" variant="primary" class="max-sm:w-full">Créer le profil</Button>
+					{#if form?.success && next}
+						<Button href={next} variant="primary" class="max-sm:w-full">
+							Continuer la campagne
+						</Button>
+					{/if}
+				</div>
+			</form>
+		</Panel>
+	{/if}
 
-	<Panel flush>
-		{#snippet header()}
-			<h2 class="rf-label">Profils</h2>
-		{/snippet}
-		{#if data.profiles.length === 0}
-			<EmptyState
-				title="Aucun profil d'envoi"
-				message="Configurez un serveur SMTP ci-dessous pour pouvoir envoyer."
-			/>
-		{:else}
+	{#if data.profiles.length === 0}
+		<EmptyState
+			title="Aucun profil d'envoi"
+			message="Configurez un serveur SMTP pour pouvoir envoyer vos campagnes."
+		>
+			{#if !creating}
+				<Button variant="primary" onclick={() => (creating = true)}>Créer un profil</Button>
+			{/if}
+		</EmptyState>
+	{:else}
+		<Panel flush>
 			<ul class="divide-y divide-line">
 				{#each data.profiles as p (p.id)}
-					<li class="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
-						<span class="font-medium [overflow-wrap:anywhere] text-ink">{p.name}</span>
-						<span class="flex min-w-0 flex-wrap items-center gap-2 text-xs text-ink-dim">
-							<span class="font-mono [overflow-wrap:anywhere]">{p.host}:{p.port}</span>
-							<span class="font-mono [overflow-wrap:anywhere]">{p.fromAddress}</span>
-							<CopyButton value={p.fromAddress} what="l'adresse expéditeur" size="sm" />
-							{#if data.wrongDomainIds.includes(p.id)}
-								<span class="basis-full text-sm text-warning" role="alert">
-									Ce profil passe par le module d'envoi mais n'envoie pas depuis le domaine signé :
-									DMARC échouera.
+					<li class="flex flex-col gap-3 px-4 py-3">
+						<div class="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+							<div class="flex min-w-0 flex-col gap-1">
+								<span class="flex flex-wrap items-center gap-2">
+									<span class="font-medium [overflow-wrap:anywhere] text-ink">{p.name}</span>
+									{#if !p.tenantId}
+										<Plate variant="neutral">Global</Plate>
+									{/if}
 								</span>
-							{/if}
-							{#if !p.tenantId}
-								<Plate variant="neutral">Global</Plate>
-							{/if}
-						</span>
-						<div class="flex w-full flex-col gap-2">
-							<div class="flex flex-wrap items-center gap-2">
-								<form method="POST" action="?/verify" use:enhance>
+								<span class="font-mono [overflow-wrap:anywhere] text-ink-dim">
+									{p.host}:{p.port}
+								</span>
+								<span class="flex flex-wrap items-center gap-2 text-ink-dim">
+									<span class="font-mono [overflow-wrap:anywhere]">{p.fromAddress}</span>
+									<CopyButton value={p.fromAddress} what="l'adresse expéditeur" size="sm" />
+								</span>
+							</div>
+							<div class="flex flex-col gap-2 md:flex-row md:flex-wrap md:items-center">
+								<form method="POST" action="?/verify" use:enhance class="contents">
 									<input type="hidden" name="profileId" value={p.id} />
-									<Button type="submit" size="sm">Tester la connexion</Button>
+									<Button type="submit" class="max-md:w-full">Tester la connexion</Button>
 								</form>
-								<form method="POST" action="?/sendTest" use:enhance class="flex flex-wrap gap-2">
+								<form
+									method="POST"
+									action="?/sendTest"
+									use:enhance
+									class="flex flex-col gap-2 md:flex-row"
+								>
 									<input type="hidden" name="profileId" value={p.id} />
 									<input
 										type="email"
@@ -90,105 +147,78 @@
 										readonly
 										value={data.userEmail}
 										aria-label="Adresse de test"
-										class="min-h-8 rounded-md border border-line bg-transparent px-2 text-ink"
+										class="rf-input font-mono md:w-64"
 									/>
-									<Button type="submit" size="sm">Envoyer un e-mail de test</Button>
+									<Button type="submit" class="max-md:w-full">Envoyer un e-mail de test</Button>
 								</form>
-								<Button size="sm" onclick={() => (editing = editing === p.id ? null : p.id)}>
+								<Button
+									class="max-md:w-full"
+									onclick={() => (editing = editing === p.id ? null : p.id)}
+								>
 									Modifier
 								</Button>
 							</div>
-							{#if editing === p.id || form?.editId === p.id}
-								<form
-									method="POST"
-									action="?/update"
-									use:enhance={() =>
-										async ({ result, update }) => {
-											await update({ reset: false });
-											if (result.type === 'success') editing = null;
-										}}
-									class="flex flex-col gap-4 rounded-md border border-line p-3"
-								>
-									<input type="hidden" name="profileId" value={p.id} />
-									<div class="grid gap-4 sm:grid-cols-2">
-										{#each editFields as [name, label, type, help] (name)}
-											<Field
-												{label}
-												{name}
-												{type}
-												{help}
-												required
-												autocomplete="off"
-												value={String(p[name as keyof typeof p] ?? '')}
-											/>
-										{/each}
-										<Field
-											label="Mot de passe"
-											name="password"
-											type="password"
-											autocomplete="new-password"
-											help="Laisser vide pour conserver le mot de passe actuel."
-										/>
-									</div>
-									{#if form?.editId === p.id && form.editError}
-										<ErrorNotice message={form.editError} />
-									{/if}
-									<div class="flex gap-2">
-										<Button type="submit" variant="primary" size="sm">Enregistrer</Button>
-										<Button size="sm" onclick={() => (editing = null)}>Annuler</Button>
-									</div>
-								</form>
-							{/if}
-							{#if form?.editOk && form.editId === p.id}
-								<p class="text-sm text-ink" role="status">{form.editOk}</p>
-							{/if}
-							{#if form?.profileId === p.id}
-								{#if form.testError}
-									<ErrorNotice message={form.testError} />
-								{:else if form.testOk}
-									<p class="text-sm text-ink" role="status">{form.testOk}</p>
-								{/if}
-							{/if}
 						</div>
+						{#if data.wrongDomainIds.includes(p.id)}
+							<p class="text-warning" role="alert">
+								Ce profil passe par le module d'envoi mais n'envoie pas depuis le domaine signé :
+								DMARC échouera.
+							</p>
+						{/if}
+						{#if editing === p.id || form?.editId === p.id}
+							<form
+								method="POST"
+								action="?/update"
+								use:enhance={() =>
+									async ({ result, update }) => {
+										await update({ reset: false });
+										if (result.type === 'success') editing = null;
+									}}
+								class="flex flex-col gap-4 rounded-card border border-line bg-surface-2 p-4"
+							>
+								<input type="hidden" name="profileId" value={p.id} />
+								<div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+									{#each editFields as [name, label, type, help] (name)}
+										<Field
+											{label}
+											{name}
+											{type}
+											{help}
+											required
+											autocomplete="off"
+											value={String(p[name as keyof typeof p] ?? '')}
+										/>
+									{/each}
+									<Field
+										label="Mot de passe"
+										name="password"
+										type="password"
+										autocomplete="new-password"
+										help="Laisser vide pour conserver le mot de passe actuel."
+									/>
+								</div>
+								{#if form?.editId === p.id && form.editError}
+									<ErrorNotice message={form.editError} />
+								{/if}
+								<div class="flex gap-2">
+									<Button type="submit" variant="primary">Enregistrer</Button>
+									<Button onclick={() => (editing = null)}>Annuler</Button>
+								</div>
+							</form>
+						{/if}
+						{#if form?.editOk && form.editId === p.id}
+							<p class="text-ink" role="status">{form.editOk}</p>
+						{/if}
+						{#if form?.profileId === p.id}
+							{#if form.testError}
+								<ErrorNotice message={form.testError} />
+							{:else if form.testOk}
+								<p class="text-ink" role="status">{form.testOk}</p>
+							{/if}
+						{/if}
 					</li>
 				{/each}
 			</ul>
-		{/if}
-	</Panel>
-
-	<Panel>
-		{#snippet header()}
-			<h2 class="rf-label">Nouveau profil</h2>
-		{/snippet}
-		<form method="POST" action="?/create" use:enhance class="flex flex-col gap-4">
-			<p class="text-ink-dim">Tous les champs sont obligatoires.</p>
-			<div class="grid gap-4 sm:grid-cols-2">
-				{#each fields as [name, label, type, help] (name)}
-					<Field {label} {name} {type} {help} required autocomplete="off" />
-				{/each}
-			</div>
-			<p class="text-sm text-ink-dim">
-				Avec l'hôte « mail » (module d'envoi intégré), l'adresse expéditeur doit utiliser le domaine
-				du module, sinon DMARC échouera.
-			</p>
-			<details class="rounded-md border border-line px-3 py-2">
-				<summary class="min-h-8 cursor-pointer text-ink-dim">Options avancées</summary>
-				<label class="mt-2 flex min-h-8 items-center gap-2">
-					<input type="checkbox" name="global" class="h-4 w-4" />
-					<span class="text-ink">Profil global (superadmin)</span>
-				</label>
-			</details>
-			{#if form?.error}
-				<ErrorNotice message={form.error} />
-			{/if}
-			<Button type="submit" variant="primary" class="w-full md:w-auto md:self-start">
-				Créer le profil
-			</Button>
-			{#if form?.success && next}
-				<Button href={next} variant="primary" class="w-full md:w-auto md:self-start">
-					Continuer la campagne
-				</Button>
-			{/if}
-		</form>
-	</Panel>
-</main>
+		</Panel>
+	{/if}
+</Page>

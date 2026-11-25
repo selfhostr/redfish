@@ -6,9 +6,13 @@
 	let { form }: { form: ActionData } = $props();
 </script>
 
+<svelte:head>
+	<title>Double authentification – redfish</title>
+</svelte:head>
+
 <main class="mx-auto flex min-h-screen max-w-sm flex-col justify-center gap-6 px-4 py-8 sm:p-8">
 	<div>
-		<h1 class="text-2xl font-semibold text-ink">Double authentification</h1>
+		<h1 class="rf-page-title">Double authentification</h1>
 		<p class="mt-1 text-ink-dim">
 			Saisissez le code à 6 chiffres de votre application d'authentification, ou un code de secours.
 		</p>

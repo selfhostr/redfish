@@ -66,13 +66,16 @@
 			color 0.12s ease;
 	}
 
+	/* Deux tailles, même corps de texte : 36 px (défaut) et 32 px (rangées denses). */
 	.md {
-		padding: 0.5rem 0.875rem;
+		min-height: var(--control-h);
+		padding: 0 0.875rem;
 		font-size: 0.8125rem;
 	}
 	.sm {
-		padding: 0.3125rem 0.625rem;
-		font-size: 0.75rem;
+		min-height: var(--control-h-sm);
+		padding: 0 0.625rem;
+		font-size: 0.8125rem;
 	}
 
 	/* Primaire : neutre, clair sur sombre (aucune couleur de marque) */

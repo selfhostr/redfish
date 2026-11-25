@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { enhance } from '$app/forms';
-	import { Button, ErrorNotice, Field, Panel } from '$lib/components/ui';
+	import { Button, ErrorNotice, Field, Page, Panel } from '$lib/components/ui';
 	import AuthorizationFields from '$lib/components/campaigns/AuthorizationFields.svelte';
 	import ScenarioPicker from '$lib/components/campaigns/ScenarioPicker.svelte';
 	import SendingPaceFields from '$lib/components/campaigns/SendingPaceFields.svelte';
@@ -102,15 +102,26 @@
 	});
 </script>
 
-<main class="mx-auto flex max-w-3xl flex-col gap-6 px-4 py-6 md:px-6 md:py-8">
-	<div class="flex flex-wrap items-center justify-between gap-3">
-		<h1 class="text-2xl font-semibold tracking-tight text-ink">Nouvelle campagne</h1>
-		<Button variant="ghost" href="/campaigns">Retour aux campagnes</Button>
-	</div>
+<Page
+	title="Nouvelle campagne"
+	description="Choisissez un scénario, une liste de destinataires et une autorisation, puis créez la campagne en brouillon."
+>
+	{#snippet actions()}
+		<Button
+			type="submit"
+			form="new-campaign"
+			variant="primary"
+			disabled={!ready}
+			class="max-md:w-full"
+		>
+			Créer la campagne
+		</Button>
+	{/snippet}
 
 	<form
+		id="new-campaign"
 		method="POST"
-		class="flex flex-col gap-6"
+		class="grid items-start gap-4 xl:grid-cols-3"
 		use:enhance={() => {
 			return async ({ result, update }) => {
 				if (result.type === 'redirect') {
@@ -124,175 +135,172 @@
 			};
 		}}
 	>
-		<ScenarioPicker scenarios={data.scenarios} {scenarioId} onpick={pickScenario} />
+		<div class="flex min-w-0 flex-col gap-4 xl:col-span-2">
+			<ScenarioPicker scenarios={data.scenarios} {scenarioId} onpick={pickScenario} />
 
-		<Panel>
-			<div class="flex flex-col gap-4">
-				<h2 class="rf-eyebrow">Campagne</h2>
-				<Field
-					label="Nom de la campagne"
-					name="name"
-					required
-					placeholder="Ex. Sensibilisation Q1, Finance"
-					bind:value={name}
-					oninput={() => (nameTouched = true)}
-				/>
+			<Panel>
+				<div class="flex flex-col gap-4">
+					<h2 class="rf-title">Campagne</h2>
+					<div class="grid gap-4 md:grid-cols-2">
+						<Field
+							label="Nom de la campagne"
+							name="name"
+							required
+							placeholder="Ex. Sensibilisation Q1, Finance"
+							bind:value={name}
+							oninput={() => (nameTouched = true)}
+						/>
 
-				<!-- Profil d'envoi -->
-				<div class="flex flex-col gap-1.5">
-					{#if !hasProfiles}
-						<span class="field-label">Profil d'envoi</span>
-						<p class="rounded-md bg-surface-2 px-3 py-2 text-ink-dim">
-							Aucun profil d'envoi.
-							<a href="/sending-profiles?next=/campaigns/new" class="rf-link">
-								Créer un profil d'envoi
-							</a>
-						</p>
-					{:else if data.profiles.length === 1 && !changeProfile}
-						<span class="field-label">Profil d'envoi</span>
-						<input type="hidden" name="sendingProfileId" value={sendingProfileId} />
-						<div class="summary">
-							<span class="summary-text">{profile?.name}</span>
-							<button type="button" class="rf-link" onclick={() => (changeProfile = true)}>
-								Changer
-							</button>
+						<!-- Profil d'envoi -->
+						<div class="flex flex-col gap-1.5">
+							{#if !hasProfiles}
+								<span class="rf-label">Profil d'envoi</span>
+								<p class="rounded-btn bg-surface-2 px-3 py-2 text-ink-dim">
+									Aucun profil d'envoi.
+									<a href="/sending-profiles?next=/campaigns/new" class="rf-link">
+										Créer un profil d'envoi
+									</a>
+								</p>
+							{:else if data.profiles.length === 1 && !changeProfile}
+								<span class="rf-label">Profil d'envoi</span>
+								<input type="hidden" name="sendingProfileId" value={sendingProfileId} />
+								<div class="summary">
+									<span class="summary-text">{profile?.name}</span>
+									<button type="button" class="rf-link" onclick={() => (changeProfile = true)}>
+										Changer
+									</button>
+								</div>
+							{:else}
+								<Field label="Profil d'envoi" id="field-sendingProfileId">
+									{#snippet input()}
+										<select
+											id="field-sendingProfileId"
+											name="sendingProfileId"
+											required
+											class="rf-input w-full max-w-full min-w-0"
+											bind:value={sendingProfileId}
+										>
+											{#each data.profiles as p (p.id)}<option value={p.id}>{p.name}</option>{/each}
+										</select>
+									{/snippet}
+								</Field>
+							{/if}
 						</div>
-					{:else}
-						<Field label="Profil d'envoi" id="field-sendingProfileId">
-							{#snippet input()}
-								<select
-									id="field-sendingProfileId"
-									name="sendingProfileId"
-									required
-									class="rf-input w-full max-w-full min-w-0"
-									bind:value={sendingProfileId}
+
+						<!-- Liste de cibles -->
+						<div class="flex flex-col gap-1.5">
+							{#if !hasLists}
+								<span class="rf-label">Liste de destinataires</span>
+								<p class="rounded-btn bg-surface-2 px-3 py-2 text-ink-dim">
+									Aucune liste.
+									<a href="/lists?next=/campaigns/new" class="rf-link">Créer une liste</a>
+								</p>
+							{:else if data.lists.length === 1 && !changeList}
+								<span class="rf-label">Liste de destinataires</span>
+								<input type="hidden" name="targetListId" value={targetListId} />
+								<div class="summary">
+									<span class="summary-text">{list?.name}</span>
+									<button type="button" class="rf-link" onclick={() => (changeList = true)}>
+										Changer
+									</button>
+								</div>
+							{:else}
+								<Field label="Liste de destinataires" id="field-targetListId">
+									{#snippet input()}
+										<select
+											id="field-targetListId"
+											name="targetListId"
+											required
+											class="rf-input w-full max-w-full min-w-0"
+											bind:value={targetListId}
+										>
+											{#each data.lists as l (l.id)}<option value={l.id}>{l.name}</option>{/each}
+										</select>
+									{/snippet}
+								</Field>
+							{/if}
+							{#if list && list.targetCount === 0}
+								<div
+									class="rounded-card border border-line-strong border-l-signal bg-signal-bg px-4 py-3 text-ink"
+									role="alert"
 								>
-									{#each data.profiles as p (p.id)}<option value={p.id}>{p.name}</option>{/each}
-								</select>
-							{/snippet}
-						</Field>
-					{/if}
-				</div>
-
-				<!-- Liste de cibles -->
-				<div class="flex flex-col gap-1.5">
-					{#if !hasLists}
-						<span class="field-label">Liste de destinataires</span>
-						<p class="rounded-md bg-surface-2 px-3 py-2 text-ink-dim">
-							Aucune liste.
-							<a href="/lists?next=/campaigns/new" class="rf-link">Créer une liste</a>
-						</p>
-					{:else if data.lists.length === 1 && !changeList}
-						<span class="field-label">Liste de destinataires</span>
-						<input type="hidden" name="targetListId" value={targetListId} />
-						<div class="summary">
-							<span class="summary-text">{list?.name}</span>
-							<button type="button" class="rf-link" onclick={() => (changeList = true)}>
-								Changer
-							</button>
+									La liste « {list.name} » ne contient aucun destinataire : la campagne n'enverra rien.
+									<a href="/lists/{list.id}?next=/campaigns/new" class="rf-link">
+										Ajouter des destinataires
+									</a>
+								</div>
+							{/if}
 						</div>
-					{:else}
-						<Field label="Liste de destinataires" id="field-targetListId">
-							{#snippet input()}
-								<select
-									id="field-targetListId"
-									name="targetListId"
-									required
-									class="rf-input w-full max-w-full min-w-0"
-									bind:value={targetListId}
-								>
-									{#each data.lists as l (l.id)}<option value={l.id}>{l.name}</option>{/each}
-								</select>
-							{/snippet}
-						</Field>
-					{/if}
-					{#if list && list.targetCount === 0}
-						<div
-							class="rounded-lg border border-line-strong border-l-signal bg-signal-bg px-4 py-3 text-ink"
-							role="alert"
-						>
-							La liste « {list.name} » ne contient aucun destinataire : la campagne n'enverra rien.
-							<a href="/lists/{list.id}?next=/campaigns/new" class="rf-link">
-								Ajouter des destinataires
-							</a>
-						</div>
-					{/if}
+
+						{#if !hasTrackingDefault}
+							<Field
+								label="Domaine de tracking"
+								name="trackingDomain"
+								required
+								placeholder="track.exemple.com"
+								bind:value={trackingDomain}
+							/>
+						{/if}
+					</div>
 				</div>
+			</Panel>
+		</div>
 
-				{#if !hasTrackingDefault}
-					<Field
-						label="Domaine de tracking"
-						name="trackingDomain"
-						required
-						placeholder="track.exemple.com"
-						bind:value={trackingDomain}
-					/>
-				{/if}
-			</div>
-		</Panel>
+		<div class="flex min-w-0 flex-col gap-4">
+			<AuthorizationFields
+				bind:reference
+				bind:approvedBy
+				bind:validFrom
+				bind:validUntil
+				bind:editAuth
+				timezone={data.timezone}
+				{hasAuthDefault}
+			/>
 
-		<AuthorizationFields
-			bind:reference
-			bind:approvedBy
-			bind:validFrom
-			bind:validUntil
-			bind:editAuth
-			timezone={data.timezone}
-			{hasAuthDefault}
-		/>
+			<Panel>
+				<SendingPaceFields timezone={data.timezone} />
+			</Panel>
 
-		<Panel>
-			<SendingPaceFields timezone={data.timezone} />
-		</Panel>
+			<details class="advanced" bind:open={advancedOpen}>
+				<summary>Options avancées</summary>
+				<div class="flex flex-col gap-4 pt-4">
+					{#if hasTrackingDefault}
+						<Field
+							label="Domaine de tracking"
+							name="trackingDomain"
+							required
+							placeholder="track.exemple.com"
+							bind:value={trackingDomain}
+						/>
+					{/if}
+					<Field label="Message de sensibilisation" id="field-awarenessMessage">
+						{#snippet input()}
+							<textarea
+								id="field-awarenessMessage"
+								name="awarenessMessage"
+								rows="3"
+								class="rf-input"
+								placeholder="Message affiché à la cible après interaction (optionnel)."
+								bind:value={awarenessMessage}></textarea>
+						{/snippet}
+					</Field>
+				</div>
+			</details>
 
-		<details class="advanced" bind:open={advancedOpen}>
-			<summary>Options avancées</summary>
-			<div class="flex flex-col gap-4 pt-4">
-				{#if hasTrackingDefault}
-					<Field
-						label="Domaine de tracking"
-						name="trackingDomain"
-						required
-						placeholder="track.exemple.com"
-						bind:value={trackingDomain}
-					/>
-				{/if}
-				<Field label="Message de sensibilisation" id="field-awarenessMessage">
-					{#snippet input()}
-						<textarea
-							id="field-awarenessMessage"
-							name="awarenessMessage"
-							rows="3"
-							class="rf-input"
-							placeholder="Message affiché à la cible après interaction (optionnel)."
-							bind:value={awarenessMessage}></textarea>
-					{/snippet}
-				</Field>
-			</div>
-		</details>
-
-		{#if form?.error}
-			<ErrorNotice title="Création impossible" message={form.error} />
-		{/if}
-		{#if !ready}
-			<p class="text-ink-dim">
-				Complétez les éléments manquants ci-dessus pour pouvoir créer la campagne.
-			</p>
-		{/if}
-		<Button type="submit" variant="primary" disabled={!ready} class="max-md:w-full md:self-start">
-			Créer la campagne
-		</Button>
+			{#if form?.error}
+				<ErrorNotice title="Création impossible" message={form.error} />
+			{/if}
+			{#if !ready}
+				<p class="rf-meta">
+					Complétez les éléments manquants (scénario, profil d'envoi, liste) pour pouvoir créer la
+					campagne.
+				</p>
+			{/if}
+		</div>
 	</form>
-</main>
+</Page>
 
 <style>
-	.field-label {
-		font-family: var(--font-mono);
-		text-transform: uppercase;
-		font-size: 0.6875rem;
-		letter-spacing: 0.04em;
-		color: var(--c-ink-dim);
-	}
 	.summary {
 		display: flex;
 		align-items: center;

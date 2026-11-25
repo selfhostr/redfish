@@ -11,3 +11,4 @@ export { default as LocalTime } from './LocalTime.svelte';
 export { default as CopyButton } from './CopyButton.svelte';
 export { toast, dismissToast, getToasts } from './toast.svelte';
 export type { ToastKind, ToastItem } from './toast.svelte';
+export { default as Page } from './Page.svelte';

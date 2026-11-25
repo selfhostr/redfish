@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { Button, CopyButton, ErrorNotice, Panel } from '$lib/components/ui';
+	import { Button, CopyButton, ErrorNotice, Page, Panel, Plate } from '$lib/components/ui';
 	import type { CheckId, CheckStatus } from '$lib/server/deliverability/checks';
 	import type { ActionData, PageData } from './$types';
 
@@ -21,23 +21,19 @@
 		fail: 'Échec',
 		unknown: 'Non vérifiable'
 	};
-	const tone: Record<CheckStatus, string> = {
-		ok: 'text-signal',
-		warn: 'text-warning',
-		fail: 'text-danger',
-		unknown: 'text-ink-dim'
+	const tone: Record<CheckStatus, 'signal' | 'advisory' | 'warning' | 'neutral'> = {
+		ok: 'signal',
+		warn: 'advisory',
+		fail: 'warning',
+		unknown: 'neutral'
 	};
 	const stateLabel = { none: 'Non configuré', stopped: 'Arrêté', running: 'En marche' } as const;
 </script>
 
-<main class="mx-auto flex max-w-4xl flex-col gap-6 px-4 py-6 md:px-6 md:py-8">
-	<div>
-		<h1 class="text-lg font-semibold tracking-tight text-ink">Délivrabilité</h1>
-		<p class="text-ink-dim">
-			Diagnostic du domaine d'envoi : SPF, DKIM, DMARC, DNS inverse, port 25 et listes de blocage.
-		</p>
-	</div>
-
+<Page
+	title="Délivrabilité"
+	description="Diagnostic du domaine d'envoi : SPF, DKIM, DMARC, DNS inverse, port 25 et listes de blocage."
+>
 	<Panel>
 		<p class="text-ink">
 			Pour une simulation d'hameçonnage, ces réglages ne suffisent pas : le client doit aussi
@@ -58,30 +54,31 @@
 
 	<Panel>
 		{#snippet header()}
-			<h2 class="rf-label">Domaine</h2>
+			<h2 class="rf-title">Domaine</h2>
 		{/snippet}
 		{#if data.domain}
-			<form method="GET" class="flex flex-wrap items-end gap-3">
-				<label class="flex flex-col gap-1">
-					<span class="text-ink-dim">Domaine d'envoi</span>
-					<select name="domain" class="min-h-8 rounded-md border border-line bg-transparent px-2">
+			<form method="GET" class="flex flex-col gap-3 md:flex-row md:flex-wrap md:items-end">
+				<div class="flex flex-col gap-1.5">
+					<label class="rf-label" for="f-domain">Domaine d'envoi</label>
+					<select id="f-domain" name="domain" class="rf-input md:w-72">
 						{#each data.domains as d (d)}
 							<option value={d} selected={d === data.domain}>{d}</option>
 						{/each}
 					</select>
-				</label>
+				</div>
 				{#if !data.isModuleDomain}
-					<label class="flex flex-col gap-1">
-						<span class="text-ink-dim">Sélecteur DKIM (optionnel)</span>
+					<div class="flex flex-col gap-1.5">
+						<label class="rf-label" for="f-selector">Sélecteur DKIM (optionnel)</label>
 						<input
+							id="f-selector"
 							name="selector"
 							value={data.selector ?? ''}
 							autocomplete="off"
-							class="min-h-8 rounded-md border border-line bg-transparent px-2 font-mono"
+							class="rf-input font-mono md:w-56"
 						/>
-					</label>
+					</div>
 				{/if}
-				<Button type="submit">Afficher</Button>
+				<Button type="submit" variant="secondary" class="max-md:w-full">Afficher</Button>
 			</form>
 		{:else}
 			<p class="text-ink-dim">
@@ -91,44 +88,53 @@
 	</Panel>
 
 	{#if data.domain}
-		<Panel flush>
+		<Panel>
 			{#snippet header()}
-				<div class="flex flex-wrap items-center justify-between gap-3">
-					<h2 class="rf-label">{data.domain}</h2>
-					<form method="POST" action="?/recheck" use:enhance>
-						<input type="hidden" name="domain" value={data.domain} />
-						<input type="hidden" name="selector" value={data.selector ?? ''} />
-						<Button type="submit">Relancer les vérifications</Button>
-					</form>
-				</div>
+				<h2 class="rf-title font-mono [overflow-wrap:anywhere]">{data.domain}</h2>
+				<form method="POST" action="?/recheck" use:enhance>
+					<input type="hidden" name="domain" value={data.domain} />
+					<input type="hidden" name="selector" value={data.selector ?? ''} />
+					<Button type="submit" variant="secondary" size="sm">Relancer les vérifications</Button>
+				</form>
 			{/snippet}
-			<ul class="flex flex-col divide-y divide-line">
+			<ul class="grid gap-4 lg:grid-cols-2">
 				{#each data.checks as c (c.id)}
-					<li class="flex flex-col gap-1 px-4 py-3" data-check={c.id}>
-						<div class="flex flex-wrap items-baseline gap-2">
+					<li
+						class="flex min-w-0 flex-col gap-2 rounded-card border border-line bg-surface-2 p-4"
+						data-check={c.id}
+					>
+						<div class="flex flex-wrap items-center justify-between gap-2">
 							<span class="font-medium text-ink">{titles[c.id]}</span>
-							<span class="font-medium {tone[c.status]}">{labels[c.status]}</span>
+							<Plate variant={tone[c.status]}>{labels[c.status]}</Plate>
 						</div>
 						<p class="text-ink">{c.message}</p>
 						{#if c.fix}<p class="text-ink-dim">{c.fix}</p>{/if}
 						{#if c.record}
-							<div class="flex flex-col gap-1 rounded-md border border-line px-3 py-2 font-mono">
-								<span class="flex items-start gap-2">
-									<span class="text-ink-dim">{c.record.type}</span>
-									<span class="[overflow-wrap:anywhere]">{c.record.name}</span>
-									<CopyButton value={c.record.name} what="le nom de l'enregistrement" />
-								</span>
-								<span class="flex items-start gap-2">
-									<span class="[overflow-wrap:anywhere]">{c.record.value}</span>
-									<CopyButton value={c.record.value} what="la valeur de l'enregistrement" />
-								</span>
+							<div
+								class="flex flex-col gap-2 rounded-btn border border-line bg-surface-1 px-3 py-2"
+							>
+								<div class="flex items-start justify-between gap-3">
+									<span class="flex min-w-0 flex-wrap gap-x-2 font-mono">
+										<span class="text-ink-dim">{c.record.type}</span>
+										<span class="[overflow-wrap:anywhere]">{c.record.name}</span>
+									</span>
+									<span class="shrink-0">
+										<CopyButton value={c.record.name} what="le nom de l'enregistrement" />
+									</span>
+								</div>
+								<div class="flex items-start justify-between gap-3">
+									<span class="min-w-0 font-mono [overflow-wrap:anywhere]">{c.record.value}</span>
+									<span class="shrink-0">
+										<CopyButton value={c.record.value} what="la valeur de l'enregistrement" />
+									</span>
+								</div>
 							</div>
 						{/if}
 					</li>
 				{/each}
 			</ul>
 			{#if data.checkedAt}
-				<p class="px-4 py-2 text-ink-dim">
+				<p class="mt-4 rf-meta">
 					Résultats mis en cache 5 minutes (vérifié à {new Date(data.checkedAt).toLocaleTimeString(
 						'fr-CH'
 					)}).
@@ -139,26 +145,41 @@
 
 	<Panel>
 		{#snippet header()}
-			<h2 class="rf-label">Module d'envoi intégré : {stateLabel[data.module.state]}</h2>
+			<h2 class="rf-title">Module d'envoi intégré : {stateLabel[data.module.state]}</h2>
 		{/snippet}
-		<div class="flex flex-col gap-3">
+		<div class="flex flex-col gap-4">
 			{#if data.module.state !== 'running'}
 				<p class="text-ink">
 					Un serveur d'envoi optionnel, livré avec redfish, envoie directement sans filtre d'un
 					tiers. Il exige que votre hébergeur autorise le port 25 sortant.
 				</p>
-				<p class="text-ink-dim">Ajoutez ces valeurs à votre fichier .env :</p>
-				<pre class="overflow-x-auto rounded-md border border-line px-3 py-2 font-mono">{data.module
-						.envBlock}</pre>
-				<CopyButton value={data.module.envBlock} what="le bloc .env" label="Copier le bloc .env" />
-				<p class="text-ink-dim">Puis démarrez le module :</p>
-				<pre
-					class="overflow-x-auto rounded-md border border-line px-3 py-2 font-mono">docker compose --profile mail up -d</pre>
-				<CopyButton
-					value="docker compose --profile mail up -d"
-					what="la commande"
-					label="Copier la commande"
-				/>
+				<div class="grid gap-4 lg:grid-cols-2">
+					<div class="flex min-w-0 flex-col gap-2">
+						<p class="text-ink-dim">Ajoutez ces valeurs à votre fichier .env :</p>
+						<pre
+							class="overflow-x-auto rounded-btn border border-line bg-surface-2 px-3 py-2 font-mono">{data
+								.module.envBlock}</pre>
+						<div>
+							<CopyButton
+								value={data.module.envBlock}
+								what="le bloc .env"
+								label="Copier le bloc .env"
+							/>
+						</div>
+					</div>
+					<div class="flex min-w-0 flex-col gap-2">
+						<p class="text-ink-dim">Puis démarrez le module :</p>
+						<pre
+							class="overflow-x-auto rounded-btn border border-line bg-surface-2 px-3 py-2 font-mono">docker compose --profile mail up -d</pre>
+						<div>
+							<CopyButton
+								value="docker compose --profile mail up -d"
+								what="la commande"
+								label="Copier la commande"
+							/>
+						</div>
+					</div>
+				</div>
 			{:else}
 				<p class="text-ink">
 					Le module répond sur mail:587. Vous pouvez créer le profil d'envoi correspondant.
@@ -178,4 +199,4 @@
 			{/if}
 		</div>
 	</Panel>
-</main>
+</Page>

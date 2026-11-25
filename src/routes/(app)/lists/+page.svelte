@@ -4,7 +4,7 @@
 	import { localNext } from '$lib/return-path';
 	import { EMAIL_NAME_WARNING, looksLikeEmail } from '$lib/email-name';
 	import { withParams } from '$lib/url-params';
-	import { Button, EmptyState, ErrorNotice, Field, Panel, Plate } from '$lib/components/ui';
+	import { Button, EmptyState, ErrorNotice, Field, Page, Panel, Plate } from '$lib/components/ui';
 	import type { ActionData, PageData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -18,25 +18,61 @@
 	const archivedHref = $derived(withParams(page.url, { archived: data.showArchived ? null : '1' }));
 </script>
 
-<main class="mx-auto flex max-w-3xl flex-col gap-6 px-4 py-6 md:px-6 md:py-8">
-	<div class="flex flex-wrap items-center justify-between gap-3">
-		<h1 class="text-2xl font-semibold tracking-tight text-ink">Destinataires</h1>
-		<Button href="/privacy" variant="ghost" size="sm" class="max-sm:w-full">
-			Données personnelles (RGPD)
-		</Button>
-	</div>
+{#snippet rowActions(l: PageData['lists'][number])}
+	{#if l.archived}
+		<form method="POST" action="?/restore" use:enhance>
+			<input type="hidden" name="id" value={l.id} />
+			<Button type="submit" variant="secondary" size="sm">Restaurer</Button>
+		</form>
+	{:else}
+		<Button variant="ghost" size="sm" onclick={() => (pendingId = l.id)}>Supprimer</Button>
+	{/if}
+{/snippet}
 
-	<p class="text-ink-dim">
-		Chaque liste regroupe les personnes ciblées par vos campagnes. Ouvrez une liste pour consulter
-		ou importer ses destinataires. Pour répondre à une demande d'accès ou d'effacement, passez par
-		les données personnelles.
-	</p>
-
-	<div class="flex justify-end">
-		<Button href={archivedHref} variant="ghost" size="sm">
-			{data.showArchived ? 'Masquer les archivées' : 'Afficher les archivées'}
-		</Button>
-	</div>
+<Page
+	title="Destinataires"
+	description={data.lists.length === 0
+		? 'Aucune liste pour ce client.'
+		: `${data.lists.length} liste${data.lists.length > 1 ? 's' : ''}${data.showArchived ? ' (archivées comprises)' : ''}. Ouvrez une liste pour consulter ou importer ses destinataires.`}
+>
+	<Panel>
+		{#snippet header()}
+			<h2 class="rf-title">Nouvelle liste</h2>
+		{/snippet}
+		<div class="flex flex-col gap-3">
+			<form
+				method="POST"
+				action={createAction}
+				use:enhance
+				class="flex flex-col gap-3 md:flex-row md:items-end"
+			>
+				<Field
+					class="grow md:max-w-md"
+					label="Nom de la liste"
+					name="name"
+					required
+					bind:value={newName}
+					placeholder="ex. Comptabilité, Direction…"
+				/>
+				<Button type="submit" variant="primary" class="max-md:w-full">Créer</Button>
+			</form>
+			<p class="rf-meta">
+				Donnez le nom du service ou du groupe visé. Les adresses e-mail s'ajoutent ensuite, dans la
+				liste.
+			</p>
+			{#if looksLikeEmail(newName) || (form && 'warning' in form && form.warning)}
+				<p class="text-ink-dim" role="status">{EMAIL_NAME_WARNING}</p>
+			{/if}
+			{#if form?.error}
+				<ErrorNotice message={form.error} />
+			{/if}
+			{#if form?.success && next}
+				<Button href={next} variant="primary" class="w-full sm:w-auto sm:self-start">
+					Continuer la campagne
+				</Button>
+			{/if}
+		</div>
+	</Panel>
 
 	{#if pending}
 		<Panel>
@@ -82,78 +118,63 @@
 
 	<Panel flush>
 		{#snippet header()}
-			<h2 class="rf-label">Listes de destinataires</h2>
+			<div class="flex w-full items-center justify-between gap-3">
+				<h2 class="rf-title">Listes de destinataires</h2>
+				<Button href={archivedHref} variant="ghost" size="sm">
+					{data.showArchived ? 'Masquer les archivées' : 'Afficher les archivées'}
+				</Button>
+			</div>
 		{/snippet}
 		{#if data.lists.length === 0}
 			<EmptyState
 				title="Aucune liste"
-				message="Créez la première liste ci-dessous, puis importez des destinataires."
+				message="Créez la première liste avec le formulaire ci-dessus, puis importez des destinataires."
 			/>
 		{:else}
-			<ul class="divide-y divide-line">
+			<ul class="divide-y divide-line md:hidden">
 				{#each data.lists as l (l.id)}
 					<li class="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
 						<span class="flex min-w-0 items-center gap-2">
-							<a
-								href="/lists/{l.id}"
-								class="font-medium [overflow-wrap:anywhere] text-ink hover:underline"
-							>
+							<a href="/lists/{l.id}" class="font-medium [overflow-wrap:anywhere] text-ink">
 								{l.name}
 							</a>
 							{#if l.archived}<Plate variant="neutral">Archivée</Plate>{/if}
 						</span>
-						{#if l.archived}
-							<form method="POST" action="?/restore" use:enhance>
-								<input type="hidden" name="id" value={l.id} />
-								<Button type="submit" variant="secondary" size="sm">Restaurer</Button>
-							</form>
-						{:else}
-							<Button variant="ghost" size="sm" onclick={() => (pendingId = l.id)}>
-								Supprimer
-							</Button>
-						{/if}
+						{@render rowActions(l)}
 					</li>
 				{/each}
 			</ul>
+			<div class="max-md:hidden">
+				<table class="w-full text-left">
+					<thead class="border-b border-line">
+						<tr>
+							<th class="rf-label px-4 py-2.5">Nom</th>
+							<th class="rf-label px-4 py-2.5">Statut</th>
+							<th class="rf-label px-4 py-2.5 text-right">Actions</th>
+						</tr>
+					</thead>
+					<tbody class="divide-y divide-line">
+						{#each data.lists as l (l.id)}
+							<tr class="rf-row">
+								<td class="px-4 py-3">
+									<a
+										href="/lists/{l.id}"
+										class="rf-row-link font-medium [overflow-wrap:anywhere] text-ink"
+									>
+										{l.name}
+									</a>
+								</td>
+								<td class="px-4 py-3 text-ink-dim">
+									{#if l.archived}<Plate variant="neutral">Archivée</Plate>{:else}Active{/if}
+								</td>
+								<td class="px-4 py-3 text-right">
+									<span class="relative z-10 inline-flex">{@render rowActions(l)}</span>
+								</td>
+							</tr>
+						{/each}
+					</tbody>
+				</table>
+			</div>
 		{/if}
 	</Panel>
-
-	<Panel>
-		{#snippet header()}
-			<h2 class="rf-label">Nouvelle liste</h2>
-		{/snippet}
-		<div class="flex flex-col gap-4">
-			<p class="text-ink-dim">
-				Donnez un nom à la liste, par exemple le service ou le groupe visé. Les adresses e-mail des
-				destinataires s'ajoutent ensuite, à l'intérieur de la liste.
-			</p>
-			<form
-				method="POST"
-				action={createAction}
-				use:enhance
-				class="flex flex-col gap-3 sm:flex-row sm:items-end"
-			>
-				<Field
-					class="grow"
-					label="Nom de la liste"
-					name="name"
-					required
-					bind:value={newName}
-					placeholder="ex. Comptabilité, Direction…"
-				/>
-				<Button type="submit" variant="primary" class="w-full sm:w-auto">Créer</Button>
-			</form>
-			{#if looksLikeEmail(newName) || (form && 'warning' in form && form.warning)}
-				<p class="text-ink-dim" role="status">{EMAIL_NAME_WARNING}</p>
-			{/if}
-			{#if form?.error}
-				<ErrorNotice message={form.error} />
-			{/if}
-			{#if form?.success && next}
-				<Button href={next} variant="primary" class="w-full sm:w-auto sm:self-start">
-					Continuer la campagne
-				</Button>
-			{/if}
-		</div>
-	</Panel>
-</main>
+</Page>

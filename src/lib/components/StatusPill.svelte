@@ -15,7 +15,7 @@
 		completed: { label: 'Terminée', variant: 'signal' }
 	};
 
-	const s = $derived(map[status] ?? { label: status || 'n/d', variant: 'neutral' as Variant });
+	const s = $derived(map[status] ?? { label: status || '—', variant: 'neutral' as Variant });
 </script>
 
 <Plate variant={s.variant}>{s.label}</Plate>

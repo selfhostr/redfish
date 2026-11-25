@@ -44,38 +44,34 @@ test('the navigation separates the client from the administration', async ({ pag
 	await page.goto('/dashboard');
 	const nav = page.getByRole('navigation', { name: 'Navigation principale' });
 	await expect(nav.getByRole('link', { name: 'Destinataires' })).toBeVisible();
-	// Global screens sit in the Administration menu, closed by default.
-	const admin = nav.getByRole('button', { name: 'Administration' });
-	await expect(admin).toHaveAttribute('aria-expanded', 'false');
-	await expect(nav.getByRole('link', { name: 'Scénarios' })).toBeHidden();
-	await admin.click();
-	await expect(admin).toHaveAttribute('aria-expanded', 'true');
-	await expect(nav.getByRole('link', { name: 'Scénarios' })).toBeVisible();
-	// Clients are managed from the switcher, not from the Administration menu.
-	await expect(nav.locator('#admin-menu').getByRole('link', { name: 'Clients' })).toHaveCount(0);
+	// Global screens sit in the Administration group of the sidebar.
+	const admin = nav.getByRole('group', { name: 'Administration' });
+	await expect(admin.getByRole('link', { name: 'Scénarios' })).toBeVisible();
+	// Clients are managed from the switcher, not from the Administration group.
+	await expect(admin.getByRole('link', { name: 'Clients' })).toHaveCount(0);
 	// An operator does not see the superadmin screens.
 	await expect(nav.getByRole('link', { name: 'Utilisateurs' })).toHaveCount(0);
 	await expect(nav.getByRole('link', { name: 'Délivrabilité' })).toHaveCount(0);
-	await page.keyboard.press('Escape');
-	await expect(admin).toHaveAttribute('aria-expanded', 'false');
-	await expect(admin).toBeFocused();
-	// Personal data is reached from the recipients page, and back.
+	// Personal data is reached through the section tabs of the recipients entry, and back.
 	await nav.getByRole('link', { name: 'Destinataires' }).click();
-	await page.getByRole('link', { name: 'Données personnelles (RGPD)' }).click();
+	const tabs = page.getByRole('navigation', { name: 'Pages de la section' });
+	await tabs.getByRole('link', { name: 'Données personnelles (RGPD)' }).click();
 	await expect(page).toHaveURL(/\/privacy$/);
 	await expect(nav.getByRole('link', { name: 'Destinataires' })).toHaveAttribute(
 		'aria-current',
 		'page'
 	);
-	await page.getByRole('link', { name: 'Retour aux destinataires' }).click();
+	await tabs.getByRole('link', { name: 'Listes' }).click();
 	await expect(page).toHaveURL(/\/lists$/);
 
 	// Mobile drawer: the page behind is locked and the sheet scrolls down to the logout button.
 	await page.setViewportSize({ width: 390, height: 844 });
-	await page.getByRole('button', { name: 'Ouvrir le menu' }).click();
-	const drawer = page.locator('#mobile-menu');
+	await page.getByRole('button', { name: 'Ouvrir la navigation' }).click();
+	const drawer = page.locator('#drawer');
 	await expect(drawer).toBeVisible();
 	expect(await page.evaluate(() => getComputedStyle(document.body).overflow)).toBe('hidden');
+	// Account actions sit in the account menu at the foot of the drawer.
+	await drawer.getByRole('button', { name: /^Compte/ }).click();
 	const logout = drawer.getByRole('button', { name: 'Déconnexion' });
 	await logout.scrollIntoViewIfNeeded();
 	await expect(logout).toBeInViewport();
@@ -106,7 +102,7 @@ test('campaign list and report for the demo data', async ({ page }) => {
 	await page
 		.getByRole('row')
 		.filter({ hasText: 'Client E2E SA' })
-		.getByRole('link', { name: 'Paramètres' })
+		.getByRole('link', { name: 'Client E2E SA' })
 		.click();
 	await expect(page.getByRole('heading', { name: 'Client E2E SA' })).toBeVisible();
 	await expect(page.getByRole('button', { name: 'Travailler sur ce client' })).toBeVisible();
@@ -137,10 +133,10 @@ test('a recipient list can be created then deleted from the Destinataires page',
 	await page.goto('/lists');
 	await page.getByLabel('Nom de la liste').fill(name);
 	await page.getByRole('button', { name: 'Créer', exact: true }).click();
-	const item = page.getByRole('listitem').filter({ hasText: name });
+	const item = page.getByRole('row').filter({ hasText: name });
 	await expect(item).toBeVisible();
 	await item.getByRole('button', { name: 'Supprimer' }).click();
 	await page.getByRole('button', { name: 'Supprimer définitivement' }).click();
 	await expect(page.getByText('Liste supprimée.')).toBeVisible();
-	await expect(page.getByRole('listitem').filter({ hasText: name })).toHaveCount(0);
+	await expect(page.getByRole('row').filter({ hasText: name })).toHaveCount(0);
 });

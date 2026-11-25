@@ -1,7 +1,15 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { page } from '$app/state';
-	import { Button, CopyButton, EmptyState, ErrorNotice, Panel, Plate } from '$lib/components/ui';
+	import {
+		Button,
+		CopyButton,
+		EmptyState,
+		ErrorNotice,
+		Page,
+		Panel,
+		Plate
+	} from '$lib/components/ui';
 	import { categoryLabel, difficultyLabel, localeLabel } from '$lib/scenario-labels';
 	import { withParams } from '$lib/url-params';
 	import type { ActionData, PageData } from './$types';
@@ -23,6 +31,11 @@
 	const resetHref = $derived(
 		withParams(page.url, { q: null, category: null, difficulty: null, locale: null })
 	);
+	const summary = $derived(
+		data.total === 0
+			? 'Aucun scénario pour le moment.'
+			: `${data.scenarios.length} scénario${data.scenarios.length > 1 ? 's' : ''} affiché${data.scenarios.length > 1 ? 's' : ''} sur ${data.total}. Ouvrez-en un pour voir son aperçu.`
+	);
 	const archivedHref = $derived(withParams(page.url, { archived: data.showArchived ? null : '1' }));
 </script>
 
@@ -30,49 +43,53 @@
 	{#if s.archived}
 		<form method="POST" action="?/restore" use:enhance>
 			<input type="hidden" name="key" value={s.key} />
-			<Button type="submit" variant="secondary">Restaurer</Button>
+			<Button type="submit" variant="secondary" size="sm">Restaurer</Button>
 		</form>
 	{:else}
-		<Button variant="danger" onclick={() => (pendingKey = s.key)}>Supprimer</Button>
+		<Button variant="danger" size="sm" onclick={() => (pendingKey = s.key)}>Supprimer</Button>
 	{/if}
 {/snippet}
 
-<main class="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-6 md:px-6 md:py-8">
-	<div class="flex flex-wrap items-center justify-between gap-3">
-		<h1 class="text-2xl font-semibold text-ink">Scénarios</h1>
+<Page title="Scénarios" description={summary}>
+	{#snippet actions()}
 		{#if isSuperadmin}
-			<div class="flex flex-wrap items-center gap-2">
-				<Button href="/scenarios/new" variant="primary">Créer un scénario</Button>
-				<form
-					method="POST"
-					action="?/import"
-					enctype="multipart/form-data"
-					use:enhance={() => {
-						importing = true;
-						return async ({ update }) => {
-							await update();
-							if (fileInput) fileInput.value = '';
-							importing = false;
-						};
-					}}
+			<form
+				method="POST"
+				action="?/import"
+				enctype="multipart/form-data"
+				class="max-md:w-full"
+				use:enhance={() => {
+					importing = true;
+					return async ({ update }) => {
+						await update();
+						if (fileInput) fileInput.value = '';
+						importing = false;
+					};
+				}}
+			>
+				<input
+					bind:this={fileInput}
+					id="import-file"
+					class="sr-only"
+					type="file"
+					name="file"
+					accept="application/json,.json"
+					disabled={importing}
+					onchange={(e) => e.currentTarget.form?.requestSubmit()}
+				/>
+				<label
+					for="import-file"
+					class="btn-import max-md:flex max-md:justify-center"
+					aria-disabled={importing || undefined}
 				>
-					<input
-						bind:this={fileInput}
-						id="import-file"
-						class="sr-only"
-						type="file"
-						name="file"
-						accept="application/json,.json"
-						disabled={importing}
-						onchange={(e) => e.currentTarget.form?.requestSubmit()}
-					/>
-					<label for="import-file" class="btn-import" aria-disabled={importing || undefined}>
-						{importing ? 'Import en cours...' : 'Importer un scénario'}
-					</label>
-				</form>
-			</div>
+					{importing ? 'Import en cours...' : 'Importer un scénario'}
+				</label>
+			</form>
+			<Button href="/scenarios/new" variant="primary" class="max-md:w-full">
+				Créer un scénario
+			</Button>
 		{/if}
-	</div>
+	{/snippet}
 
 	{#if form?.error}
 		<ErrorNotice message={form.error} />
@@ -91,60 +108,56 @@
 		</p>
 	{/if}
 
-	<p class="text-ink-dim">
-		Vos scénarios, créés ou importés. La plateforme ne livre aucun scénario : vous fournissez les
-		vôtres. Ouvrez un scénario pour en voir l'aperçu.
-	</p>
-
-	<Panel>
-		<form method="GET" class="flex flex-wrap items-end gap-3">
-			<label class="flex w-full min-w-48 grow flex-col gap-1.5 md:w-auto">
+	<div class="flex flex-wrap items-end justify-between gap-3 max-md:flex-col max-md:items-stretch">
+		<form
+			method="GET"
+			role="search"
+			aria-label="Filtrer les scénarios"
+			class="flex flex-col gap-3 max-md:w-full md:flex-row md:flex-wrap md:items-end"
+		>
+			<label class="flex flex-col gap-1.5">
 				<span class="rf-label">Recherche</span>
 				<input
-					class="rf-input"
+					class="rf-input md:w-72"
 					type="search"
 					name="q"
 					value={data.filters.q ?? ''}
 					placeholder="Titre, clé ou tag"
 				/>
 			</label>
-			<label class="flex w-full flex-col gap-1.5 md:w-auto">
+			<label class="flex flex-col gap-1.5">
 				<span class="rf-label">Catégorie</span>
-				<select class="rf-input" name="category">
+				<select class="rf-input md:w-44" name="category">
 					<option value="">Toutes</option>
 					{#each data.available.categories as c (c)}
 						<option value={c} selected={data.filters.category === c}>{categoryLabel(c)}</option>
 					{/each}
 				</select>
 			</label>
-			<label class="flex w-full flex-col gap-1.5 md:w-auto">
+			<label class="flex flex-col gap-1.5">
 				<span class="rf-label">Difficulté</span>
-				<select class="rf-input" name="difficulty">
+				<select class="rf-input md:w-36" name="difficulty">
 					<option value="">Toutes</option>
 					{#each data.available.difficulties as d (d)}
 						<option value={d} selected={data.filters.difficulty === d}>{difficultyLabel(d)}</option>
 					{/each}
 				</select>
 			</label>
-			<label class="flex w-full flex-col gap-1.5 md:w-auto">
+			<label class="flex flex-col gap-1.5">
 				<span class="rf-label">Langue</span>
-				<select class="rf-input" name="locale">
+				<select class="rf-input md:w-36" name="locale">
 					<option value="">Toutes</option>
 					{#each data.available.locales as l (l)}
 						<option value={l} selected={data.filters.locale === l}>{localeLabel(l)}</option>
 					{/each}
 				</select>
 			</label>
-			<div class="flex w-full items-center gap-2 md:w-auto">
-				<Button type="submit" variant="primary">Filtrer</Button>
-				<Button href={resetHref} variant="ghost">Réinitialiser</Button>
-			</div>
+			<Button type="submit" variant="secondary" class="max-md:w-full">Filtrer</Button>
+			{#if hasFilters}
+				<Button href={resetHref} variant="ghost" class="max-md:w-full">Réinitialiser</Button>
+			{/if}
 		</form>
-	</Panel>
-
-	<div class="flex flex-wrap items-center justify-between gap-3">
-		<p class="text-ink-dim">{data.scenarios.length} sur {data.total}</p>
-		<Button href={archivedHref} variant="ghost" size="sm">
+		<Button href={archivedHref} variant="ghost">
 			{data.showArchived ? 'Masquer les archivés' : 'Afficher les archivés'}
 		</Button>
 	</div>
@@ -192,7 +205,7 @@
 		>
 			{#if isSuperadmin}
 				<div class="flex flex-wrap items-center gap-2">
-					<Button href="/scenarios/new" variant="primary" size="sm">Créer un scénario</Button>
+					<Button href="/scenarios/new" variant="primary">Créer un scénario</Button>
 					<label for="import-file" class="btn-import">Importer un scénario</label>
 				</div>
 			{/if}
@@ -224,22 +237,23 @@
 							{/if}
 						</div>
 						<span class="flex items-center gap-2">
-							<span class="font-mono text-xs [overflow-wrap:anywhere] text-ink-dim">{s.key}</span>
+							<span class="font-mono [overflow-wrap:anywhere] text-ink-dim">{s.key}</span>
 							<CopyButton value={s.key} what="la clé" size="sm" />
 						</span>
-						<p class="text-xs text-ink-dim">
+						<p class="rf-meta">
 							{categoryLabel(s.category)} · {difficultyLabel(s.difficulty)} · {localeLabel(
 								s.locale
 							)}
 						</p>
 						{#if s.tags.length > 0}
-							<p class="text-xs [overflow-wrap:anywhere] text-ink-dim">{s.tags.join(', ')}</p>
+							<p class="rf-meta [overflow-wrap:anywhere]">{s.tags.join(', ')}</p>
 						{/if}
 						<div class="flex flex-wrap gap-2">
 							<Button
 								href="/scenarios/{encodeURIComponent(s.key)}/export"
 								download
 								variant="secondary"
+								size="sm"
 							>
 								Exporter
 							</Button>
@@ -252,25 +266,25 @@
 			</ul>
 			<div class="hidden overflow-x-auto md:block">
 				<table class="w-full text-left">
-					<thead class="bg-surface-2">
+					<thead class="border-b border-line">
 						<tr>
-							<th class="rf-label px-4 py-3 font-medium">Titre</th>
-							<th class="rf-label px-4 py-3 font-medium">Clé</th>
-							<th class="rf-label px-4 py-3 font-medium">Catégorie</th>
-							<th class="rf-label px-4 py-3 font-medium">Difficulté</th>
-							<th class="rf-label px-4 py-3 font-medium">Langue</th>
-							<th class="rf-label px-4 py-3 font-medium">Tags</th>
-							<th class="rf-label px-4 py-3 font-medium">État</th>
-							<th class="rf-label px-4 py-3 font-medium">Actions</th>
+							<th class="rf-label px-4 py-2.5">Titre</th>
+							<th class="rf-label px-4 py-2.5">Clé</th>
+							<th class="rf-label px-4 py-2.5">Catégorie</th>
+							<th class="rf-label px-4 py-2.5">Difficulté</th>
+							<th class="rf-label px-4 py-2.5">Langue</th>
+							<th class="rf-label px-4 py-2.5">Tags</th>
+							<th class="rf-label px-4 py-2.5">État</th>
+							<th class="rf-label px-4 py-2.5">Actions</th>
 						</tr>
 					</thead>
 					<tbody class="divide-y divide-line">
 						{#each data.scenarios as s (s.id)}
-							<tr class="hover:bg-surface-2">
+							<tr class="rf-row">
 								<td class="px-4 py-3">
 									<a
 										href="/scenarios/{encodeURIComponent(s.key)}"
-										class="font-medium text-ink hover:underline"
+										class="rf-row-link font-medium text-ink"
 									>
 										{s.title}
 									</a>
@@ -285,7 +299,7 @@
 								<td class="px-4 py-3 text-ink-dim">{difficultyLabel(s.difficulty)}</td>
 								<td class="px-4 py-3 text-ink-dim">{localeLabel(s.locale)}</td>
 								<td class="px-4 py-3 text-ink-dim">
-									{s.tags.length > 0 ? s.tags.join(', ') : 'n/d'}
+									{s.tags.length > 0 ? s.tags.join(', ') : '—'}
 								</td>
 								<td class="px-4 py-3">
 									{#if s.archived}
@@ -302,6 +316,7 @@
 											href="/scenarios/{encodeURIComponent(s.key)}/export"
 											download
 											variant="secondary"
+											size="sm"
 										>
 											Exporter
 										</Button>
@@ -317,14 +332,16 @@
 			</div>
 		</Panel>
 	{/if}
-</main>
+</Page>
 
 <style>
 	.btn-import {
 		display: inline-flex;
 		align-items: center;
-		min-height: 2.5rem;
-		padding: 0 1rem;
+		min-height: 2.25rem;
+		padding: 0 0.875rem;
+		font-weight: 500;
+		white-space: nowrap;
 		border: 1px solid var(--color-line);
 		border-radius: 0.375rem;
 		background: var(--color-surface-2);

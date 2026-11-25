@@ -51,13 +51,23 @@
 		{/each}
 		{#each points as p, i (i)}
 			{#if points.length <= 6 || i === 0 || i === points.length - 1}
-				<text x={x(i)} y={H - 8} text-anchor="middle" font-size="11" fill="var(--c-ink-dim)">
+				<text
+					x={x(i)}
+					y={H - 8}
+					text-anchor={i === points.length - 1 && points.length > 1
+						? 'end'
+						: i === 0
+							? 'start'
+							: 'middle'}
+					font-size="11"
+					fill="var(--c-ink-dim)"
+				>
 					{fmt(p.date)}
 				</text>
 			{/if}
 		{/each}
 	</svg>
-	<ul class="flex flex-wrap gap-4 text-xs text-ink-dim">
+	<ul class="rf-meta flex flex-wrap gap-4">
 		{#each series as s (s.key)}
 			<li class="flex items-center gap-1.5">
 				<span class="inline-block h-0.5 w-4" style="background: {s.color}"></span>{s.label}

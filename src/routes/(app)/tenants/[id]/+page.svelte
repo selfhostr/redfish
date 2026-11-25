@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { Button, ErrorNotice, Field, Panel } from '$lib/components/ui';
+	import { Button, ErrorNotice, Field, Page, Panel } from '$lib/components/ui';
 	import { localeLabel } from '$lib/scenario-labels';
 	import type { ActionData, PageData } from './$types';
 
@@ -13,22 +13,17 @@
 	const nameMatches = $derived(confirmName.trim() === data.tenant.name);
 </script>
 
-<main class="mx-auto flex max-w-4xl flex-col gap-6 px-4 py-6 md:px-6 md:py-8">
-	<header class="flex flex-wrap items-end justify-between gap-3">
-		<div class="min-w-0">
-			<p class="rf-eyebrow">Paramètres du client</p>
-			<h1 class="mt-1 text-2xl font-semibold tracking-tight [overflow-wrap:anywhere] text-ink">
-				{data.tenant.name}
-			</h1>
-		</div>
-		<Button href="/tenants" variant="ghost" size="sm" class="max-sm:w-full">
-			Tous les clients
-		</Button>
-	</header>
+<Page
+	title={data.tenant.name}
+	description="Paramètres du client : identité, contact et fuseau horaire."
+>
+	{#snippet actions()}
+		<Button href="/tenants" variant="secondary" class="max-sm:w-full">Tous les clients</Button>
+	{/snippet}
 
 	{#if data.welcome}
 		<div
-			class="flex flex-col gap-3 rounded-lg border border-line-strong bg-surface-1 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+			class="flex flex-col gap-3 rounded-card border border-line-strong bg-surface-1 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
 		>
 			<p class="text-ink-dim">
 				Le client est créé et actif. Complétez son contact et son fuseau horaire si vous le
@@ -45,7 +40,7 @@
 		<form
 			method="POST"
 			action="/set-tenant"
-			class="flex flex-col gap-3 rounded-lg border border-line-strong bg-surface-1 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+			class="flex flex-col gap-3 rounded-card border border-line-strong bg-surface-1 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
 		>
 			<input type="hidden" name="tenantId" value={data.tenant.id} />
 			<input type="hidden" name="redirectTo" value="/dashboard" />
@@ -59,86 +54,88 @@
 		</form>
 	{/if}
 
-	<Panel>
-		{#snippet header()}
-			<h2 class="rf-label">Identité</h2>
-		{/snippet}
-		<dl class="grid gap-4 sm:grid-cols-2">
-			<div>
-				<dt class="rf-label">Nom</dt>
-				<dd class="mt-1 [overflow-wrap:anywhere] text-ink">{data.tenant.name}</dd>
-			</div>
-			<div>
-				<dt class="rf-label">Langue</dt>
-				<dd class="mt-1 text-ink">{localeLabel(data.tenant.locale)}</dd>
-			</div>
-		</dl>
-		<p class="mt-4 text-xs text-ink-dim">Le nom et la langue sont fixés à la création du client.</p>
-	</Panel>
+	<div class="grid items-start gap-4 lg:grid-cols-3">
+		<Panel>
+			{#snippet header()}
+				<h2 class="rf-title">Identité</h2>
+			{/snippet}
+			<dl class="flex flex-col gap-4">
+				<div>
+					<dt class="rf-label">Nom</dt>
+					<dd class="mt-1 [overflow-wrap:anywhere] text-ink">{data.tenant.name}</dd>
+				</div>
+				<div>
+					<dt class="rf-label">Langue</dt>
+					<dd class="mt-1 text-ink">{localeLabel(data.tenant.locale)}</dd>
+				</div>
+			</dl>
+			<p class="mt-4 rf-meta">Le nom et la langue sont fixés à la création du client.</p>
+		</Panel>
 
-	<Panel>
-		{#snippet header()}
-			<h2 class="rf-label">Contact et fuseau horaire</h2>
-		{/snippet}
-		<form method="POST" action="?/update" use:enhance class="flex flex-col gap-4">
-			<div class="grid gap-4 sm:grid-cols-2">
-				<Field
-					label="Nom du contact"
-					name="contactName"
-					maxlength={120}
-					autocomplete="off"
-					value={form?.contactName ?? data.contact.contactName ?? ''}
-				/>
-				<Field
-					label="E-mail du contact"
-					name="contactEmail"
-					type="email"
-					maxlength={254}
-					autocomplete="off"
-					value={form?.contactEmail ?? data.contact.contactEmail ?? ''}
-				/>
-			</div>
-			<Field
-				label="Fuseau horaire"
-				name="timezone"
-				help="Fuseau IANA utilisé pour saisir et afficher les dates des campagnes."
-			>
-				{#snippet input()}
-					<input
-						id="field-timezone"
-						name="timezone"
-						list="tz-list"
+		<Panel class="lg:col-span-2">
+			{#snippet header()}
+				<h2 class="rf-title">Contact et fuseau horaire</h2>
+			{/snippet}
+			<form method="POST" action="?/update" use:enhance class="flex flex-col gap-4">
+				<div class="grid gap-4 md:grid-cols-2">
+					<Field
+						label="Nom du contact"
+						name="contactName"
+						maxlength={120}
 						autocomplete="off"
-						class="rf-input"
-						value={form?.timezone || data.contact.timezone}
+						value={form?.contactName ?? data.contact.contactName ?? ''}
 					/>
-					<datalist id="tz-list">
-						{#each data.timezones as tz (tz)}<option value={tz}></option>{/each}
-					</datalist>
-				{/snippet}
-			</Field>
-			<Field label="Notes" name="notes">
-				{#snippet input()}
-					<textarea id="field-notes" name="notes" rows="4" maxlength="2000" class="rf-input"
-						>{form?.notes ?? data.contact.notes ?? ''}</textarea
+					<Field
+						label="E-mail du contact"
+						name="contactEmail"
+						type="email"
+						maxlength={254}
+						autocomplete="off"
+						value={form?.contactEmail ?? data.contact.contactEmail ?? ''}
+					/>
+					<Field
+						label="Fuseau horaire"
+						name="timezone"
+						help="Fuseau IANA utilisé pour saisir et afficher les dates des campagnes."
 					>
-				{/snippet}
-			</Field>
-			{#if form?.contactError}
-				<ErrorNotice message={form.contactError} />
-			{:else if form?.saved}
-				<p class="text-signal" role="status">Paramètres enregistrés.</p>
-			{/if}
-			<div>
-				<Button type="submit" variant="primary" class="max-md:w-full">Enregistrer</Button>
-			</div>
-		</form>
-	</Panel>
+						{#snippet input()}
+							<input
+								id="field-timezone"
+								name="timezone"
+								list="tz-list"
+								autocomplete="off"
+								class="rf-input"
+								value={form?.timezone || data.contact.timezone}
+							/>
+							<datalist id="tz-list">
+								{#each data.timezones as tz (tz)}<option value={tz}></option>{/each}
+							</datalist>
+						{/snippet}
+					</Field>
+					<Field label="Notes" name="notes">
+						{#snippet input()}
+							<textarea id="field-notes" name="notes" rows="3" maxlength="2000" class="rf-input"
+								>{form?.notes ?? data.contact.notes ?? ''}</textarea
+							>
+						{/snippet}
+					</Field>
+				</div>
+				{#if form?.contactError}
+					<ErrorNotice message={form.contactError} />
+				{:else if form?.saved}
+					<p class="text-signal" role="status">Paramètres enregistrés.</p>
+				{/if}
+				<div>
+					<Button type="submit" variant="primary" class="max-md:w-full">Enregistrer</Button>
+				</div>
+			</form>
+		</Panel>
+	</div>
 
 	{#if isSuperadmin}
 		<Panel>
 			{#snippet header()}
-				<h2 class="rf-eyebrow">Zone de danger</h2>
+				<h2 class="rf-title">Zone de danger</h2>
 			{/snippet}
 			<div class="flex flex-col gap-4">
 				<p class="text-ink-dim">
@@ -184,4 +181,4 @@
 			</div>
 		</Panel>
 	{/if}
-</main>
+</Page>
