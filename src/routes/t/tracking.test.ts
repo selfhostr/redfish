@@ -264,6 +264,55 @@ test('GET /t/a with an unknown token is 404 and records nothing', async () => {
 	expect(eventsOfType('awareness_viewed')).toHaveLength(0);
 });
 
+/** Bascule le scénario de la fixture en mode redirection vers `url`. */
+const setRedirect = (url: string | null) =>
+	db.update(scenarios).set({ landingMode: 'redirect', landingRedirectUrl: url }).run();
+
+test('LANDING REDIRECT: GET /t/p 302s to the configured URL and records nothing', async () => {
+	setRedirect('https://exemple.test/suite');
+	const result = await thrown(() => landingLoad(makeEvent(TOKEN) as never));
+	expect(isRedirect(result)).toBe(true);
+	expect((result as { status: number }).status).toBe(302);
+	expect((result as { location: string }).location).toBe('https://exemple.test/suite');
+	expect(eventsOfType('clicked')).toHaveLength(0);
+	expect(eventsOfType('awareness_viewed')).toHaveLength(0);
+});
+
+test('LANDING REDIRECT: GET /t/a 302s to the URL and does NOT record awareness_viewed', async () => {
+	setRedirect('https://exemple.test/suite');
+	const result = await thrown(() => awarenessLoad(makeEvent(TOKEN, { ua: 'UA' }) as never));
+	expect(isRedirect(result)).toBe(true);
+	expect((result as { status: number }).status).toBe(302);
+	expect((result as { location: string }).location).toBe('https://exemple.test/suite');
+	expect(eventsOfType('awareness_viewed')).toHaveLength(0);
+});
+
+test('LANDING REDIRECT: awareness mode still records awareness_viewed and renders the debrief', async () => {
+	// Mode par défaut (awareness) : comportement inchangé.
+	const data = (await awarenessLoad(makeEvent(TOKEN, { ua: 'UA' }) as never)) as { html: string };
+	expect(eventsOfType('awareness_viewed')).toHaveLength(1);
+	expect(data.html).toContain('Message propre à la campagne.');
+});
+
+test('LANDING REDIRECT: an invalid stored URL falls back to the normal render (defense in depth)', async () => {
+	setRedirect('javascript:alert(1)');
+	const landing = (await landingLoad(makeEvent(TOKEN) as never)) as { html: string };
+	expect(landing.html).toContain(`/t/s/${TOKEN}`);
+	const awareness = (await awarenessLoad(makeEvent(TOKEN, { ua: 'UA' }) as never)) as {
+		html: string;
+	};
+	expect(eventsOfType('awareness_viewed')).toHaveLength(1);
+	expect(awareness.html).toContain('Message propre à la campagne.');
+});
+
+test('LANDING REDIRECT: redirect mode with an unknown token is still 404 on /t/a', async () => {
+	setRedirect('https://exemple.test/suite');
+	const result = await thrown(() => awarenessLoad(makeEvent('nope') as never));
+	expect(isHttpError(result)).toBe(true);
+	expect((result as { status: number }).status).toBe(404);
+	expect(eventsOfType('awareness_viewed')).toHaveLength(0);
+});
+
 test('every /t route is rate-limited per IP; the pixel still serves the GIF without recording', async () => {
 	const ip = '198.51.100.77';
 	for (let i = 0; i < 60; i++) await openGet(makeEvent(TOKEN, { ip }) as never);

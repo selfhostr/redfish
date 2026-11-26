@@ -1,7 +1,8 @@
-import { error } from '@sveltejs/kit';
+import { error, redirect } from '@sveltejs/kit';
 import { eq } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { campaignRecipients, campaigns, scenarios, targets } from '$lib/server/db/schema';
+import { isValidLandingRedirectUrl } from '$lib/server/scenarios/bundle';
 import { renderLanding } from '$lib/server/scenarios/render';
 import type { RenderCtx } from '$lib/server/scenarios/render';
 import { isTrackingLimited } from '$lib/server/tracking/guard';
@@ -33,6 +34,18 @@ export const load: PageServerLoad = async ({ params, getClientAddress }) => {
 
 	const scenario = db.select().from(scenarios).where(eq(scenarios.id, campaign.scenarioId)).get();
 	if (!scenario) throw error(404, 'Page inconnue');
+
+	// Mode redirection : la cible est renvoyée vers l'URL configurée sans voir la
+	// page simulée. Validation du schéma au moment de la redirection (défense en
+	// profondeur) ; une URL invalide retombe sur le rendu normal.
+	if (
+		scenario.landingMode === 'redirect' &&
+		scenario.landingRedirectUrl &&
+		isValidLandingRedirectUrl(scenario.landingRedirectUrl)
+	) {
+		// URL délibérément externe (site réel / page neutre) : autorisée explicitement.
+		throw redirect(302, scenario.landingRedirectUrl, { external: true });
+	}
 
 	const target = db.select().from(targets).where(eq(targets.id, recipient.targetId)).get();
 	if (!target) throw error(404, 'Page inconnue');

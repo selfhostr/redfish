@@ -141,6 +141,16 @@ export const scenarios = sqliteTable(
 		emailTemplate: text('email_template'),
 		landingTemplate: text('landing_template'),
 		awarenessTemplate: text('awareness_template'),
+		/**
+		 * Comportement après le clic : `awareness` affiche le débrief pédagogique
+		 * (défaut) ; `redirect` redirige la cible vers {@link landingRedirectUrl}
+		 * sans aucun message (débrief fait séparément, collectivement).
+		 */
+		landingMode: text('landing_mode', { enum: ['awareness', 'redirect'] })
+			.notNull()
+			.default('awareness'),
+		/** URL absolue http(s) de redirection en mode `redirect` ; NULL sinon. */
+		landingRedirectUrl: text('landing_redirect_url'),
 		enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
 		/** Archivé (supprimé mais encore référencé par des campagnes) : masqué des listes. */
 		archivedAt: integer('archived_at', { mode: 'timestamp' }),
@@ -148,7 +158,10 @@ export const scenarios = sqliteTable(
 			.notNull()
 			.default(sql`(unixepoch())`)
 	},
-	(t) => [check('scenarios_source_check', sql`${t.source} in ('builtin', 'imported')`)]
+	(t) => [
+		check('scenarios_source_check', sql`${t.source} in ('builtin', 'imported')`),
+		check('scenarios_landing_mode_check', sql`${t.landingMode} in ('awareness', 'redirect')`)
+	]
 );
 
 export const targetLists = sqliteTable('target_lists', {

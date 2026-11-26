@@ -33,7 +33,9 @@ const defaults = {
 	fromName: '',
 	email: SKELETON_EMAIL,
 	landing: SKELETON_LANDING,
-	awareness: SKELETON_AWARENESS
+	awareness: SKELETON_AWARENESS,
+	landingMode: 'awareness',
+	landingRedirectUrl: ''
 };
 
 export const load: PageServerLoad = async ({ locals }) => {
@@ -60,7 +62,9 @@ export const actions: Actions = {
 			fromName: str('fromName'),
 			email: String(data.get('email') ?? ''),
 			landing: String(data.get('landing') ?? ''),
-			awareness: String(data.get('awareness') ?? '')
+			awareness: String(data.get('awareness') ?? ''),
+			landingMode: str('landingMode') || 'awareness',
+			landingRedirectUrl: str('landingRedirectUrl')
 		};
 
 		const bundle = {
@@ -75,7 +79,9 @@ export const actions: Actions = {
 			fromName: values.fromName || null,
 			email: values.email,
 			landing: values.landing,
-			awareness: values.awareness
+			awareness: values.awareness,
+			landingMode: values.landingMode,
+			landingRedirectUrl: values.landingRedirectUrl || null
 		};
 
 		let key: string;

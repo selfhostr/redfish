@@ -100,6 +100,31 @@ test('création : landing non conforme (champ nommé) -> fail 400 + valeurs cons
 	expect(getScenario('invalide')).toBeUndefined();
 });
 
+test('création : mode redirect + URL http(s) -> scénario importé avec mode et URL', async () => {
+	await expect(
+		runCreate(superadmin, {
+			...validFields,
+			key: 'avec-redirect',
+			landingMode: 'redirect',
+			landingRedirectUrl: 'https://exemple.test/suite'
+		})
+	).rejects.toMatchObject({ status: 303, location: '/scenarios/avec-redirect' });
+	const row = getScenario('avec-redirect');
+	expect(row?.landingMode).toBe('redirect');
+	expect(row?.landingRedirectUrl).toBe('https://exemple.test/suite');
+});
+
+test('création : mode redirect sans URL -> fail 400', async () => {
+	const r = (await runCreate(superadmin, {
+		...validFields,
+		key: 'redirect-sans-url',
+		landingMode: 'redirect',
+		landingRedirectUrl: ''
+	})) as { status: number; data: { error: string } };
+	expect(r.status).toBe(400);
+	expect(getScenario('redirect-sans-url')).toBeUndefined();
+});
+
 test('création : {{awarenessMessage}} absent -> fail 400', async () => {
 	const awareness = SKELETON_AWARENESS.replace('{{awarenessMessage}}', '');
 	const r = (await runCreate(superadmin, { ...validFields, key: 'sans-note', awareness })) as {

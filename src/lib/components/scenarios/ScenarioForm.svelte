@@ -10,6 +10,8 @@
 		email: string;
 		landing: string;
 		awareness: string;
+		landingMode: string;
+		landingRedirectUrl: string;
 	}
 
 	export interface ScenarioFormState {
@@ -260,6 +262,37 @@
 						bind:value={fields.email}
 						bind:this={emailEl}></textarea>
 					{@render fieldIssues('email')}
+				</div>
+				<div class="flex flex-col gap-1.5">
+					<label class="rf-label" for="field-landing-mode">
+						Après le clic (et l'éventuelle soumission)
+					</label>
+					<select
+						id="field-landing-mode"
+						class="rf-input"
+						name="landingMode"
+						bind:value={fields.landingMode}
+					>
+						<option value="awareness">Page de sensibilisation</option>
+						<option value="redirect">Redirection sans message</option>
+					</select>
+					{#if fields.landingMode === 'redirect'}
+						<input
+							class="rf-input"
+							name="landingRedirectUrl"
+							type="url"
+							inputmode="url"
+							placeholder="https://exemple.test"
+							bind:value={fields.landingRedirectUrl}
+							required
+						/>
+					{/if}
+					<span class="rf-meta">
+						« Page de sensibilisation » : la cible voit le débrief pédagogique (comportement par
+						défaut). « Redirection sans message » : la cible est redirigée vers l'URL indiquée (URL
+						absolue en http(s)) et ne voit AUCUN débrief — la sensibilisation se fait séparément
+						(collectivement, plus tard).
+					</span>
 				</div>
 				<div class="flex flex-col gap-1.5">
 					<label class="rf-label" for="field-landing">Page de destination (HTML)</label>

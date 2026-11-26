@@ -73,6 +73,10 @@ export type ScenarioContent = {
 	email: string;
 	landing: string;
 	awareness: string;
+	/** Comportement après le clic (voir la table `scenarios`). */
+	landingMode?: 'awareness' | 'redirect';
+	/** URL absolue http(s) de redirection en mode `redirect` ; NULL sinon. */
+	landingRedirectUrl?: string | null;
 };
 
 /** Vrai si le contenu vit en base (scénario importé) plutôt que sur disque. */
@@ -93,7 +97,9 @@ export async function loadScenarioContent(scenario: Scenario): Promise<ScenarioC
 			fromName: scenario.fromName ?? undefined,
 			email: scenario.emailTemplate ?? '',
 			landing: scenario.landingTemplate ?? '',
-			awareness: scenario.awarenessTemplate ?? ''
+			awareness: scenario.awarenessTemplate ?? '',
+			landingMode: scenario.landingMode,
+			landingRedirectUrl: scenario.landingRedirectUrl
 		};
 	}
 	const path = scenario.path as string;
@@ -105,7 +111,15 @@ export async function loadScenarioContent(scenario: Scenario): Promise<ScenarioC
 		read(manifest.templates.landing),
 		read(manifest.templates.awareness)
 	]);
-	return { subject: manifest.subject, fromName: manifest.fromName, email, landing, awareness };
+	return {
+		subject: manifest.subject,
+		fromName: manifest.fromName,
+		email,
+		landing,
+		awareness,
+		landingMode: scenario.landingMode,
+		landingRedirectUrl: scenario.landingRedirectUrl
+	};
 }
 
 /**
