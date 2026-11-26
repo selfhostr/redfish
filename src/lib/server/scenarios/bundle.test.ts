@@ -55,6 +55,8 @@ function makeBundle(overrides: Partial<Bundle> = {}): Bundle {
 		email: EMAIL,
 		landing: LANDING,
 		awareness: AWARENESS,
+		landingMode: 'awareness',
+		landingRedirectUrl: null,
 		...overrides
 	};
 }
@@ -186,6 +188,80 @@ test('import refusé : le MJML ne compile pas', async () => {
 
 test('import refusé : clé en conflit avec un scénario builtin', async () => {
 	await expect(importBundle(makeBundle({ key: BUILTIN_KEY }))).rejects.toThrow(/livré/);
+});
+
+test('landing redirect : import OK avec une URL http(s) absolue, stockée en base', async () => {
+	const { key } = await importBundle(
+		makeBundle({
+			key: 'redir-ok',
+			landingMode: 'redirect',
+			landingRedirectUrl: 'https://exemple.test/suite'
+		})
+	);
+	expect(key).toBe('redir-ok');
+	const row = getScenario('redir-ok') as Scenario;
+	expect(row.landingMode).toBe('redirect');
+	expect(row.landingRedirectUrl).toBe('https://exemple.test/suite');
+});
+
+test('landing redirect : mode awareness ignore l’URL fournie (NULL en base)', async () => {
+	await importBundle(
+		makeBundle({
+			key: 'awareness-url',
+			landingMode: 'awareness',
+			landingRedirectUrl: 'https://exemple.test/suite'
+		})
+	);
+	const row = getScenario('awareness-url') as Scenario;
+	expect(row.landingMode).toBe('awareness');
+	expect(row.landingRedirectUrl).toBeNull();
+});
+
+test('landing redirect refusé : mode redirect sans URL', async () => {
+	await expect(
+		importBundle(
+			makeBundle({ key: 'redir-sans-url', landingMode: 'redirect', landingRedirectUrl: null })
+		)
+	).rejects.toBeInstanceOf(BundleImportError);
+});
+
+test('landing redirect refusé : URL non http(s)', async () => {
+	await expect(
+		importBundle(
+			makeBundle({
+				key: 'redir-js',
+				landingMode: 'redirect',
+				landingRedirectUrl: 'javascript:alert(1)'
+			})
+		)
+	).rejects.toBeInstanceOf(BundleImportError);
+	await expect(
+		importBundle(
+			makeBundle({
+				key: 'redir-rel',
+				landingMode: 'redirect',
+				landingRedirectUrl: '/chemin/relatif'
+			})
+		)
+	).rejects.toBeInstanceOf(BundleImportError);
+});
+
+test('landing redirect : round-trip export/import préserve mode et URL', async () => {
+	await importBundle(
+		makeBundle({
+			key: 'redir-roundtrip',
+			landingMode: 'redirect',
+			landingRedirectUrl: 'https://exemple.test/final'
+		})
+	);
+	const exported = await exportBundle('redir-roundtrip');
+	expect(exported.landingMode).toBe('redirect');
+	expect(exported.landingRedirectUrl).toBe('https://exemple.test/final');
+
+	const { key } = await importBundle({ ...exported, key: 'redir-roundtrip-copie' });
+	const row = getScenario(key) as Scenario;
+	expect(row.landingMode).toBe('redirect');
+	expect(row.landingRedirectUrl).toBe('https://exemple.test/final');
 });
 
 test('import refusé : version de schéma inconnue', async () => {

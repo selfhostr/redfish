@@ -23,9 +23,27 @@ export type Bundle = {
 	email: string;
 	landing: string;
 	awareness: string;
+	/** Comportement après le clic : `awareness` (défaut) ou `redirect`. */
+	landingMode: 'awareness' | 'redirect';
+	/** URL absolue http(s) de redirection en mode `redirect` ; NULL sinon. */
+	landingRedirectUrl: string | null;
 };
 
 export const BUNDLE_SCHEMA_VERSION = 1 as const;
+
+/**
+ * Vrai si `value` est une URL absolue en http(s). Utilisé à l'import (validation
+ * d'un bundle) ET au moment de la redirection (défense en profondeur côté `/t`).
+ */
+export function isValidLandingRedirectUrl(value: string): boolean {
+	let url: URL;
+	try {
+		url = new URL(value);
+	} catch {
+		return false;
+	}
+	return url.protocol === 'http:' || url.protocol === 'https:';
+}
 
 /** Clé valide : étiquette de type slug (réutilisée en sous-domaine d'aperçu, en URL). */
 const KEY_RE = /^[a-z0-9][a-z0-9-]{0,62}$/;
@@ -61,7 +79,9 @@ export async function exportBundle(key: string): Promise<Bundle> {
 		fromName: content.fromName ?? null,
 		email: content.email,
 		landing: content.landing,
-		awareness: content.awareness
+		awareness: content.awareness,
+		landingMode: scenario.landingMode,
+		landingRedirectUrl: scenario.landingRedirectUrl ?? null
 	};
 }
 
@@ -194,6 +214,35 @@ export async function importBundle(input: unknown): Promise<{ key: string }> {
 	const fromName =
 		raw.fromName === undefined || raw.fromName === null ? null : String(raw.fromName);
 
+	// Comportement après le clic. Absent → `awareness` (rétrocompatibilité des
+	// anciens bundles). En mode `redirect`, l'URL est obligatoire et doit être
+	// absolue en http(s) ; en mode `awareness`, toute URL fournie est ignorée.
+	const landingMode =
+		raw.landingMode === undefined || raw.landingMode === null
+			? 'awareness'
+			: String(raw.landingMode);
+	if (landingMode !== 'awareness' && landingMode !== 'redirect') {
+		throw new BundleImportError(
+			'Mode d’atterrissage invalide : « awareness » ou « redirect » attendu.'
+		);
+	}
+	let landingRedirectUrl: string | null = null;
+	if (landingMode === 'redirect') {
+		const rawUrl = raw.landingRedirectUrl;
+		if (typeof rawUrl !== 'string' || rawUrl.trim() === '') {
+			throw new BundleImportError(
+				'URL de redirection manquante : en mode « Redirection sans message », une URL http(s) absolue est requise.'
+			);
+		}
+		const url = rawUrl.trim();
+		if (!isValidLandingRedirectUrl(url)) {
+			throw new BundleImportError(
+				'URL de redirection invalide : une URL absolue en http(s) est attendue (ex. « https://exemple.test »).'
+			);
+		}
+		landingRedirectUrl = url;
+	}
+
 	// Une clé réservée par un scénario livré (builtin) ne peut pas être écrasée :
 	// renommer l'import. Une clé déjà importée est, elle, mise à jour.
 	const existing = getScenario(key);
@@ -222,6 +271,8 @@ export async function importBundle(input: unknown): Promise<{ key: string }> {
 			emailTemplate: email,
 			landingTemplate: landing,
 			awarenessTemplate: awareness,
+			landingMode,
+			landingRedirectUrl,
 			enabled: true
 		})
 		.onConflictDoUpdate({
@@ -239,6 +290,8 @@ export async function importBundle(input: unknown): Promise<{ key: string }> {
 				emailTemplate: email,
 				landingTemplate: landing,
 				awarenessTemplate: awareness,
+				landingMode,
+				landingRedirectUrl,
 				enabled: true,
 				archivedAt: null
 			}

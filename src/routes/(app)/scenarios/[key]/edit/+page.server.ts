@@ -51,7 +51,9 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 			fromName: content.fromName ?? '',
 			email: content.email,
 			landing: content.landing,
-			awareness: content.awareness
+			awareness: content.awareness,
+			landingMode: scenario.landingMode,
+			landingRedirectUrl: scenario.landingRedirectUrl ?? ''
 		},
 		tags: parseTags(scenario.tagsJson)
 	};
@@ -81,7 +83,9 @@ export const actions: Actions = {
 			fromName: str('fromName'),
 			email: String(data.get('email') ?? ''),
 			landing: String(data.get('landing') ?? ''),
-			awareness: String(data.get('awareness') ?? '')
+			awareness: String(data.get('awareness') ?? ''),
+			landingMode: str('landingMode') || 'awareness',
+			landingRedirectUrl: str('landingRedirectUrl')
 		};
 
 		const bundle = {
@@ -97,7 +101,9 @@ export const actions: Actions = {
 			fromName: values.fromName || null,
 			email: values.email,
 			landing: values.landing,
-			awareness: values.awareness
+			awareness: values.awareness,
+			landingMode: values.landingMode,
+			landingRedirectUrl: values.landingRedirectUrl || null
 		};
 
 		let key: string;

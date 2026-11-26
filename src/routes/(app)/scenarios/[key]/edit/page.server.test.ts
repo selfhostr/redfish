@@ -38,7 +38,9 @@ const seedImported = (key = KEY) =>
 		fromName: 'Service informatique',
 		email: SKELETON_EMAIL,
 		landing: SKELETON_LANDING,
-		awareness: SKELETON_AWARENESS
+		awareness: SKELETON_AWARENESS,
+		landingMode: 'awareness',
+		landingRedirectUrl: null
 	});
 
 const editFields = (overrides: Record<string, string> = {}): Record<string, string> => ({
