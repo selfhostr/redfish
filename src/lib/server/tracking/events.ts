@@ -5,7 +5,13 @@ import { qualifyScanner } from './scanner';
 
 /** Types d'événements enregistrables depuis les endpoints publics `/t`. */
 export type RecordableEventType =
-	'opened' | 'clicked' | 'page_interaction' | 'form_submitted' | 'awareness_viewed' | 'reported';
+	| 'opened'
+	| 'attachment_opened'
+	| 'clicked'
+	| 'page_interaction'
+	| 'form_submitted'
+	| 'awareness_viewed'
+	| 'reported';
 
 /** Options d'enregistrement : user-agent (en-tête) et horloge injectable (tests). */
 export type RecordEventOptions = { ua?: string | null; now?: Date };

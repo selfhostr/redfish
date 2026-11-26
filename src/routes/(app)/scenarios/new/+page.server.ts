@@ -6,6 +6,7 @@ import {
 	importBundle
 } from '$lib/server/scenarios/bundle';
 import {
+	SKELETON_ATTACHMENT_HTML,
 	SKELETON_AWARENESS,
 	SKELETON_EMAIL,
 	SKELETON_LANDING,
@@ -35,7 +36,10 @@ const defaults = {
 	landing: SKELETON_LANDING,
 	awareness: SKELETON_AWARENESS,
 	landingMode: 'awareness',
-	landingRedirectUrl: ''
+	landingRedirectUrl: '',
+	attachmentMode: 'none',
+	attachmentFilename: '',
+	attachmentTemplate: SKELETON_ATTACHMENT_HTML
 };
 
 export const load: PageServerLoad = async ({ locals }) => {
@@ -64,7 +68,10 @@ export const actions: Actions = {
 			landing: String(data.get('landing') ?? ''),
 			awareness: String(data.get('awareness') ?? ''),
 			landingMode: str('landingMode') || 'awareness',
-			landingRedirectUrl: str('landingRedirectUrl')
+			landingRedirectUrl: str('landingRedirectUrl'),
+			attachmentMode: str('attachmentMode') || 'none',
+			attachmentFilename: str('attachmentFilename'),
+			attachmentTemplate: String(data.get('attachmentTemplate') ?? '')
 		};
 
 		const bundle = {
@@ -81,7 +88,10 @@ export const actions: Actions = {
 			landing: values.landing,
 			awareness: values.awareness,
 			landingMode: values.landingMode,
-			landingRedirectUrl: values.landingRedirectUrl || null
+			landingRedirectUrl: values.landingRedirectUrl || null,
+			attachmentMode: values.attachmentMode,
+			attachmentFilename: values.attachmentFilename || null,
+			attachmentTemplate: values.attachmentMode === 'none' ? null : values.attachmentTemplate
 		};
 
 		let key: string;

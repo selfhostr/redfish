@@ -58,6 +58,27 @@ export const SKELETON_LANDING = `<!doctype html>
 </html>
 `;
 
+/**
+ * Gabarit de pièce jointe HTML « zéro capture » : il ne fait que signaler son
+ * OUVERTURE via le beacon {{attachmentOpen}} (comme le pixel d'ouverture de
+ * l'e-mail). Aucun champ de formulaire n'est autorisé (cf. `validateAttachment`).
+ */
+export const SKELETON_ATTACHMENT_HTML = `<!doctype html>
+<html lang="fr">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Document</title>
+	</head>
+	<body>
+		<h1>Bonjour {{firstName}}</h1>
+		<p>Ceci est un exercice de sensibilisation. Ouvrir une pièce jointe reçue par
+			message peut suffire à déclencher une action : ne les ouvrez qu'en confiance.</p>
+		<img src="{{attachmentOpen}}" width="1" height="1" alt="" style="display:none" />
+	</body>
+</html>
+`;
+
 /** Gabarit page de sensibilisation minimal et neutre. */
 export const SKELETON_AWARENESS = `<!doctype html>
 <html lang="fr">

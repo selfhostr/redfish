@@ -153,6 +153,26 @@ test("détail : un scan automatisé ne fait pas avancer l'étape du destinataire
 	expect(stages?.filter((s) => s === 'Envoyé').length).toBe(1);
 });
 
+test('pièce jointe : indicateur attachment_opened dans les comptes, taux et détails', async () => {
+	ev(0, 'sent');
+	ev(1, 'sent');
+	ev(2, 'sent');
+	ev(0, 'attachment_opened');
+	ev(0, 'clicked');
+	ev(1, 'attachment_opened');
+	const r = await buildReport(campaignId, { anonymize: false });
+	expect(r.counts.attachmentOpened).toBe(2);
+	expect(r.rates.attachment).toBeCloseTo(2 / 3);
+	// Indicateur PARALLÈLE : signalé par un flag distinct, sans casser l'étape linéaire.
+	const byEmail = new Map(r.details?.map((d) => [d.email, d]));
+	expect(byEmail.get('a@x.test')?.attachmentOpened).toBe(true);
+	expect(byEmail.get('b@x.test')?.attachmentOpened).toBe(true);
+	expect(byEmail.get('c@x.test')?.attachmentOpened).toBe(false);
+	// Le clic reste l'étape linéaire de a@x.test (ouverture de PJ non linéaire).
+	expect(byEmail.get('a@x.test')?.stage).toBe('Lien cliqué');
+	expect(r.attentionPoints.join(' ')).toContain('ouvert la pièce jointe');
+});
+
 test('campagne sans destinataire : taux à 0', async () => {
 	db.delete(events).run();
 	db.delete(campaignRecipients).run();

@@ -31,7 +31,8 @@ const ctx: RenderCtx = {
 		submit: 'https://track.exemple.test/s/AAAA-bbbb_CCCC',
 		beacon: 'https://track.exemple.test/b/AAAA-bbbb_CCCC',
 		awareness: 'https://track.exemple.test/a/AAAA-bbbb_CCCC',
-		report: 'https://track.exemple.test/r/AAAA-bbbb_CCCC'
+		report: 'https://track.exemple.test/r/AAAA-bbbb_CCCC',
+		attachmentOpen: 'https://track.exemple.test/ao/AAAA-bbbb_CCCC'
 	}
 };
 

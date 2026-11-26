@@ -17,6 +17,9 @@ vi.mock('$lib/server/authorization', () => ({ canSendCampaign: async () => ({ ok
 vi.mock('$lib/server/scenarios/render', () => ({
 	renderEmail: async () => ({ subject: 's', html: '<p>x</p>' })
 }));
+vi.mock('$lib/server/scenarios/attachment', () => ({
+	renderAttachment: async () => null
+}));
 
 import { eq } from 'drizzle-orm';
 import { db } from '$lib/server/db';

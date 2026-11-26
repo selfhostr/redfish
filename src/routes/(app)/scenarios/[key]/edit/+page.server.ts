@@ -53,7 +53,10 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 			landing: content.landing,
 			awareness: content.awareness,
 			landingMode: scenario.landingMode,
-			landingRedirectUrl: scenario.landingRedirectUrl ?? ''
+			landingRedirectUrl: scenario.landingRedirectUrl ?? '',
+			attachmentMode: scenario.attachmentMode,
+			attachmentFilename: scenario.attachmentFilename ?? '',
+			attachmentTemplate: content.attachmentTemplate ?? ''
 		},
 		tags: parseTags(scenario.tagsJson)
 	};
@@ -85,7 +88,10 @@ export const actions: Actions = {
 			landing: String(data.get('landing') ?? ''),
 			awareness: String(data.get('awareness') ?? ''),
 			landingMode: str('landingMode') || 'awareness',
-			landingRedirectUrl: str('landingRedirectUrl')
+			landingRedirectUrl: str('landingRedirectUrl'),
+			attachmentMode: str('attachmentMode') || 'none',
+			attachmentFilename: str('attachmentFilename'),
+			attachmentTemplate: String(data.get('attachmentTemplate') ?? '')
 		};
 
 		const bundle = {
@@ -103,7 +109,10 @@ export const actions: Actions = {
 			landing: values.landing,
 			awareness: values.awareness,
 			landingMode: values.landingMode,
-			landingRedirectUrl: values.landingRedirectUrl || null
+			landingRedirectUrl: values.landingRedirectUrl || null,
+			attachmentMode: values.attachmentMode,
+			attachmentFilename: values.attachmentFilename || null,
+			attachmentTemplate: values.attachmentMode === 'none' ? null : values.attachmentTemplate
 		};
 
 		let key: string;

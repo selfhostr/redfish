@@ -5,7 +5,17 @@ import { getCampaign } from '$lib/server/campaigns';
 import { tenantTimezone } from '$lib/server/tenant';
 import { campaignFunnel, type HumanFunnel } from '$lib/server/tracking/stats';
 
-export type ReportDetail = { name: string; email: string; stage: string };
+export type ReportDetail = {
+	name: string;
+	email: string;
+	stage: string;
+	/**
+	 * Ouverture d'une pièce jointe HTML : indicateur PARALLÈLE au parcours linéaire
+	 * `stage` (clic → soumission → sensibilisation). Surfacé à part pour ne pas
+	 * casser la sémantique monotone de {@link STAGES}.
+	 */
+	attachmentOpened: boolean;
+};
 export type ReportData = {
 	campaignId: string;
 	campaignName: string;
@@ -16,7 +26,15 @@ export type ReportData = {
 	timezone: string;
 	/** Comptes humains (scanners automatiques exclus). */
 	counts: HumanFunnel & { recipients: number; sent: number; failed: number };
-	rates: { open: number; click: number; submission: number; awareness: number; report: number };
+	rates: {
+		open: number;
+		click: number;
+		submission: number;
+		awareness: number;
+		report: number;
+		/** Part des envois réussis ayant OUVERT la pièce jointe HTML (`attachment_opened`). */
+		attachment: number;
+	};
 	attentionPoints: string[];
 	recommendations: string[];
 	/** Détail individuel : présent uniquement si non anonymisé. */
@@ -50,7 +68,8 @@ export async function buildReport(
 		click: rate(h.clicked),
 		submission: rate(h.formSubmitted),
 		awareness: rate(h.awarenessViewed),
-		report: rate(h.reported)
+		report: rate(h.reported),
+		attachment: rate(h.attachmentOpened)
 	};
 
 	const attentionPoints: string[] = [];
@@ -69,6 +88,10 @@ export async function buildReport(
 		if (h.formSubmitted > 0)
 			attentionPoints.push(
 				`${h.formSubmitted} destinataire(s) ont soumis des informations sur la page simulée (${pct(rates.submission)}).`
+			);
+		if (h.attachmentOpened > 0)
+			attentionPoints.push(
+				`${h.attachmentOpened} destinataire(s) ont ouvert la pièce jointe piégée (${pct(rates.attachment)}).`
 			);
 		if (h.clicked > 0 && h.reported === 0)
 			attentionPoints.push("Aucun signalement : le message n'a été remonté à aucun moment.");
@@ -111,6 +134,7 @@ export async function buildReport(
 			sent: f.sent,
 			failed: f.failed,
 			opened: h.opened,
+			attachmentOpened: h.attachmentOpened,
 			clicked: h.clicked,
 			pageInteraction: h.pageInteraction,
 			formSubmitted: h.formSubmitted,
@@ -149,7 +173,9 @@ export async function buildReport(
 			stage:
 				r.status === 'failed'
 					? 'Envoi en échec'
-					: (STAGES.find(([k]) => seen.get(r.id)?.has(k))?.[1] ?? 'Aucune activité')
+					: (STAGES.find(([k]) => seen.get(r.id)?.has(k))?.[1] ?? 'Aucune activité'),
+			// Activité parallèle au parcours linéaire : surfacée comme indicateur distinct.
+			attachmentOpened: seen.get(r.id)?.has('attachment_opened') ?? false
 		}));
 	}
 	return report;

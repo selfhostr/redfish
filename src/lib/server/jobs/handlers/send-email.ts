@@ -11,6 +11,7 @@ import {
 import { canSendCampaign } from '$lib/server/authorization';
 import { renderEmail } from '$lib/server/scenarios/render';
 import type { RenderCtx } from '$lib/server/scenarios/render';
+import { renderAttachment } from '$lib/server/scenarios/attachment';
 import {
 	registerFailureHandler,
 	registerHandler,
@@ -35,7 +36,8 @@ export function buildTrackingUrls(base: string, token: string): TrackingUrls {
 		submit: `${root}/t/s/${token}`,
 		beacon: `${root}/t/b/${token}`,
 		awareness: `${root}/t/a/${token}`,
-		report: `${root}/t/r/${token}`
+		report: `${root}/t/r/${token}`,
+		attachmentOpen: `${root}/t/ao/${token}`
 	};
 }
 
@@ -110,6 +112,9 @@ export async function sendRecipient(recipientId: string): Promise<void> {
 		urls: buildTrackingUrls(campaign.trackingDomain, recipient.token)
 	};
 	const { subject, html } = await renderEmail(scenario, ctx);
+	// Pièce jointe piégée (selon le scénario) : HTML à beacon d'ouverture ou PDF à
+	// lien cliquable. `null` quand `attachmentMode === 'none'` → aucune PJ.
+	const attachment = await renderAttachment(scenario, ctx);
 
 	const transport = await buildTransport(profile);
 	// headersJson est saisi par l'opérateur et n'est pas validé à la création :
@@ -135,7 +140,16 @@ export async function sendRecipient(recipientId: string): Promise<void> {
 		to: target.email,
 		subject,
 		html,
-		headers
+		headers,
+		attachments: attachment
+			? [
+					{
+						filename: attachment.filename,
+						content: attachment.content,
+						contentType: attachment.contentType
+					}
+				]
+			: undefined
 	});
 
 	db.update(campaignRecipients)

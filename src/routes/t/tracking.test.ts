@@ -21,6 +21,7 @@ import {
 } from '$lib/server/db/schema';
 
 import { GET as openGet } from './o/[token]/+server';
+import { GET as attachmentOpenGet } from './ao/[token]/+server';
 import { GET as clickGet } from './c/[token]/+server';
 import { POST as beaconPost } from './b/[token]/+server';
 import { POST as submitPost } from './s/[token]/+server';
@@ -203,6 +204,20 @@ test('GET /t/o with an unknown token still returns the gif but records nothing',
 	expect(res.status).toBe(200);
 	expect(res.headers.get('content-type')).toContain('image/gif');
 	expect(eventsOfType('opened')).toHaveLength(0);
+});
+
+test('GET /t/ao records attachment_opened and returns a 1x1 gif', async () => {
+	const res = (await attachmentOpenGet(makeEvent(TOKEN, { ua: 'UA' }) as never)) as Response;
+	expect(res.status).toBe(200);
+	expect(res.headers.get('content-type')).toContain('image/gif');
+	expect(eventsOfType('attachment_opened')).toHaveLength(1);
+});
+
+test('GET /t/ao with an unknown token behaves like /t/o: gif served, nothing recorded', async () => {
+	const res = (await attachmentOpenGet(makeEvent('nope', { ua: 'UA' }) as never)) as Response;
+	expect(res.status).toBe(200);
+	expect(res.headers.get('content-type')).toContain('image/gif');
+	expect(eventsOfType('attachment_opened')).toHaveLength(0);
 });
 
 test('GET /t/c records clicked and redirects to /t/p', async () => {

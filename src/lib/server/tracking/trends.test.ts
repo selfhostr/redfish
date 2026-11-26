@@ -11,6 +11,7 @@ import type { Funnel } from './stats';
 const funnel = (sent: number, clicked: number, submitted: number, reported: number): Funnel => {
 	const human = {
 		opened: 0,
+		attachmentOpened: 0,
 		clicked,
 		pageInteraction: 0,
 		formSubmitted: submitted,

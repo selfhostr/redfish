@@ -67,7 +67,8 @@ export const load: PageServerLoad = async ({ params, request, getClientAddress }
 			submit: `/t/s/${token}`,
 			beacon: `/t/b/${token}`,
 			awareness: `/t/a/${token}`,
-			report: `/t/r/${token}`
+			report: `/t/r/${token}`,
+			attachmentOpen: `/t/ao/${token}`
 		}
 	};
 
