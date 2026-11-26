@@ -2,7 +2,7 @@
 	import type { Snippet } from 'svelte';
 
 	type Props = {
-		/** Étiquette (rendue en eyebrow mono majuscule). */
+		/** Étiquette (texte normal, discret). */
 		label?: string;
 		id?: string;
 		name?: string;
@@ -76,10 +76,8 @@
 	}
 
 	.field-label {
-		font-family: var(--font-mono);
-		text-transform: uppercase;
-		font-size: 0.6875rem;
-		letter-spacing: 0.04em;
+		font-size: 0.75rem;
+		font-weight: 500;
 		color: var(--c-ink-dim);
 	}
 
@@ -88,7 +86,8 @@
 		background: var(--c-surface-2);
 		border: 1px solid var(--c-line-strong);
 		border-radius: var(--r-btn);
-		padding: 0.5rem 0.75rem;
+		min-height: var(--control-h);
+		padding: 0.4375rem 0.75rem;
 		font-family: var(--font-ui);
 		font-size: 0.8125rem;
 		line-height: 1.4;

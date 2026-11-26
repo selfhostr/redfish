@@ -24,9 +24,9 @@
 
 <Panel>
 	<fieldset class="flex min-w-0 flex-col gap-3">
-		<legend class="rf-eyebrow mb-3">Scénario</legend>
+		<legend class="rf-title mb-3">Scénario</legend>
 		{#if hasScenarios}
-			<div class="flex flex-col gap-2" role="radiogroup" aria-label="Scénario">
+			<div class="grid gap-2 md:grid-cols-2 xl:grid-cols-3" role="radiogroup" aria-label="Scénario">
 				{#each scenarios as s, i (s.id)}
 					<div class="card" class:selected={scenarioId === s.id}>
 						<label class="card-main">

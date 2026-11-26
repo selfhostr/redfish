@@ -36,7 +36,7 @@
 </script>
 
 <fieldset class="flex flex-col gap-3">
-	<legend class="field-label">Rythme d'envoi</legend>
+	<legend class="rf-label mb-1">Rythme d'envoi</legend>
 	<label class="flex items-center gap-2 text-ink">
 		<input type="radio" name="sendMode" value="all" bind:group={mode} />
 		Tout envoyer d'un coup
@@ -105,7 +105,7 @@
 					</Field>
 				</div>
 			{/if}
-			<p class="text-ink-dim">
+			<p class="rf-meta">
 				Chaque destinataire reçoit l'e-mail à un moment tiré au hasard dans la fenêtre, qui commence
 				au lancement{working ? ' (ou à la prochaine ouverture)' : ''}. Heures en {timezone}.
 				L'autorisation doit couvrir toute la fenêtre.
@@ -113,14 +113,3 @@
 		</div>
 	{/if}
 </fieldset>
-
-<style>
-	.field-label {
-		font-family: var(--font-mono);
-		text-transform: uppercase;
-		font-size: 0.6875rem;
-		letter-spacing: 0.04em;
-		color: var(--c-ink-dim);
-		margin-bottom: 0.25rem;
-	}
-</style>

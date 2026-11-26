@@ -13,6 +13,10 @@
 		align?: 'start' | 'end';
 		active?: boolean;
 		triggerClass?: string;
+		/** Côté d'ouverture : sous le bouton, au-dessus (pied de barre latérale) ou à droite (rail). */
+		side?: 'bottom' | 'top' | 'right';
+		chevron?: boolean;
+		label?: string;
 	};
 	let {
 		id,
@@ -20,7 +24,10 @@
 		children,
 		align = 'start',
 		active = false,
-		triggerClass = ''
+		triggerClass = '',
+		side = 'bottom',
+		chevron = true,
+		label
 	}: Props = $props();
 
 	let open = $state(false);
@@ -98,23 +105,33 @@
 		bind:this={btn}
 		aria-expanded={open}
 		aria-controls={id}
+		aria-label={label}
+		title={label}
 		onclick={() => (open ? close(false) : show(null))}
 		onkeydown={onTriggerKey}
 	>
 		{@render trigger()}
-		<svg
-			class="chevron"
-			class:open
-			viewBox="0 0 12 12"
-			width="12"
-			height="12"
-			aria-hidden="true"
-			focusable="false"
-		>
-			<path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" stroke-width="1.5" fill="none" />
-		</svg>
+		{#if chevron}<svg
+				class="chevron"
+				class:open
+				viewBox="0 0 12 12"
+				width="12"
+				height="12"
+				aria-hidden="true"
+				focusable="false"
+			>
+				<path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" stroke-width="1.5" fill="none" />
+			</svg>{/if}
 	</button>
-	<div class="panel" class:end={align === 'end'} {id} hidden={!open} bind:this={panel}>
+	<div
+		class="panel"
+		class:end={align === 'end'}
+		class:top={side === 'top'}
+		class:right={side === 'right'}
+		{id}
+		hidden={!open}
+		bind:this={panel}
+	>
 		{@render children()}
 	</div>
 </div>
@@ -170,6 +187,14 @@
 	.panel.end {
 		left: auto;
 		right: 0;
+	}
+	.panel.top {
+		top: auto;
+		bottom: calc(100% + 0.375rem);
+	}
+	.panel.right {
+		top: 0;
+		left: calc(100% + 0.5rem);
 	}
 	.panel[hidden] {
 		display: none;

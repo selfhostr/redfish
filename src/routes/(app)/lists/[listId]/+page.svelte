@@ -9,6 +9,7 @@
 		EmptyState,
 		ErrorNotice,
 		Field,
+		Page,
 		Panel,
 		Plate
 	} from '$lib/components/ui';
@@ -32,7 +33,7 @@
 	];
 </script>
 
-{#snippet actions(t: PageData['targets'][number])}
+{#snippet targetActions(t: PageData['targets'][number])}
 	{#if editing === t.id}
 		<form
 			method="POST"
@@ -65,7 +66,7 @@
 			</span>
 		</form>
 	{:else if t.anonymizedAt}
-		<span class="text-xs text-ink-dim">Anonymisée</span>
+		<span class="rf-meta">Anonymisée</span>
 	{:else}
 		<span class="flex flex-wrap gap-2">
 			<Button type="button" variant="ghost" size="sm" onclick={() => (editing = t.id)}>
@@ -105,13 +106,40 @@
 	{/if}
 {/snippet}
 
-<main class="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-6 md:px-6 md:py-8">
-	<div class="flex flex-wrap items-center justify-between gap-3">
-		{#if renaming}
+<Page
+	title={data.list.name}
+	description={`${data.targets.length} destinataire${data.targets.length > 1 ? 's' : ''} dans cette liste. Ils reçoivent les campagnes qui l'utilisent.`}
+>
+	{#snippet meta()}
+		{#if data.list.archivedAt}<Plate variant="neutral">Archivée</Plate>{/if}
+	{/snippet}
+	{#snippet actions()}
+		<div class="flex flex-wrap gap-2 max-md:w-full">
+			<Button href="/lists" variant="ghost" size="sm">Toutes les listes</Button>
+			<Button
+				variant="secondary"
+				size="sm"
+				onclick={() => {
+					draftName = data.list.name;
+					renaming = true;
+				}}
+			>
+				Renommer
+			</Button>
+			{#if !data.list.archivedAt}
+				<Button variant="ghost" size="sm" onclick={() => (confirmingDelete = true)}>
+					Supprimer la liste
+				</Button>
+			{/if}
+		</div>
+	{/snippet}
+
+	{#if renaming}
+		<Panel>
 			<form
 				method="POST"
 				action="?/rename"
-				class="flex grow flex-col gap-2 sm:flex-row sm:items-end"
+				class="flex flex-col gap-3 md:flex-row md:items-end"
 				use:enhance={() =>
 					async ({ update }) => {
 						await update({ reset: false });
@@ -119,45 +147,20 @@
 					}}
 			>
 				<Field
-					class="grow"
+					class="grow md:max-w-md"
 					label="Nom de la liste"
 					name="name"
 					required
 					bind:value={draftName}
 					placeholder="ex. Comptabilité, Direction…"
 				/>
-				<span class="flex gap-2">
-					<Button type="submit" variant="primary" size="sm">Enregistrer</Button>
-					<Button type="button" variant="ghost" size="sm" onclick={() => (renaming = false)}>
-						Annuler
-					</Button>
-				</span>
+				<div class="flex gap-2">
+					<Button type="submit" variant="primary">Enregistrer</Button>
+					<Button type="button" variant="ghost" onclick={() => (renaming = false)}>Annuler</Button>
+				</div>
 			</form>
-		{:else}
-			<h1 class="text-2xl font-semibold tracking-tight [overflow-wrap:anywhere] text-ink">
-				{data.list.name}
-				{#if data.list.archivedAt}<Plate variant="neutral">Archivée</Plate>{/if}
-			</h1>
-			<span class="flex flex-wrap gap-2">
-				<Button
-					variant="ghost"
-					size="sm"
-					onclick={() => {
-						draftName = data.list.name;
-						renaming = true;
-					}}
-				>
-					Renommer
-				</Button>
-				{#if !data.list.archivedAt}
-					<Button variant="ghost" size="sm" onclick={() => (confirmingDelete = true)}>
-						Supprimer la liste
-					</Button>
-				{/if}
-				<Button href="/lists" variant="ghost" size="sm">Toutes les listes</Button>
-			</span>
-		{/if}
-	</div>
+		</Panel>
+	{/if}
 
 	{#if renaming && looksLikeEmail(draftName)}
 		<p class="text-ink-dim" role="status">{EMAIL_NAME_WARNING}</p>
@@ -215,11 +218,6 @@
 		</div>
 	{/if}
 
-	<p class="text-ink-dim">
-		Les destinataires de cette liste reçoivent les campagnes qui l'utilisent. Importez un CSV ou
-		ajoutez des personnes une par une.
-	</p>
-
 	{#if form?.error}
 		<ErrorNotice message={form.error} />
 	{/if}
@@ -238,74 +236,13 @@
 		</div>
 	{/if}
 
-	<Panel flush>
-		{#snippet header()}
-			<h2 class="rf-label">Destinataires</h2>
-		{/snippet}
-		{#if data.targets.length === 0}
-			<EmptyState
-				title="Aucun destinataire"
-				message="Importez un CSV ou ajoutez un destinataire ci-dessous."
-			/>
-		{:else}
-			<ul class="divide-y divide-line md:hidden">
-				{#each data.targets as t (t.id)}
-					<li class="flex flex-col gap-1 px-4 py-3">
-						<span class="flex items-center justify-between gap-2">
-							<span class="min-w-0 font-mono [overflow-wrap:anywhere] text-ink">{t.email}</span>
-							<CopyButton value={t.email} what="l'e-mail" size="sm" />
-						</span>
-						<span class="text-xs text-ink-dim">
-							{t.firstName}
-							{t.lastName} · {t.department ?? 'n/d'} · {t.locale ?? 'n/d'}
-						</span>
-						{@render actions(t)}
-					</li>
-				{/each}
-			</ul>
-			<div class="hidden overflow-x-auto md:block">
-				<table class="w-full text-left">
-					<thead class="bg-surface-2">
-						<tr>
-							<th class="rf-label px-4 py-3 font-medium">E-mail</th>
-							<th class="rf-label px-4 py-3 font-medium">Prénom</th>
-							<th class="rf-label px-4 py-3 font-medium">Nom</th>
-							<th class="rf-label px-4 py-3 font-medium">Service</th>
-							<th class="rf-label px-4 py-3 font-medium">Langue</th>
-							<th class="rf-label px-4 py-3 font-medium">Actions</th>
-						</tr>
-					</thead>
-					<tbody class="divide-y divide-line">
-						{#each data.targets as t (t.id)}
-							<tr class="hover:bg-surface-2">
-								<td class="px-4 py-3 text-ink">
-									<span class="flex items-center gap-2">
-										<span class="font-mono">{t.email}</span>
-										<CopyButton value={t.email} what="l'e-mail" size="sm" />
-									</span>
-								</td>
-								<td class="px-4 py-3 text-ink-dim">{t.firstName}</td>
-								<td class="px-4 py-3 text-ink-dim">{t.lastName}</td>
-								<td class="px-4 py-3 text-ink-dim">{t.department ?? 'n/d'}</td>
-								<td class="px-4 py-3 text-ink-dim">{t.locale ?? 'n/d'}</td>
-								<td class="px-4 py-3">{@render actions(t)}</td>
-							</tr>
-						{/each}
-					</tbody>
-				</table>
-			</div>
-		{/if}
-	</Panel>
-
-	<div class="grid gap-6 md:grid-cols-2">
+	<div class="grid gap-4 lg:grid-cols-2">
 		<Panel>
 			{#snippet header()}
-				<h2 class="rf-label">Import CSV</h2>
+				<h2 class="rf-title">Import CSV</h2>
 			{/snippet}
 			<div class="flex flex-col gap-3">
-				<p class="text-ink-dim">
-					Colonnes : email (requis), firstName, lastName, department, locale.
-				</p>
+				<p class="rf-meta">Colonnes : email (requis), firstName, lastName, department, locale.</p>
 				<form
 					method="POST"
 					action="?/import"
@@ -334,10 +271,10 @@
 
 		<Panel>
 			{#snippet header()}
-				<h2 class="rf-label">Ajout manuel</h2>
+				<h2 class="rf-title">Ajout manuel</h2>
 			{/snippet}
 			<form method="POST" action="?/add" use:enhance class="flex flex-col gap-3">
-				<p class="text-ink-dim">Seul l'e-mail est obligatoire.</p>
+				<p class="rf-meta">Seul l'e-mail est obligatoire.</p>
 				{#each fields as [name, label, type] (name)}
 					<Field {label} {name} {type} required={name === 'email'} />
 				{/each}
@@ -347,4 +284,63 @@
 			</form>
 		</Panel>
 	</div>
-</main>
+
+	<Panel flush>
+		{#snippet header()}
+			<h2 class="rf-title">Destinataires</h2>
+		{/snippet}
+		{#if data.targets.length === 0}
+			<EmptyState
+				title="Aucun destinataire"
+				message="Importez un CSV ou ajoutez un destinataire ci-dessous."
+			/>
+		{:else}
+			<ul class="divide-y divide-line md:hidden">
+				{#each data.targets as t (t.id)}
+					<li class="flex flex-col gap-1 px-4 py-3">
+						<span class="flex items-center justify-between gap-2">
+							<span class="min-w-0 font-mono [overflow-wrap:anywhere] text-ink">{t.email}</span>
+							<CopyButton value={t.email} what="l'e-mail" size="sm" />
+						</span>
+						<span class="rf-meta">
+							{t.firstName}
+							{t.lastName} · {t.department ?? '—'} · {t.locale ?? '—'}
+						</span>
+						{@render targetActions(t)}
+					</li>
+				{/each}
+			</ul>
+			<div class="hidden overflow-x-auto md:block">
+				<table class="w-full text-left">
+					<thead class="border-b border-line">
+						<tr>
+							<th class="rf-label px-4 py-2.5">E-mail</th>
+							<th class="rf-label px-4 py-2.5">Prénom</th>
+							<th class="rf-label px-4 py-2.5">Nom</th>
+							<th class="rf-label px-4 py-2.5">Service</th>
+							<th class="rf-label px-4 py-2.5">Langue</th>
+							<th class="rf-label px-4 py-2.5">Actions</th>
+						</tr>
+					</thead>
+					<tbody class="divide-y divide-line">
+						{#each data.targets as t (t.id)}
+							<tr class="rf-row">
+								<td class="px-4 py-3 text-ink">
+									<span class="flex items-center gap-2">
+										<span class="font-mono">{t.email}</span>
+										<CopyButton value={t.email} what="l'e-mail" size="sm" />
+									</span>
+								</td>
+								<td class="px-4 py-3 text-ink-dim">{t.firstName}</td>
+								<td class="px-4 py-3 text-ink-dim">{t.lastName}</td>
+								<td class="px-4 py-3 text-ink-dim">{t.department ?? '—'}</td>
+								<td class="px-4 py-3 text-ink-dim">{t.locale ?? '—'}</td>
+								<td class="px-4 py-3">{@render targetActions(t)}</td>
+							</tr>
+						{/each}
+					</tbody>
+				</table>
+			</div>
+		{/if}
+	</Panel>
+</Page>

@@ -35,7 +35,7 @@
 
 <Panel>
 	<div class="flex flex-col gap-4">
-		<h2 class="rf-eyebrow">Autorisation écrite</h2>
+		<h2 class="rf-title">Autorisation écrite</h2>
 		{#if hasAuthDefault && !editAuth}
 			<input type="hidden" name="reference" value={reference} />
 			<input type="hidden" name="approvedBy" value={approvedBy} />
@@ -48,7 +48,7 @@
 				<button type="button" class="rf-link" onclick={() => (editAuth = true)}> Modifier </button>
 			</div>
 		{:else}
-			<p class="text-ink-dim">Une autorisation valide est obligatoire avant tout envoi réel.</p>
+			<p class="rf-meta">Une autorisation valide est obligatoire avant tout envoi réel.</p>
 			<div class="grid gap-4 sm:grid-cols-2">
 				<Field
 					label="Référence"

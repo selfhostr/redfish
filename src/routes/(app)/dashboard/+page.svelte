@@ -1,7 +1,7 @@
 <script lang="ts">
 	import TrendChart from '$lib/components/TrendChart.svelte';
 	import StatusPill from '$lib/components/StatusPill.svelte';
-	import { Button, Panel, EmptyState, CopyButton } from '$lib/components/ui';
+	import { Button, Panel, EmptyState, Page } from '$lib/components/ui';
 	import { funnelLabels } from '$lib/funnel-labels';
 	import { categoryLabel, difficultyLabel, localeLabel } from '$lib/scenario-labels';
 	import { clientSettingsDone, onboardingSteps, showOnboarding } from '$lib/onboarding';
@@ -21,7 +21,7 @@
 	);
 
 	const pct = (num: number, den: number) => (den > 0 ? Math.round((num / den) * 100) : 0);
-	const ratePct = (num: number, den: number) => (den > 0 ? `${pct(num, den)} %` : 'n/d');
+	const ratePct = (num: number, den: number) => (den > 0 ? `${pct(num, den)} %` : '—');
 
 	const kpis = $derived.by(() => {
 		const a = data.aggregate;
@@ -65,38 +65,40 @@
 	});
 </script>
 
-<main class="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-6 md:px-6 md:py-8">
-	<header class="flex flex-wrap items-end justify-between gap-4">
-		<div class="min-w-0">
-			<p class="rf-eyebrow">Tableau de bord</p>
-			<h1 class="mt-1 text-2xl font-semibold tracking-tight [overflow-wrap:anywhere] text-ink">
-				{#if tenantName}{tenantName}{:else}Aucun client sélectionné{/if}
-			</h1>
-			{#if tenant}
-				<p class="mt-1 text-sm text-ink-dim [overflow-wrap:anywhere]">
-					Contact : {contact || 'non renseigné'} · Fuseau horaire : {tenant.timezone} · Langue : {localeLabel(
-						tenant.locale
-					)}
-				</p>
-			{/if}
-		</div>
-		<div class="flex flex-wrap gap-2">
-			{#if tenant}
-				<Button variant="secondary" href={`/tenants/${tenant.id}`}>Paramètres</Button>
-			{/if}
-			{#if data.campaignCount > 0}
-				<Button variant="primary" href="/campaigns/new">Nouvelle campagne</Button>
-			{/if}
-		</div>
-	</header>
+<Page
+	title={tenantName || 'Aucun client sélectionné'}
+	description={tenant
+		? 'Résultats cumulés des campagnes de ce client.'
+		: 'Choisissez ou créez un client pour voir ses résultats.'}
+>
+	{#snippet meta()}
+		{#if tenant}
+			<span class="rf-meta [overflow-wrap:anywhere]">
+				Contact : {contact || '—'} · Fuseau horaire : {tenant.timezone} · Langue : {localeLabel(
+					tenant.locale
+				)}
+			</span>
+		{/if}
+	{/snippet}
+	{#snippet actions()}
+		{#if tenant}
+			<Button variant="secondary" href={`/tenants/${tenant.id}`}>Paramètres</Button>
+		{/if}
+		{#if data.campaignCount > 0}
+			<Button variant="primary" href="/campaigns/new">Nouvelle campagne</Button>
+		{/if}
+	{/snippet}
 
 	{#if data.queue}
 		<div
 			role="status"
-			class="rounded-card border border-l-2 border-line bg-surface-1 p-4 text-sm"
+			class="rounded-btn border border-l-2 border-line-strong bg-surface-1 px-4 py-3.5"
 			style="border-left-color: var(--c-warning)"
 		>
-			<p class="font-semibold text-ink">File d'envoi à surveiller</p>
+			<p class="flex items-center gap-2 font-semibold text-ink">
+				<span class="h-2 w-2 shrink-0 rounded-full bg-warning" aria-hidden="true"></span>File
+				d'envoi à surveiller
+			</p>
 			<ul class="mt-1 list-disc pl-5 text-ink-dim">
 				{#if data.queue.workerDown}
 					<li>
@@ -129,9 +131,9 @@
 	{:else if onboarding}
 		<Panel>
 			{#snippet header()}
-				<h2 class="rf-eyebrow">Premiers pas</h2>
+				<h2 class="rf-title">Premiers pas</h2>
 			{/snippet}
-			<p class="mb-3 text-ink-dim">
+			<p class="rf-meta mb-3">
 				Une campagne combine un scénario, un profil d'envoi et une liste de destinataires. Quatre
 				étapes pour lancer la première campagne de « {tenantName} » :
 			</p>
@@ -143,7 +145,7 @@
 							class="flex min-h-11 items-center gap-3 rounded-md px-1 text-ink hover:bg-surface-2"
 						>
 							<span
-								class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-line-strong font-mono text-xs"
+								class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-line-strong font-mono text-[11px]"
 								class:text-signal={s.done}
 								aria-hidden="true"
 							>
@@ -153,7 +155,7 @@
 								{s.label}
 							</span>
 							<span
-								class="shrink-0 text-xs"
+								class="shrink-0 rf-meta"
 								class:text-signal={s.done}
 								class:text-ink-dim={!s.done}
 							>
@@ -166,84 +168,82 @@
 		</Panel>
 	{/if}
 	{#if data.hasTenant && data.campaignCount > 0}
-		<p class="text-ink-dim">Cumul des indicateurs sur toutes les campagnes du client.</p>
-		<section class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+		<section class="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-5">
 			{#each kpis as k (k.label)}
 				<div class="rounded-card border border-line bg-surface-1 p-4">
-					<p class="rf-eyebrow">{k.label}</p>
-					<p class="mt-2 text-2xl font-semibold tracking-tight text-ink">{k.value}</p>
-					<p class="mt-1 text-xs text-ink-dim">{k.hint}</p>
+					<p class="rf-label">{k.label}</p>
+					<p class="mt-2 text-2xl font-semibold tabular-nums text-ink">{k.value}</p>
+					<p class="rf-meta mt-1">{k.hint}</p>
 				</div>
 			{/each}
 		</section>
-		<p class="text-xs text-ink-dim">
-			Le taux d'ouverture est un plancher : l'ouverture repose sur un pixel que de nombreux clients
-			mail (Outlook, Office 365) bloquent par défaut. Un clic ou une interaction compte comme une
-			ouverture ; une ouverture sans clic peut passer inaperçue.
+		<p class="rf-meta -mt-2">
+			Le taux d'ouverture est un minimum : certains clients mail (Outlook, Office 365) bloquent le
+			pixel de suivi.
 		</p>
 
-		{#if data.featured}
-			<p class="text-ink-dim">
-				Entonnoir de la campagne mise en avant : de l'envoi à la sensibilisation.
-			</p>
-			<Panel>
-				{#snippet header()}
-					<div>
-						<h2 class="rf-eyebrow">Entonnoir</h2>
-						<p class="mt-1 font-semibold text-ink">{data.featured!.name}</p>
-					</div>
-					<div class="flex flex-wrap items-center gap-3">
-						<StatusPill status={data.featured!.status} />
-						<Button size="sm" href={`/campaigns/${data.featured!.id}`}>Détail</Button>
-					</div>
-				{/snippet}
+		<div class="grid items-start gap-4 lg:grid-cols-2">
+			{#if data.featured}
+				<Panel>
+					{#snippet header()}
+						<div>
+							<h2 class="rf-title">Entonnoir</h2>
+							<p class="rf-meta mt-0.5 [overflow-wrap:anywhere]">{data.featured!.name}</p>
+						</div>
+						<div class="flex flex-wrap items-center gap-3">
+							<StatusPill status={data.featured!.status} />
+							<Button size="sm" href={`/campaigns/${data.featured!.id}`}>Détail</Button>
+						</div>
+					{/snippet}
 
-				{#if data.featured.funnel.sent === 0}
-					<p class="text-ink-dim">Campagne pas encore lancée, aucune donnée d'entonnoir.</p>
-				{:else}
-					<div class="flex flex-col gap-3">
-						{#each stages as s (s.label)}
-							<div class="grid grid-cols-[1fr_auto] items-center gap-x-3 gap-y-1 md:flex md:gap-3">
-								<span class="text-ink-dim md:w-40 md:shrink-0">{s.label}</span>
-								<span class="text-right text-ink md:order-last md:w-24 md:shrink-0">
-									{s.value} · {s.width} %
-								</span>
+					{#if data.featured.funnel.sent === 0}
+						<p class="text-ink-dim">Campagne pas encore lancée, aucune donnée d'entonnoir.</p>
+					{:else}
+						<div class="flex flex-col gap-3">
+							{#each stages as s (s.label)}
 								<div
-									class="col-span-2 h-4 overflow-hidden rounded-flat bg-surface-2 md:col-auto md:grow"
+									class="grid grid-cols-[1fr_auto] items-center gap-x-3 gap-y-1 md:flex md:gap-3"
 								>
+									<span class="text-ink-dim md:w-40 md:shrink-0">{s.label}</span>
+									<span class="text-right text-ink md:order-last md:w-24 md:shrink-0">
+										{s.value} · {s.width} %
+									</span>
 									<div
-										class="h-4 rounded-flat bg-ink-dim"
-										style="width: {Math.max(s.width, s.value > 0 ? 2 : 0)}%"
-									></div>
+										class="col-span-2 h-4 overflow-hidden rounded-flat bg-surface-2 md:col-auto md:grow"
+									>
+										<div
+											class="h-4 rounded-flat bg-ink-dim"
+											style="width: {Math.max(s.width, s.value > 0 ? 2 : 0)}%"
+										></div>
+									</div>
 								</div>
-							</div>
-						{/each}
-					</div>
-					<p class="mt-4 text-xs text-ink-dim">
-						Proportions calculées sur {data.featured.funnel.sent} e-mails envoyés ({data.featured
-							.funnel.recipients} destinataires).
+							{/each}
+						</div>
+						<p class="rf-meta mt-4">
+							Proportions calculées sur {data.featured.funnel.sent} e-mails envoyés ({data.featured
+								.funnel.recipients} destinataires).
+						</p>
+					{/if}
+				</Panel>
+			{/if}
+
+			<Panel class={data.featured ? '' : 'lg:col-span-2'}>
+				{#snippet header()}
+					<h2 class="rf-title">Progression</h2>
+				{/snippet}
+				{#if data.trend.length < 2}
+					<p class="text-ink-dim">
+						La progression apparaît à partir de deux campagnes terminées ayant envoyé des e-mails.
 					</p>
+				{:else}
+					<TrendChart points={data.trend} />
 				{/if}
 			</Panel>
-		{/if}
+		</div>
 
-		<Panel>
-			{#snippet header()}
-				<h2 class="rf-eyebrow">Progression</h2>
-			{/snippet}
-			{#if data.trend.length < 2}
-				<p class="text-ink-dim">
-					La progression apparaît à partir de deux campagnes terminées ayant envoyé des e-mails.
-				</p>
-			{:else}
-				<TrendChart points={data.trend} />
-			{/if}
-		</Panel>
-
-		<p class="text-ink-dim">Chaque campagne avec son scénario, son statut et ses résultats.</p>
 		<Panel flush>
 			{#snippet header()}
-				<h2 class="rf-eyebrow">Campagnes</h2>
+				<h2 class="rf-title">Campagnes</h2>
 				<Button size="sm" variant="ghost" href="/campaigns">Toutes les campagnes</Button>
 			{/snippet}
 			<ul class="divide-y divide-line md:hidden">
@@ -259,7 +259,7 @@
 							<StatusPill status={r.status} />
 						</div>
 						{#if r.scenarioMeta}
-							<div class="text-xs text-ink-dim">
+							<div class="rf-meta">
 								<a
 									href={`/scenarios/${encodeURIComponent(r.scenarioMeta.key)}`}
 									class="text-ink hover:underline"
@@ -273,7 +273,7 @@
 								</span>
 							</div>
 						{/if}
-						<dl class="grid grid-cols-3 gap-2 text-xs">
+						<dl class="rf-meta grid grid-cols-3 gap-2">
 							<div>
 								<dt class="text-ink-dim">Envoyés</dt>
 								<dd class="text-ink">{r.funnel.sent}</dd>
@@ -294,7 +294,7 @@
 									style="width: {pct(r.funnel.opened, r.funnel.sent)}%"
 								></div>
 							</div>
-							<span class="text-xs whitespace-nowrap text-ink-dim">
+							<span class="rf-meta whitespace-nowrap">
 								Ouverts {ratePct(r.funnel.opened, r.funnel.sent)}
 							</span>
 						</div>
@@ -303,15 +303,15 @@
 			</ul>
 			<div class="hidden overflow-x-auto md:block">
 				<table class="w-full text-left">
-					<thead class="border-b border-line bg-surface-2">
+					<thead class="border-b border-line">
 						<tr>
-							<th class="rf-label px-4 py-3 font-medium">Nom</th>
-							<th class="rf-label px-4 py-3 font-medium">Scénario</th>
-							<th class="rf-label px-4 py-3 font-medium">Statut</th>
-							<th class="rf-label px-4 py-3 text-right font-medium">Envoyés</th>
-							<th class="rf-label px-4 py-3 text-right font-medium">Clics</th>
-							<th class="rf-label px-4 py-3 text-right font-medium">Formulaires soumis</th>
-							<th class="rf-label px-4 py-3 font-medium">Ouverts</th>
+							<th class="rf-label px-4 py-2.5">Nom</th>
+							<th class="rf-label px-4 py-2.5">Scénario</th>
+							<th class="rf-label px-4 py-2.5">Statut</th>
+							<th class="rf-label px-4 py-2.5 text-right">Envoyés</th>
+							<th class="rf-label px-4 py-2.5 text-right">Clics</th>
+							<th class="rf-label px-4 py-2.5 text-right">Formulaires soumis</th>
+							<th class="rf-label px-4 py-2.5">Ouverts</th>
 						</tr>
 					</thead>
 					<tbody class="divide-y divide-line">
@@ -330,19 +330,13 @@
 										>
 											{r.scenarioMeta.title}
 										</a>
-										<p
-											class="mt-0.5 flex items-center gap-1 font-mono text-xs whitespace-nowrap text-ink-dim"
-										>
-											{r.scenarioMeta.key}
-											<CopyButton value={r.scenarioMeta.key} what="la clé du scénario" />
-										</p>
-										<p class="mt-0.5 text-xs text-ink-dim">
+										<p class="mt-0.5 rf-meta">
 											{categoryLabel(r.scenarioMeta.category)} · {difficultyLabel(
 												r.scenarioMeta.difficulty
 											)} · {localeLabel(r.scenarioMeta.locale)}
 										</p>
 									{:else}
-										<span class="text-ink-dim">n/d</span>
+										<span class="text-ink-dim">—</span>
 									{/if}
 								</td>
 								<td class="px-4 py-3"><StatusPill status={r.status} /></td>
@@ -357,7 +351,7 @@
 												style="width: {pct(r.funnel.opened, r.funnel.sent)}%"
 											></div>
 										</div>
-										<span class="text-xs whitespace-nowrap text-ink-dim">
+										<span class="rf-meta whitespace-nowrap">
 											{ratePct(r.funnel.opened, r.funnel.sent)}
 										</span>
 									</div>
@@ -369,4 +363,4 @@
 			</div>
 		</Panel>
 	{/if}
-</main>
+</Page>

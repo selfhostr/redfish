@@ -56,5 +56,7 @@
 		{timeZone ? zoned : mounted ? local : utc}
 	</time>
 {:else}
-	<span class={klass}>n/d</span>
+	<span class={klass}>
+		<span aria-hidden="true">—</span><span class="sr-only">non renseigné</span>
+	</span>
 {/if}

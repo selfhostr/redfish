@@ -42,6 +42,10 @@
 	--c-warning-bg: color-mix(in srgb, var(--c-warning) 12%, transparent);
 	--c-info-bg: color-mix(in srgb, var(--c-info) 12%, transparent);
 
+	/* Hauteurs de contrôle : 36 px (formulaires, boutons), 32 px (rangées denses). */
+	--control-h: 2.25rem;
+	--control-h-sm: 2rem;
+
 	--c-on-ink: #07080a; /* texte sur fond --c-ink (bouton primaire) */
 	--c-ink-hover: #ffffff; /* survol du bouton primaire */
 }
@@ -127,13 +131,39 @@
 		border-radius: var(--r-card);
 	}
 
-	/* Étiquette / eyebrow : mono, majuscules, discret */
+	/* ----- Échelle typographique de l'app (une seule, partout) -----------------------
+	   Titre de page  .rf-page-title  1.375rem / 600   (un seul h1 par page)
+	   Titre de bloc  .rf-title       0.875rem / 600   (en-tête de Panel, h2)
+	   Corps                          0.8125rem / 400  (13 px, densité App UI)
+	   Libellé        .rf-label       0.75rem / 500    (champ, colonne de tableau, légende)
+	   Aide / méta    .rf-meta        0.75rem / 400
+	   Pas de majuscules forcées ni de monospace pour les libellés : la mono reste
+	   réservée aux adresses, identifiants, enregistrements DNS et nombres. */
+	.rf-page-title {
+		font-size: 1.375rem;
+		font-weight: 600;
+		letter-spacing: -0.02em;
+		line-height: 1.2;
+		color: var(--c-ink);
+		overflow-wrap: anywhere;
+	}
+	.rf-title {
+		font-size: 0.875rem;
+		font-weight: 600;
+		letter-spacing: -0.01em;
+		line-height: 1.3;
+		color: var(--c-ink);
+	}
 	.rf-label,
 	.rf-eyebrow {
-		font-family: var(--font-mono);
-		text-transform: uppercase;
-		font-size: 0.6875rem;
-		letter-spacing: 0.04em;
+		font-size: 0.75rem;
+		font-weight: 500;
+		line-height: 1.3;
+		color: var(--c-ink-dim);
+	}
+	.rf-meta {
+		font-size: 0.75rem;
+		line-height: 1.45;
 		color: var(--c-ink-dim);
 	}
 
@@ -142,7 +172,8 @@
 		background: var(--c-surface-2);
 		border: 1px solid var(--c-line-strong);
 		border-radius: var(--r-btn);
-		padding: 0.5rem 0.75rem;
+		min-height: var(--control-h);
+		padding: 0.4375rem 0.75rem;
 		font-size: 0.8125rem;
 		line-height: 1.4;
 		color: var(--c-ink);
@@ -201,6 +232,29 @@
 	.rf-btn-ghost:hover:not(:disabled) {
 		background: var(--c-surface-2);
 		border-color: var(--c-ink-dim);
+	}
+
+	/* Rangée de tableau entièrement cliquable : le lien principal de la rangée porte
+	   .rf-row-link, son pseudo-élément couvre toute la rangée (.rf-row). */
+	.rf-row {
+		position: relative;
+		transition: background-color 0.12s ease;
+	}
+	.rf-row:hover {
+		background: var(--c-surface-2);
+	}
+	.rf-row-link::after {
+		content: '';
+		position: absolute;
+		inset: 0;
+	}
+	.rf-row-link:focus-visible {
+		outline: none;
+	}
+	.rf-row-link:focus-visible::after {
+		outline: 2px solid var(--c-ink);
+		outline-offset: -2px;
+		border-radius: 4px;
 	}
 
 	.rf-link {

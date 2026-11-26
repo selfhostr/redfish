@@ -152,7 +152,7 @@
 	<ErrorNotice message={form.error} />
 {/if}
 
-<div class="grid items-start gap-6 lg:grid-cols-2">
+<div class="grid items-start gap-6 xl:grid-cols-2">
 	<form
 		method="POST"
 		use:enhance={() => {
@@ -165,6 +165,9 @@
 		class="flex min-w-0 flex-col gap-6"
 	>
 		<Panel>
+			{#snippet header()}
+				<h2 class="rf-title">Informations</h2>
+			{/snippet}
 			<div class="grid gap-4 md:grid-cols-2">
 				<label class="flex flex-col gap-1.5">
 					<span class="rf-label">Clé</span>
@@ -215,10 +218,8 @@
 						bind:value={fields.fromName}
 						placeholder="Facultatif"
 					/>
-					<span class="text-xs text-ink-dim">
-						Nom affiché de l'expéditeur pour ce scénario (ex. « Service informatique »). Laissé
-						vide, c'est le nom du profil d'envoi qui s'applique. L'adresse e-mail provient toujours
-						du profil d'envoi.
+					<span class="rf-meta">
+						Ex. « Service informatique ». Laissé vide, le nom du profil d'envoi s'applique.
 					</span>
 				</label>
 				<div class="flex flex-col gap-1.5 md:col-span-2">
@@ -238,6 +239,9 @@
 		</Panel>
 
 		<Panel>
+			{#snippet header()}
+				<h2 class="rf-title">Contenu</h2>
+			{/snippet}
 			<div class="flex flex-col gap-5">
 				<div class="flex flex-col gap-1.5">
 					<label class="rf-label" for="field-email">E-mail (MJML)</label>
@@ -273,7 +277,7 @@
 						spellcheck="false"
 						bind:value={fields.landing}
 						bind:this={landingEl}></textarea>
-					<span class="text-xs text-ink-dim">
+					<span class="rf-meta">
 						Invariant « zéro capture » : le formulaire poste vers {'{{submitUrl}}'}, aucun champ ne
 						porte d'attribut name, et le beacon navigator.sendBeacon('{'{{beaconUrl}}'}') signale
 						uniquement l'affichage.
@@ -311,14 +315,14 @@
 
 	<section class="preview-col flex min-w-0 flex-col gap-4" aria-label="Aperçu en direct">
 		<div class="flex flex-wrap items-center justify-between gap-3">
-			<h2 class="rf-eyebrow">Aperçu en direct</h2>
-			<span class="text-xs text-ink-dim" aria-live="polite">
+			<h2 class="rf-title">Aperçu en direct</h2>
+			<span class="rf-meta" aria-live="polite">
 				{#if pending}Mise à jour...{:else if previewError}Aperçu indisponible{:else if preview}À
 					jour{/if}
 			</span>
 		</div>
 
-		<p class="text-ink-dim">
+		<p class="rf-meta">
 			Rendu pour un destinataire fictif, sans lien actif ni envoi. Les problèmes détectés
 			s'affichent ici pendant la saisie.
 		</p>
@@ -361,7 +365,7 @@
 
 {#snippet fieldIssues(field: TemplateField)}
 	{#each issuesFor(field) as issue, i (i)}
-		<span class="text-xs text-warning">{issue.message}</span>
+		<span class="rf-meta text-warning">{issue.message}</span>
 	{/each}
 {/snippet}
 
@@ -387,7 +391,7 @@
 		overflow-wrap: anywhere;
 	}
 
-	@media (min-width: 1024px) {
+	@media (min-width: 1280px) {
 		.preview-col {
 			position: sticky;
 			top: 1rem;

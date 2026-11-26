@@ -18,7 +18,7 @@
 
 <Panel>
 	{#snippet header()}
-		<h2 class="rf-eyebrow">Contrôle avant lancement</h2>
+		<h2 class="rf-title">Contrôle avant lancement</h2>
 		{#if report.ok}
 			<Plate variant={report.warnings > 0 ? 'advisory' : 'info'}>
 				{report.warnings > 0 ? `${report.warnings} avertissement(s)` : 'Prête'}
@@ -38,7 +38,7 @@
 			{@const rows = report.items.filter((i) => i.section === sec)}
 			{#if rows.length > 0}
 				<div class="flex flex-col gap-1.5">
-					<h3 class="field-label">{titles[sec]}</h3>
+					<h3 class="rf-label">{titles[sec]}</h3>
 					<ul class="flex flex-col gap-1.5">
 						{#each rows as r, i (i)}
 							<li class="flex items-start gap-2">
@@ -59,13 +59,3 @@
 		{/if}
 	</div>
 </Panel>
-
-<style>
-	.field-label {
-		font-family: var(--font-mono);
-		text-transform: uppercase;
-		font-size: 0.6875rem;
-		letter-spacing: 0.04em;
-		color: var(--c-ink-dim);
-	}
-</style>
