@@ -39,7 +39,8 @@ const defaults = {
 	landingRedirectUrl: '',
 	attachmentMode: 'none',
 	attachmentFilename: '',
-	attachmentTemplate: SKELETON_ATTACHMENT_HTML
+	attachmentTemplate: SKELETON_ATTACHMENT_HTML,
+	includeQr: false
 };
 
 export const load: PageServerLoad = async ({ locals }) => {
@@ -56,6 +57,10 @@ export const actions: Actions = {
 
 		const data = await request.formData();
 		const str = (k: string) => String(data.get(k) ?? '').trim();
+		const bool = (k: string) => {
+			const v = data.get(k);
+			return v === 'true' || v === 'on' || v === '1';
+		};
 		const values = {
 			key: str('key'),
 			title: str('title'),
@@ -71,7 +76,8 @@ export const actions: Actions = {
 			landingRedirectUrl: str('landingRedirectUrl'),
 			attachmentMode: str('attachmentMode') || 'none',
 			attachmentFilename: str('attachmentFilename'),
-			attachmentTemplate: String(data.get('attachmentTemplate') ?? '')
+			attachmentTemplate: String(data.get('attachmentTemplate') ?? ''),
+			includeQr: bool('includeQr')
 		};
 
 		const bundle = {
@@ -91,7 +97,8 @@ export const actions: Actions = {
 			landingRedirectUrl: values.landingRedirectUrl || null,
 			attachmentMode: values.attachmentMode,
 			attachmentFilename: values.attachmentFilename || null,
-			attachmentTemplate: values.attachmentMode === 'none' ? null : values.attachmentTemplate
+			attachmentTemplate: values.attachmentMode === 'none' ? null : values.attachmentTemplate,
+			includeQr: values.includeQr
 		};
 
 		let key: string;

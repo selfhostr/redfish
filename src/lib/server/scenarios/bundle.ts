@@ -33,6 +33,8 @@ export type Bundle = {
 	attachmentFilename: string | null;
 	/** Gabarit de la PJ : corps HTML (`html`) ou texte visible (`pdf`) ; NULL en `none`. */
 	attachmentTemplate: string | null;
+	/** QR code dans l'e-mail (« quishing ») : `{{qrCode}}` encode l'URL de clic. Défaut `false`. */
+	includeQr: boolean;
 };
 
 export const BUNDLE_SCHEMA_VERSION = 1 as const;
@@ -90,7 +92,8 @@ export async function exportBundle(key: string): Promise<Bundle> {
 		landingRedirectUrl: scenario.landingRedirectUrl ?? null,
 		attachmentMode: scenario.attachmentMode,
 		attachmentFilename: scenario.attachmentFilename ?? null,
-		attachmentTemplate: scenario.attachmentTemplate ?? null
+		attachmentTemplate: scenario.attachmentTemplate ?? null,
+		includeQr: scenario.includeQr
 	};
 }
 
@@ -193,6 +196,21 @@ export function validateAttachment(
 	if (!/<img\b[^>]*\ssrc\s*=\s*(["'])\{\{\s*attachmentOpen\s*\}\}\1/i.test(html)) {
 		throw new BundleImportError(
 			'Pièce jointe refusée : le beacon d’ouverture <img src="{{attachmentOpen}}"> est absent.'
+		);
+	}
+}
+
+/**
+ * Vérifie la cohérence du QR code (« quishing »). Quand `includeQr` est actif, le
+ * gabarit e-mail DOIT contenir `{{qrCode}}` : sinon le QR généré à l'envoi ne
+ * serait jamais affiché (« QR perdu silencieusement »). On refuse plutôt que
+ * d'insérer automatiquement, pour rester cohérent avec les autres invariants de
+ * gabarit (landing, sensibilisation) et laisser l'opérateur placer le QR.
+ */
+export function validateEmailQr(email: string, includeQr: boolean): void {
+	if (includeQr && !/\{\{\s*qrCode\s*\}\}/.test(email)) {
+		throw new BundleImportError(
+			'QR code activé mais {{qrCode}} est absent du gabarit e-mail : ajoutez {{qrCode}} dans le corps, sinon le QR ne serait jamais affiché.'
 		);
 	}
 }
@@ -318,6 +336,12 @@ export async function importBundle(input: unknown): Promise<{ key: string }> {
 	}
 	validateAttachment(attachmentMode, attachmentFilename, attachmentTemplate);
 
+	// QR code (« quishing »). Absent → false (rétrocompatibilité des anciens
+	// bundles). Quand actif, le gabarit e-mail doit porter {{qrCode}} (cf.
+	// validateEmailQr), sinon le QR serait généré mais jamais affiché.
+	const includeQr = raw.includeQr === true;
+	validateEmailQr(email, includeQr);
+
 	// Une clé réservée par un scénario livré (builtin) ne peut pas être écrasée :
 	// renommer l'import. Une clé déjà importée est, elle, mise à jour.
 	const existing = getScenario(key);
@@ -351,6 +375,7 @@ export async function importBundle(input: unknown): Promise<{ key: string }> {
 			attachmentMode,
 			attachmentFilename,
 			attachmentTemplate,
+			includeQr,
 			enabled: true
 		})
 		.onConflictDoUpdate({
@@ -373,6 +398,7 @@ export async function importBundle(input: unknown): Promise<{ key: string }> {
 				attachmentMode,
 				attachmentFilename,
 				attachmentTemplate,
+				includeQr,
 				enabled: true,
 				archivedAt: null
 			}

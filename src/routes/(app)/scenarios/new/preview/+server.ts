@@ -4,6 +4,7 @@ import {
 	BundleImportError,
 	validateAttachment,
 	validateAwareness,
+	validateEmailQr,
 	validateLanding
 } from '$lib/server/scenarios/bundle';
 import { renderDraftPreview, type DraftIssue } from '$lib/server/scenarios/preview';
@@ -69,6 +70,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		return typeof v === 'string' ? v : '';
 	};
 	const attachmentMode = str('attachmentMode').trim() || 'none';
+	const includeQr = ['true', 'on', '1'].includes(str('includeQr').trim());
 	const content = {
 		subject: str('subject').trim(),
 		fromName: str('fromName').trim() || undefined,
@@ -79,7 +81,8 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 			? attachmentMode
 			: 'none') as 'none' | 'html' | 'pdf',
 		attachmentFilename: str('attachmentFilename').trim() || null,
-		attachmentTemplate: str('attachmentTemplate') || null
+		attachmentTemplate: str('attachmentTemplate') || null,
+		includeQr
 	};
 	if (
 		[content.subject, content.email, content.landing, content.awareness].some(
@@ -98,6 +101,19 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		validationIssue('awareness', validateAwareness, content.awareness)
 	]) {
 		if (issue) issues.push(issue);
+	}
+
+	// Cohérence du QR code : include_qr actif → {{qrCode}} requis dans l'e-mail.
+	if (content.includeQr) {
+		try {
+			validateEmailQr(content.email, true);
+		} catch (e) {
+			issues.push({
+				field: 'email',
+				message:
+					e instanceof BundleImportError ? e.message : e instanceof Error ? e.message : String(e)
+			});
+		}
 	}
 
 	// Validation « zéro capture » de la pièce jointe piégée (signature propre).

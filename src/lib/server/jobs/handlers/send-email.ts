@@ -12,6 +12,7 @@ import { canSendCampaign } from '$lib/server/authorization';
 import { renderEmail } from '$lib/server/scenarios/render';
 import type { RenderCtx } from '$lib/server/scenarios/render';
 import { renderAttachment } from '$lib/server/scenarios/attachment';
+import { QR_CID, QR_CONTENT_TYPE, QR_FILENAME, renderQrPng } from '$lib/server/scenarios/qr';
 import {
 	registerFailureHandler,
 	registerHandler,
@@ -112,9 +113,33 @@ export async function sendRecipient(recipientId: string): Promise<void> {
 		urls: buildTrackingUrls(campaign.trackingDomain, recipient.token)
 	};
 	const { subject, html } = await renderEmail(scenario, ctx);
-	// Pièce jointe piégée (selon le scénario) : HTML à beacon d'ouverture ou PDF à
-	// lien cliquable. `null` quand `attachmentMode === 'none'` → aucune PJ.
+	// Pièces jointes (selon le scénario), accumulées dans un seul tableau :
+	// - PJ piégée : HTML à beacon d'ouverture ou PDF à lien cliquable (ou aucune) ;
+	// - QR code (« quishing ») : image inline PNG (cid) encodant l'URL de clic,
+	//   affichée à la place de `{{qrCode}}` dans le corps de l'e-mail.
+	const attachments: {
+		filename: string;
+		content: string | Buffer;
+		contentType: string;
+		cid?: string;
+	}[] = [];
 	const attachment = await renderAttachment(scenario, ctx);
+	if (attachment) {
+		attachments.push({
+			filename: attachment.filename,
+			content: attachment.content,
+			contentType: attachment.contentType
+		});
+	}
+	if (scenario.includeQr) {
+		attachments.push({
+			filename: QR_FILENAME,
+			// Le QR n'encode QUE l'URL de clic de tracking (scanner = cliquer).
+			content: await renderQrPng(ctx.urls.click),
+			contentType: QR_CONTENT_TYPE,
+			cid: QR_CID
+		});
+	}
 
 	const transport = await buildTransport(profile);
 	// headersJson est saisi par l'opérateur et n'est pas validé à la création :
@@ -141,15 +166,7 @@ export async function sendRecipient(recipientId: string): Promise<void> {
 		subject,
 		html,
 		headers,
-		attachments: attachment
-			? [
-					{
-						filename: attachment.filename,
-						content: attachment.content,
-						contentType: attachment.contentType
-					}
-				]
-			: undefined
+		attachments: attachments.length > 0 ? attachments : undefined
 	});
 
 	db.update(campaignRecipients)

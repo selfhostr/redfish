@@ -56,7 +56,8 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 			landingRedirectUrl: scenario.landingRedirectUrl ?? '',
 			attachmentMode: scenario.attachmentMode,
 			attachmentFilename: scenario.attachmentFilename ?? '',
-			attachmentTemplate: content.attachmentTemplate ?? ''
+			attachmentTemplate: content.attachmentTemplate ?? '',
+			includeQr: scenario.includeQr
 		},
 		tags: parseTags(scenario.tagsJson)
 	};
@@ -74,6 +75,10 @@ export const actions: Actions = {
 
 		const data = await request.formData();
 		const str = (k: string) => String(data.get(k) ?? '').trim();
+		const bool = (k: string) => {
+			const v = data.get(k);
+			return v === 'true' || v === 'on' || v === '1';
+		};
 		const values = {
 			// La clé ne change jamais : on affiche celle du scénario, sans tenir
 			// compte d'une éventuelle valeur soumise.
@@ -91,7 +96,8 @@ export const actions: Actions = {
 			landingRedirectUrl: str('landingRedirectUrl'),
 			attachmentMode: str('attachmentMode') || 'none',
 			attachmentFilename: str('attachmentFilename'),
-			attachmentTemplate: String(data.get('attachmentTemplate') ?? '')
+			attachmentTemplate: String(data.get('attachmentTemplate') ?? ''),
+			includeQr: bool('includeQr')
 		};
 
 		const bundle = {
@@ -112,7 +118,8 @@ export const actions: Actions = {
 			landingRedirectUrl: values.landingRedirectUrl || null,
 			attachmentMode: values.attachmentMode,
 			attachmentFilename: values.attachmentFilename || null,
-			attachmentTemplate: values.attachmentMode === 'none' ? null : values.attachmentTemplate
+			attachmentTemplate: values.attachmentMode === 'none' ? null : values.attachmentTemplate,
+			includeQr: values.includeQr
 		};
 
 		let key: string;

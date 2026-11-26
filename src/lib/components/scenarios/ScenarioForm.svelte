@@ -15,6 +15,7 @@
 		attachmentMode: string;
 		attachmentFilename: string;
 		attachmentTemplate: string;
+		includeQr: boolean;
 	}
 
 	export interface ScenarioFormState {
@@ -266,6 +267,24 @@
 						bind:value={fields.email}
 						bind:this={emailEl}></textarea>
 					{@render fieldIssues('email')}
+				</div>
+				<div class="flex flex-col gap-1.5">
+					<label class="flex items-start gap-2">
+						<input
+							type="checkbox"
+							class="mt-0.5"
+							name="includeQr"
+							value="true"
+							bind:checked={fields.includeQr}
+						/>
+						<span class="rf-label">Insérer un QR code (quishing)</span>
+					</label>
+					<span class="rf-meta">
+						Le QR code encode le lien de phishing (l'URL de clic) : le scanner compte comme un clic,
+						exactement comme cliquer le lien. Placez {'{{qrCode}}'} dans le corps de l'e-mail (dans un
+						bloc de texte) à l'endroit où le QR doit apparaître ; il est inséré à l'envoi en pièce jointe
+						image. Aucune donnée saisie n'est collectée.
+					</span>
 				</div>
 				<div class="flex flex-col gap-1.5">
 					<label class="rf-label" for="field-landing-mode">
