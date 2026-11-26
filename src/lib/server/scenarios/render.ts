@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import mjml2html from 'mjml';
 import type { Scenario } from '$lib/server/db/schema';
 import { parseManifest } from './loader';
+import { QR_IMG_HTML } from './qr';
 
 /**
  * Contexte de rendu d'un envoi : le destinataire et les URLs de tracking de
@@ -85,6 +86,8 @@ export type ScenarioContent = {
 	attachmentFilename: string | null;
 	/** Gabarit de la PJ : corps HTML (`html`) ou texte visible (`pdf`) ; NULL en `none`. */
 	attachmentTemplate: string | null;
+	/** QR code dans l'e-mail (« quishing ») : `{{qrCode}}` encode l'URL de clic. */
+	includeQr: boolean;
 };
 
 /** Vrai si le contenu vit en base (scénario importé) plutôt que sur disque. */
@@ -110,7 +113,8 @@ export async function loadScenarioContent(scenario: Scenario): Promise<ScenarioC
 			landingRedirectUrl: scenario.landingRedirectUrl,
 			attachmentMode: scenario.attachmentMode,
 			attachmentFilename: scenario.attachmentFilename,
-			attachmentTemplate: scenario.attachmentTemplate
+			attachmentTemplate: scenario.attachmentTemplate,
+			includeQr: scenario.includeQr
 		};
 	}
 	const path = scenario.path as string;
@@ -134,7 +138,8 @@ export async function loadScenarioContent(scenario: Scenario): Promise<ScenarioC
 		// (comme `landingMode`) : un paquet builtin sur disque n'en décrit aucun.
 		attachmentMode: scenario.attachmentMode,
 		attachmentFilename: scenario.attachmentFilename,
-		attachmentTemplate: scenario.attachmentTemplate
+		attachmentTemplate: scenario.attachmentTemplate,
+		includeQr: scenario.includeQr
 	};
 }
 
@@ -175,14 +180,17 @@ export function renderSubjectContent(
  * le MJML en HTML. Lève {@link MjmlCompileError} si MJML renvoie des erreurs.
  */
 export async function renderEmailContent(
-	content: Pick<ScenarioContent, 'subject' | 'email'>,
+	content: Pick<ScenarioContent, 'subject' | 'email' | 'includeQr'>,
 	ctx: RenderCtx
 ): Promise<{ subject: string; html: string }> {
 	const mjmlSource = substitute(content.email, {
 		firstName: escapeHtml(ctx.firstName),
 		clickUrl: ctx.urls.click,
 		openUrl: ctx.urls.open,
-		reportUrl: ctx.urls.report
+		reportUrl: ctx.urls.report,
+		// QR code (« quishing ») : image inline (cid) encodant l'URL de clic, insérée
+		// à l'envoi (cf. handler send-email). Vide quand `include_qr` est inactif.
+		qrCode: content.includeQr ? QR_IMG_HTML : ''
 	});
 
 	const { html, errors } = await mjml2html(mjmlSource, { validationLevel: 'soft' });

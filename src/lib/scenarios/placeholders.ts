@@ -34,7 +34,11 @@ export const TEMPLATE_PLACEHOLDERS: Record<TemplateField, readonly PlaceholderIn
 		FIRST_NAME,
 		{ key: 'clickUrl', hint: 'Lien suivi vers la page de destination' },
 		{ key: 'openUrl', hint: "URL du pixel d'ouverture" },
-		{ key: 'reportUrl', hint: 'Lien « Signaler ce message » (enregistre un signalement)' }
+		{ key: 'reportUrl', hint: 'Lien « Signaler ce message » (enregistre un signalement)' },
+		{
+			key: 'qrCode',
+			hint: 'QR code encodant le lien de clic (quishing) ; actif si « Insérer un QR code »'
+		}
 	],
 	landing: [
 		FIRST_NAME,

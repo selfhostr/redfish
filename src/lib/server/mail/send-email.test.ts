@@ -41,6 +41,12 @@ import {
 import { encryptSecret } from '../crypto';
 import { SKELETON_AWARENESS, SKELETON_EMAIL, SKELETON_LANDING } from '$lib/scenarios/skeletons';
 import { buildTrackingUrls, sendRecipient } from '../jobs/handlers/send-email';
+import { QR_CID, renderQrPng } from '../scenarios/qr';
+
+/** Gabarit e-mail minimal contenant le point d'insertion du QR code. */
+const EMAIL_WITH_QR =
+	'<mjml><mj-body><mj-section><mj-column>' +
+	'<mj-text>Scannez : {{qrCode}}</mj-text></mj-column></mj-section></mj-body></mjml>';
 
 const H = 3600_000;
 const now = new Date('2026-06-01T12:00:00Z');
@@ -256,6 +262,66 @@ test('a pdf attachment is attached as a Buffer linking to the click URL', async 
 	expect(attachments[0].content.toString('latin1')).toContain(
 		`https://track.acme.test/t/c/${TOKEN}`
 	);
+});
+
+test('QR quishing: includeQr attaches an inline PNG (cid) encoding the click URL, {{qrCode}} → image', async () => {
+	authorize();
+	db.update(scenarios).set({ includeQr: true, emailTemplate: EMAIL_WITH_QR }).run();
+	await sendRecipient(recipientId);
+
+	expect(sentMessages).toHaveLength(1);
+	const msg = sentMessages[0];
+	// Le corps HTML référence la pièce jointe inline par son Content-ID.
+	expect(msg.html as string).toContain(`cid:${QR_CID}`);
+
+	const attachments = msg.attachments as {
+		filename: string;
+		content: Buffer;
+		contentType: string;
+		cid?: string;
+	}[];
+	const qr = attachments.find((a) => a.cid === QR_CID)!;
+	expect(qr).toBeDefined();
+	expect(qr.contentType).toBe('image/png');
+	expect(Buffer.isBuffer(qr.content)).toBe(true);
+	expect(qr.content.length).toBeGreaterThan(0);
+	// Signature PNG.
+	expect(
+		qr.content.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))
+	).toBe(true);
+	// Le QR encode EXACTEMENT l'URL de clic de tracking (rendu déterministe).
+	const expected = await renderQrPng(`https://track.acme.test/t/c/${TOKEN}`);
+	expect(qr.content.equals(expected)).toBe(true);
+});
+
+test('QR quishing: the QR attachment coexists with a booby-trapped attachment', async () => {
+	authorize();
+	db.update(scenarios)
+		.set({
+			includeQr: true,
+			emailTemplate: EMAIL_WITH_QR,
+			attachmentMode: 'pdf',
+			attachmentFilename: 'document.pdf',
+			attachmentTemplate: 'Bonjour {{firstName}}, document ci-joint.'
+		})
+		.run();
+	await sendRecipient(recipientId);
+
+	const attachments = sentMessages[0].attachments as {
+		contentType: string;
+		cid?: string;
+	}[];
+	expect(attachments).toHaveLength(2);
+	expect(attachments.some((a) => a.cid === QR_CID)).toBe(true);
+	expect(attachments.some((a) => a.contentType === 'application/pdf')).toBe(true);
+});
+
+test('QR quishing: no QR attachment when includeQr is false (default)', async () => {
+	authorize();
+	await sendRecipient(recipientId);
+	expect(sentMessages).toHaveLength(1);
+	// Aucune PJ du tout (ni QR, ni PJ piégée) : le tableau reste absent.
+	expect(sentMessages[0].attachments).toBeUndefined();
 });
 
 test("a scenario fromName overrides the profile's display name (address stays the profile's)", async () => {

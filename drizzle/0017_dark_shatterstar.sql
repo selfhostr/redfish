@@ -1,0 +1,1 @@
+ALTER TABLE `scenarios` ADD `include_qr` integer DEFAULT false NOT NULL;

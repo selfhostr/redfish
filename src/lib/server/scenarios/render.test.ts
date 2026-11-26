@@ -13,7 +13,13 @@ vi.mock('$lib/server/db', async () => {
 import type { Scenario } from '$lib/server/db/schema';
 import { makeScenarioRoot, writeScenarioPackage } from './fixtures';
 import { getScenario, loadScenarios } from './loader';
-import { renderAwareness, renderEmail, renderLanding, renderTemplate } from './render';
+import {
+	renderAwareness,
+	renderEmail,
+	renderEmailContent,
+	renderLanding,
+	renderTemplate
+} from './render';
 import type { RenderCtx } from './render';
 
 /** Le dépôt ne livre plus de scénario : on charge un paquet FIXTURE sur disque. */
@@ -152,4 +158,27 @@ test('renderAwareness affiche le message de campagne quand il est fourni', async
 test('renderAwareness reste vide quand aucun message de campagne', async () => {
 	const html = await renderAwareness(scenario, { ...ctx, awarenessMessage: undefined });
 	expect(html).toContain('<div class="note"></div>');
+});
+
+const EMAIL_QR =
+	'<mjml><mj-body><mj-section><mj-column>' +
+	'<mj-text>Bonjour {{firstName}}, scannez : [{{qrCode}}]</mj-text>' +
+	'</mj-column></mj-section></mj-body></mjml>';
+
+test('renderEmailContent : {{qrCode}} devient une image inline cid quand includeQr est vrai', async () => {
+	const { html } = await renderEmailContent(
+		{ subject: 'Sujet', email: EMAIL_QR, includeQr: true },
+		ctx
+	);
+	expect(html).toContain('src="cid:qr-redfish"');
+});
+
+test('renderEmailContent : {{qrCode}} est vide quand includeQr est faux', async () => {
+	const { html } = await renderEmailContent(
+		{ subject: 'Sujet', email: EMAIL_QR, includeQr: false },
+		ctx
+	);
+	expect(html).not.toContain('cid:qr-redfish');
+	// La variable est rendue vide (les crochets du gabarit se touchent).
+	expect(html).toContain('[]');
 });

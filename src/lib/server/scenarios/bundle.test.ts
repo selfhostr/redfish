@@ -60,9 +60,16 @@ function makeBundle(overrides: Partial<Bundle> = {}): Bundle {
 		attachmentMode: 'none',
 		attachmentFilename: null,
 		attachmentTemplate: null,
+		includeQr: false,
 		...overrides
 	};
 }
+
+/** Gabarit e-mail valide contenant le point d'insertion du QR code. */
+const EMAIL_WITH_QR =
+	'<mjml><mj-body><mj-section><mj-column><mj-text>Bonjour {{firstName}} {{qrCode}}</mj-text>' +
+	'<mj-button href="{{clickUrl}}">Ouvrir</mj-button></mj-column></mj-section>' +
+	'<mj-raw><img src="{{openUrl}}" width="1" height="1" alt="" /></mj-raw></mj-body></mjml>';
 
 /** Gabarit de PJ HTML « zéro capture » valide : beacon d'ouverture, aucun champ. */
 const ATTACHMENT_HTML =
@@ -391,4 +398,32 @@ test('import : met à jour une clé déjà importée (upsert)', async () => {
 	const rows = db.select().from(scenarios).where(eq(scenarios.key, 'maj')).all();
 	expect(rows.length).toBe(1);
 	expect(rows[0].title).toBe('Après');
+});
+
+test('QR quishing : import conserve includeQr et le round-trip export/import le préserve', async () => {
+	const { key } = await importBundle(
+		makeBundle({ key: 'qr-rt', includeQr: true, email: EMAIL_WITH_QR })
+	);
+	const row = db.select().from(scenarios).where(eq(scenarios.key, key)).get()!;
+	expect(row.includeQr).toBe(true);
+
+	const exported = await exportBundle('qr-rt');
+	expect(exported.includeQr).toBe(true);
+
+	const copy = await importBundle({ ...exported, key: 'qr-rt-copie' });
+	const row2 = db.select().from(scenarios).where(eq(scenarios.key, copy.key)).get()!;
+	expect(row2.includeQr).toBe(true);
+});
+
+test('QR quishing : includeQr absent du bundle → false (rétrocompatibilité)', async () => {
+	const { includeQr: _omit, ...withoutQr } = makeBundle({ key: 'qr-default' });
+	const { key } = await importBundle(withoutQr);
+	const row = db.select().from(scenarios).where(eq(scenarios.key, key)).get()!;
+	expect(row.includeQr).toBe(false);
+});
+
+test('QR quishing : includeQr=true mais {{qrCode}} absent du gabarit e-mail → refus', async () => {
+	await expect(importBundle(makeBundle({ key: 'qr-missing', includeQr: true }))).rejects.toThrow(
+		/qrCode/
+	);
 });

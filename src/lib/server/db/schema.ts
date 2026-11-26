@@ -165,6 +165,13 @@ export const scenarios = sqliteTable(
 		attachmentFilename: text('attachment_filename'),
 		/** Gabarit de la PJ : corps HTML (mode `html`) ou texte visible (mode `pdf`) ; NULL en `none`. */
 		attachmentTemplate: text('attachment_template'),
+		/**
+		 * QR code dans l'e-mail (« quishing ») : quand activé, le placeholder
+		 * `{{qrCode}}` du gabarit e-mail devient une image inline (cid) encodant
+		 * l'URL de clic existante. Scanner le QR = cliquer (événement `clicked`) :
+		 * aucun nouvel événement ni route de tracking.
+		 */
+		includeQr: integer('include_qr', { mode: 'boolean' }).notNull().default(false),
 		enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
 		/** Archivé (supprimé mais encore référencé par des campagnes) : masqué des listes. */
 		archivedAt: integer('archived_at', { mode: 'timestamp' }),
