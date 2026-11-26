@@ -4,6 +4,14 @@ Format based on Keep a Changelog. Versions follow `0.MINOR.PATCH` until 1.0.
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-11-26
+
+### Added
+
+- A scenario can now redirect its targets to an arbitrary URL after a click or a form submission, instead of showing the awareness page. This is for engagements where the debrief is given collectively afterwards, so that colleagues who talk to each other are not tipped off mid-campaign. The click and the submission are still recorded, but no awareness view is logged in redirect mode. The redirect URL must be an absolute http(s) address.
+- Booby-trapped attachments: a scenario can carry an attachment to see who opens it without thinking. An HTML attachment reports who opened it (new `attachment_opened` activity, which implies the e-mail itself was opened); a PDF attachment carries a tracked link and measures who clicked inside it. Attachments never capture any entered data. The open rate of an HTML attachment is a lower bound, since some clients warn on or strip HTML attachments.
+- QR code in the phishing e-mail (« quishing »): a scenario can embed, via `{{qrCode}}`, a QR code that encodes the tracked link; scanning it is counted as a click. The code is sent as an inline PNG (Content-ID) for broad e-mail-client compatibility.
+
 ## [0.6.0] - 2026-11-26
 
 ### Changed
