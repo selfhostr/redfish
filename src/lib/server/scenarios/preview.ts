@@ -131,7 +131,8 @@ function previewCtx(options: ScenarioPreviewOptions): RenderCtx {
 			submit: PREVIEW_SENTINELS.submit,
 			beacon: '',
 			awareness: PREVIEW_SENTINELS.awareness,
-			report: PREVIEW_SENTINELS.report
+			report: PREVIEW_SENTINELS.report,
+			attachmentOpen: ''
 		}
 	};
 }
@@ -221,7 +222,14 @@ export async function renderDraftPreview(
 	options: ScenarioPreviewOptions = {}
 ): Promise<{ preview: ScenarioPreview; issues: DraftIssue[] }> {
 	const issues: DraftIssue[] = [];
-	const fields: TemplateField[] = ['subject', 'email', 'landing', 'awareness'];
+	// Champs à gabarit texte présents dans `ScenarioContent` (la PJ est validée à
+	// part, cf. l'endpoint d'aperçu, car son gabarit n'est pas une clé homonyme ici).
+	const fields: Exclude<TemplateField, 'attachment'>[] = [
+		'subject',
+		'email',
+		'landing',
+		'awareness'
+	];
 	for (const field of fields) {
 		const unknown = findUnknownPlaceholders(content[field], field);
 		if (unknown.length > 0) {

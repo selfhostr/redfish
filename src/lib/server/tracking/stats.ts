@@ -4,6 +4,7 @@ import { campaignRecipients, events } from '$lib/server/db/schema';
 
 export type HumanFunnel = {
 	opened: number;
+	attachmentOpened: number;
 	clicked: number;
 	pageInteraction: number;
 	formSubmitted: number;
@@ -20,11 +21,24 @@ export type Funnel = HumanFunnel & {
 /**
  * Étapes d'atteinte (entonnoir monotone) : chaque niveau inclut les niveaux plus
  * profonds. Un clic, une interaction, une soumission ou l'affichage de la page de
- * sensibilisation impliquent une ouverture ; un signalement, non (il peut venir de
- * l'aperçu sans charger le pixel).
+ * sensibilisation impliquent une ouverture — tout comme l'ouverture d'une pièce
+ * jointe HTML (`attachment_opened`) : on ne la reçoit que depuis un message ouvert.
+ * Un signalement, non (il peut venir de l'aperçu sans charger le pixel).
+ *
+ * L'ouverture de la PJ est une activité PARALLÈLE au parcours clic → soumission
+ * (ouvrir le fichier joint n'implique pas d'avoir cliqué le lien de l'e-mail, et
+ * inversement) : elle n'entre donc que dans `opened`, pas dans `clicked`.
  */
 const REACH: Record<keyof HumanFunnel, readonly string[]> = {
-	opened: ['opened', 'clicked', 'page_interaction', 'form_submitted', 'awareness_viewed'],
+	opened: [
+		'opened',
+		'attachment_opened',
+		'clicked',
+		'page_interaction',
+		'form_submitted',
+		'awareness_viewed'
+	],
+	attachmentOpened: ['attachment_opened'],
 	clicked: ['clicked', 'page_interaction', 'form_submitted', 'awareness_viewed'],
 	pageInteraction: ['page_interaction', 'form_submitted'],
 	formSubmitted: ['form_submitted'],
@@ -64,6 +78,7 @@ export async function campaignFunnel(campaignId: string): Promise<Funnel> {
 	};
 	const funnelOf = (m: Map<string, Set<string>>): HumanFunnel => ({
 		opened: count(m, REACH.opened),
+		attachmentOpened: count(m, REACH.attachmentOpened),
 		clicked: count(m, REACH.clicked),
 		pageInteraction: count(m, REACH.pageInteraction),
 		formSubmitted: count(m, REACH.formSubmitted),

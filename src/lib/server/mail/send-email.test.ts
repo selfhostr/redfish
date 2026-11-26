@@ -200,6 +200,64 @@ test('sendRecipient sends to the target with rendered subject + tracking URLs, r
 	expect(evs[0].type).toBe('sent');
 });
 
+test('no attachment is sent when attachmentMode is none (default)', async () => {
+	authorize();
+	await sendRecipient(recipientId);
+	expect(sentMessages).toHaveLength(1);
+	expect(sentMessages[0].attachments).toBeUndefined();
+});
+
+test('an html attachment is attached with the attachmentOpen beacon URL', async () => {
+	authorize();
+	db.update(scenarios)
+		.set({
+			attachmentMode: 'html',
+			attachmentFilename: 'facture.html',
+			attachmentTemplate:
+				'<!doctype html><html><body><p>Bonjour {{firstName}}</p>' +
+				'<img src="{{attachmentOpen}}" width="1" height="1" alt="" /></body></html>'
+		})
+		.run();
+	await sendRecipient(recipientId);
+
+	expect(sentMessages).toHaveLength(1);
+	const attachments = sentMessages[0].attachments as {
+		filename: string;
+		content: string;
+		contentType: string;
+	}[];
+	expect(attachments).toHaveLength(1);
+	expect(attachments[0].filename).toBe('facture.html');
+	expect(attachments[0].contentType).toContain('text/html');
+	expect(attachments[0].content).toContain(`https://track.acme.test/t/ao/${TOKEN}`);
+	// Zéro capture : aucun champ de formulaire dans la PJ.
+	expect(/<(?:form|input|select|textarea)\b/i.test(attachments[0].content)).toBe(false);
+});
+
+test('a pdf attachment is attached as a Buffer linking to the click URL', async () => {
+	authorize();
+	db.update(scenarios)
+		.set({
+			attachmentMode: 'pdf',
+			attachmentFilename: 'document.pdf',
+			attachmentTemplate: 'Bonjour {{firstName}}, document ci-joint.'
+		})
+		.run();
+	await sendRecipient(recipientId);
+
+	const attachments = sentMessages[0].attachments as {
+		filename: string;
+		content: Buffer;
+		contentType: string;
+	}[];
+	expect(attachments).toHaveLength(1);
+	expect(attachments[0].contentType).toBe('application/pdf');
+	expect(Buffer.isBuffer(attachments[0].content)).toBe(true);
+	expect(attachments[0].content.toString('latin1')).toContain(
+		`https://track.acme.test/t/c/${TOKEN}`
+	);
+});
+
 test("a scenario fromName overrides the profile's display name (address stays the profile's)", async () => {
 	authorize();
 	db.update(scenarios).set({ fromName: 'Service informatique' }).run();

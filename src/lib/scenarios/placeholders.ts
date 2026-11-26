@@ -6,7 +6,7 @@
  * absente de ces listes y devient une chaîne vide.
  */
 
-export type TemplateField = 'subject' | 'email' | 'landing' | 'awareness';
+export type TemplateField = 'subject' | 'email' | 'landing' | 'awareness' | 'attachment';
 
 export type PlaceholderInfo = {
 	key: string;
@@ -42,7 +42,14 @@ export const TEMPLATE_PLACEHOLDERS: Record<TemplateField, readonly PlaceholderIn
 		{ key: 'submitUrl', hint: 'Action du formulaire (rien n’est envoyé)' },
 		BEACON_URL
 	],
-	awareness: [FIRST_NAME, AWARENESS_MESSAGE, BEACON_URL]
+	awareness: [FIRST_NAME, AWARENESS_MESSAGE, BEACON_URL],
+	attachment: [
+		FIRST_NAME,
+		{
+			key: 'attachmentOpen',
+			hint: "URL du beacon d'ouverture de la PJ HTML (signale l'ouverture, jamais la saisie)"
+		}
+	]
 };
 
 /** Libellés français des gabarits, pour les messages d'erreur. */
@@ -50,7 +57,8 @@ export const TEMPLATE_LABELS: Record<TemplateField, string> = {
 	subject: 'Sujet',
 	email: 'E-mail',
 	landing: 'Page de destination',
-	awareness: 'Page de sensibilisation'
+	awareness: 'Page de sensibilisation',
+	attachment: 'Pièce jointe'
 };
 
 /** Même motif que la substitution du rendu. */

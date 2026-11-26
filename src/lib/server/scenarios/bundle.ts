@@ -27,6 +27,12 @@ export type Bundle = {
 	landingMode: 'awareness' | 'redirect';
 	/** URL absolue http(s) de redirection en mode `redirect` ; NULL sinon. */
 	landingRedirectUrl: string | null;
+	/** Pièce jointe piégée : `none` (défaut), `html` (beacon d'ouverture) ou `pdf` (lien cliquable). */
+	attachmentMode: 'none' | 'html' | 'pdf';
+	/** Nom du fichier joint (requis en `html`/`pdf`) ; NULL en `none`. */
+	attachmentFilename: string | null;
+	/** Gabarit de la PJ : corps HTML (`html`) ou texte visible (`pdf`) ; NULL en `none`. */
+	attachmentTemplate: string | null;
 };
 
 export const BUNDLE_SCHEMA_VERSION = 1 as const;
@@ -81,7 +87,10 @@ export async function exportBundle(key: string): Promise<Bundle> {
 		landing: content.landing,
 		awareness: content.awareness,
 		landingMode: scenario.landingMode,
-		landingRedirectUrl: scenario.landingRedirectUrl ?? null
+		landingRedirectUrl: scenario.landingRedirectUrl ?? null,
+		attachmentMode: scenario.attachmentMode,
+		attachmentFilename: scenario.attachmentFilename ?? null,
+		attachmentTemplate: scenario.attachmentTemplate ?? null
 	};
 }
 
@@ -143,6 +152,47 @@ export function validateAwareness(awareness: string): void {
 	if (!/\{\{\s*awarenessMessage\s*\}\}/.test(awareness)) {
 		throw new BundleImportError(
 			'Sensibilisation refusée : le placeholder {{awarenessMessage}} est absent.'
+		);
+	}
+}
+
+/**
+ * Vérifie une pièce jointe piégée. En `none`, les champs sont ignorés (aucune
+ * contrainte). En `html`/`pdf`, un nom de fichier est requis. En `html`,
+ * l'invariant « zéro capture » s'applique au gabarit : AUCUN champ de formulaire
+ * (interdiction de `form`/`input`/`select`/`textarea`/`button`), et le beacon
+ * `<img src="{{attachmentOpen}}" …>` doit être présent (il ne signale que
+ * l'ouverture du fichier, jamais la moindre saisie). Lève à la première violation.
+ */
+export function validateAttachment(
+	mode: string,
+	filename: string | null,
+	template: string | null
+): void {
+	if (mode === 'none') return;
+	if (mode !== 'html' && mode !== 'pdf') {
+		throw new BundleImportError(
+			'Mode de pièce jointe invalide : « none », « html » ou « pdf » attendu.'
+		);
+	}
+	if (!filename || filename.trim() === '') {
+		throw new BundleImportError(
+			'Pièce jointe refusée : un nom de fichier est requis en mode « html » ou « pdf ».'
+		);
+	}
+	if (mode === 'pdf') return;
+
+	const html = template ?? '';
+	// Aucun champ de formulaire : rien ne doit pouvoir capturer une saisie.
+	if (/<(?:form|input|select|textarea|button)\b/i.test(html)) {
+		throw new BundleImportError(
+			'Pièce jointe refusée : aucun champ de formulaire n’est autorisé dans la PJ HTML (invariant zéro capture).'
+		);
+	}
+	// Beacon d'ouverture : une image pointant vers l'URL de suivi {{attachmentOpen}}.
+	if (!/<img\b[^>]*\ssrc\s*=\s*(["'])\{\{\s*attachmentOpen\s*\}\}\1/i.test(html)) {
+		throw new BundleImportError(
+			'Pièce jointe refusée : le beacon d’ouverture <img src="{{attachmentOpen}}"> est absent.'
 		);
 	}
 }
@@ -243,6 +293,31 @@ export async function importBundle(input: unknown): Promise<{ key: string }> {
 		landingRedirectUrl = url;
 	}
 
+	// Pièce jointe piégée. Absente → `none` (rétrocompatibilité des anciens
+	// bundles). En `html`/`pdf`, un nom de fichier est requis ; en `html`, le
+	// gabarit doit respecter l'invariant « zéro capture ». En `none`, les champs
+	// de PJ sont ignorés et stockés à NULL.
+	const attachmentMode =
+		raw.attachmentMode === undefined || raw.attachmentMode === null
+			? 'none'
+			: String(raw.attachmentMode);
+	if (attachmentMode !== 'none' && attachmentMode !== 'html' && attachmentMode !== 'pdf') {
+		throw new BundleImportError(
+			'Mode de pièce jointe invalide : « none », « html » ou « pdf » attendu.'
+		);
+	}
+	let attachmentFilename: string | null = null;
+	let attachmentTemplate: string | null = null;
+	if (attachmentMode !== 'none') {
+		attachmentFilename =
+			typeof raw.attachmentFilename === 'string' ? raw.attachmentFilename.trim() : '';
+		attachmentTemplate =
+			raw.attachmentTemplate === undefined || raw.attachmentTemplate === null
+				? ''
+				: String(raw.attachmentTemplate);
+	}
+	validateAttachment(attachmentMode, attachmentFilename, attachmentTemplate);
+
 	// Une clé réservée par un scénario livré (builtin) ne peut pas être écrasée :
 	// renommer l'import. Une clé déjà importée est, elle, mise à jour.
 	const existing = getScenario(key);
@@ -273,6 +348,9 @@ export async function importBundle(input: unknown): Promise<{ key: string }> {
 			awarenessTemplate: awareness,
 			landingMode,
 			landingRedirectUrl,
+			attachmentMode,
+			attachmentFilename,
+			attachmentTemplate,
 			enabled: true
 		})
 		.onConflictDoUpdate({
@@ -292,6 +370,9 @@ export async function importBundle(input: unknown): Promise<{ key: string }> {
 				awarenessTemplate: awareness,
 				landingMode,
 				landingRedirectUrl,
+				attachmentMode,
+				attachmentFilename,
+				attachmentTemplate,
 				enabled: true,
 				archivedAt: null
 			}

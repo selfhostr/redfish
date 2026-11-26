@@ -1,6 +1,11 @@
 import { error, json } from '@sveltejs/kit';
 import { rateLimit } from '$lib/server/ratelimit';
-import { validateAwareness, validateLanding } from '$lib/server/scenarios/bundle';
+import {
+	BundleImportError,
+	validateAttachment,
+	validateAwareness,
+	validateLanding
+} from '$lib/server/scenarios/bundle';
 import { renderDraftPreview, type DraftIssue } from '$lib/server/scenarios/preview';
 import type { RequestHandler } from './$types';
 
@@ -63,12 +68,18 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		const v = data.get(k);
 		return typeof v === 'string' ? v : '';
 	};
+	const attachmentMode = str('attachmentMode').trim() || 'none';
 	const content = {
 		subject: str('subject').trim(),
 		fromName: str('fromName').trim() || undefined,
 		email: str('email'),
 		landing: str('landing'),
-		awareness: str('awareness')
+		awareness: str('awareness'),
+		attachmentMode: (attachmentMode === 'html' || attachmentMode === 'pdf'
+			? attachmentMode
+			: 'none') as 'none' | 'html' | 'pdf',
+		attachmentFilename: str('attachmentFilename').trim() || null,
+		attachmentTemplate: str('attachmentTemplate') || null
 	};
 	if (
 		[content.subject, content.email, content.landing, content.awareness].some(
@@ -87,6 +98,23 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		validationIssue('awareness', validateAwareness, content.awareness)
 	]) {
 		if (issue) issues.push(issue);
+	}
+
+	// Validation « zéro capture » de la pièce jointe piégée (signature propre).
+	if (content.attachmentMode !== 'none') {
+		try {
+			validateAttachment(
+				content.attachmentMode,
+				content.attachmentFilename,
+				content.attachmentTemplate
+			);
+		} catch (e) {
+			issues.push({
+				field: 'attachment',
+				message:
+					e instanceof BundleImportError ? e.message : e instanceof Error ? e.message : String(e)
+			});
+		}
 	}
 
 	return json({ preview, issues }, { headers: { 'cache-control': 'no-store' } });

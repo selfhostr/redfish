@@ -88,6 +88,7 @@ test('events.type accepts every funnel stage and round-trips', () => {
 	const types = [
 		'sent',
 		'opened',
+		'attachment_opened',
 		'clicked',
 		'page_interaction',
 		'form_submitted',

@@ -12,6 +12,9 @@
 		awareness: string;
 		landingMode: string;
 		landingRedirectUrl: string;
+		attachmentMode: string;
+		attachmentFilename: string;
+		attachmentTemplate: string;
 	}
 
 	export interface ScenarioFormState {
@@ -133,6 +136,7 @@
 	let emailEl = $state<HTMLTextAreaElement>();
 	let landingEl = $state<HTMLTextAreaElement>();
 	let awarenessEl = $state<HTMLTextAreaElement>();
+	let attachmentEl = $state<HTMLTextAreaElement>();
 
 	const SKELETONS = {
 		email: SKELETON_EMAIL,
@@ -335,6 +339,79 @@
 						bind:this={awarenessEl}></textarea>
 					{@render fieldIssues('awareness')}
 				</div>
+			</div>
+		</Panel>
+
+		<Panel>
+			{#snippet header()}
+				<h2 class="rf-title">Pièce jointe</h2>
+			{/snippet}
+			<div class="flex flex-col gap-5">
+				<div class="flex flex-col gap-1.5">
+					<label class="rf-label" for="field-attachment-mode">Type de pièce jointe</label>
+					<select
+						id="field-attachment-mode"
+						class="rf-input"
+						name="attachmentMode"
+						bind:value={fields.attachmentMode}
+					>
+						<option value="none">Aucune</option>
+						<option value="html">HTML — mesure l'ouverture</option>
+						<option value="pdf">PDF avec lien — mesure le clic</option>
+					</select>
+					<span class="rf-meta">
+						« HTML » mesure QUI a OUVERT la pièce jointe (un beacon signale l'ouverture, comme le
+						pixel de l'e-mail). « PDF avec lien » mesure QUI a CLIQUÉ sur le lien à l'intérieur du
+						document (réutilise le suivi de clic). Dans les deux cas, AUCUNE donnée saisie n'est
+						collectée.
+					</span>
+				</div>
+
+				{#if fields.attachmentMode !== 'none'}
+					<label class="flex flex-col gap-1.5">
+						<span class="rf-label">Nom du fichier</span>
+						<input
+							class="rf-input font-mono"
+							name="attachmentFilename"
+							bind:value={fields.attachmentFilename}
+							placeholder={fields.attachmentMode === 'pdf' ? 'document.pdf' : 'document.html'}
+							required
+						/>
+					</label>
+
+					<div class="flex flex-col gap-1.5">
+						<label class="rf-label" for="field-attachment">
+							{fields.attachmentMode === 'pdf'
+								? 'Texte visible du PDF'
+								: 'Contenu HTML de la pièce jointe'}
+						</label>
+						<PlaceholderToolbar
+							field="attachment"
+							target={attachmentEl}
+							label="Variables de la pièce jointe"
+						/>
+						<textarea
+							id="field-attachment"
+							class="rf-input editor"
+							name="attachmentTemplate"
+							rows="10"
+							spellcheck="false"
+							bind:value={fields.attachmentTemplate}
+							bind:this={attachmentEl}></textarea>
+						{#if fields.attachmentMode === 'html'}
+							<span class="rf-meta">
+								Invariant « zéro capture » : aucun champ de formulaire n'est autorisé ; le beacon
+								d'ouverture {'<img src="{{attachmentOpen}}">'} signale uniquement l'ouverture du fichier.
+							</span>
+						{:else}
+							<span class="rf-meta">
+								Texte affiché dans le PDF. Un lien cliquable vers l'URL de clic est ajouté
+								automatiquement : seul le clic est mesuré, jamais la moindre saisie.
+							</span>
+						{/if}
+						{@render fieldIssues('attachment')}
+					</div>
+				{/if}
 			</div>
 		</Panel>
 

@@ -151,6 +151,20 @@ export const scenarios = sqliteTable(
 			.default('awareness'),
 		/** URL absolue http(s) de redirection en mode `redirect` ; NULL sinon. */
 		landingRedirectUrl: text('landing_redirect_url'),
+		/**
+		 * Pièce jointe piégée (sensibilisation à l'ouverture d'un fichier reçu) :
+		 * `none` (défaut, aucune PJ) ; `html` joint un fichier .html qui, à
+		 * l'ouverture, signale l'ouverture via un beacon (événement
+		 * `attachment_opened`) sans AUCUNE capture de saisie ; `pdf` joint un PDF
+		 * contenant un lien cliquable vers l'URL de clic (réutilise `clicked`).
+		 */
+		attachmentMode: text('attachment_mode', { enum: ['none', 'html', 'pdf'] })
+			.notNull()
+			.default('none'),
+		/** Nom du fichier joint (requis en mode `html`/`pdf`) ; NULL en mode `none`. */
+		attachmentFilename: text('attachment_filename'),
+		/** Gabarit de la PJ : corps HTML (mode `html`) ou texte visible (mode `pdf`) ; NULL en `none`. */
+		attachmentTemplate: text('attachment_template'),
 		enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
 		/** Archivé (supprimé mais encore référencé par des campagnes) : masqué des listes. */
 		archivedAt: integer('archived_at', { mode: 'timestamp' }),
@@ -160,7 +174,8 @@ export const scenarios = sqliteTable(
 	},
 	(t) => [
 		check('scenarios_source_check', sql`${t.source} in ('builtin', 'imported')`),
-		check('scenarios_landing_mode_check', sql`${t.landingMode} in ('awareness', 'redirect')`)
+		check('scenarios_landing_mode_check', sql`${t.landingMode} in ('awareness', 'redirect')`),
+		check('scenarios_attachment_mode_check', sql`${t.attachmentMode} in ('none', 'html', 'pdf')`)
 	]
 );
 
@@ -298,6 +313,7 @@ export const events = sqliteTable(
 			enum: [
 				'sent',
 				'opened',
+				'attachment_opened',
 				'clicked',
 				'page_interaction',
 				'form_submitted',
@@ -313,7 +329,7 @@ export const events = sqliteTable(
 		index('events_recipient_idx').on(t.campaignRecipientId),
 		check(
 			'events_type_check',
-			sql`${t.type} in ('sent', 'opened', 'clicked', 'page_interaction', 'form_submitted', 'awareness_viewed', 'reported')`
+			sql`${t.type} in ('sent', 'opened', 'attachment_opened', 'clicked', 'page_interaction', 'form_submitted', 'awareness_viewed', 'reported')`
 		)
 	]
 );

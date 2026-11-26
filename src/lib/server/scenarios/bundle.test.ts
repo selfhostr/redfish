@@ -57,9 +57,18 @@ function makeBundle(overrides: Partial<Bundle> = {}): Bundle {
 		awareness: AWARENESS,
 		landingMode: 'awareness',
 		landingRedirectUrl: null,
+		attachmentMode: 'none',
+		attachmentFilename: null,
+		attachmentTemplate: null,
 		...overrides
 	};
 }
+
+/** Gabarit de PJ HTML « zéro capture » valide : beacon d'ouverture, aucun champ. */
+const ATTACHMENT_HTML =
+	'<!doctype html><html lang="fr"><head><meta charset="utf-8" /><title>Doc</title></head>' +
+	'<body><p>Bonjour {{firstName}}</p>' +
+	'<img src="{{attachmentOpen}}" width="1" height="1" alt="" /></body></html>';
 
 const ctx: RenderCtx = {
 	firstName: 'A<&>B',
@@ -72,7 +81,8 @@ const ctx: RenderCtx = {
 		submit: 'https://track.exemple.test/s/TKN',
 		beacon: 'https://track.exemple.test/b/TKN',
 		awareness: 'https://track.exemple.test/a/TKN',
-		report: 'https://track.exemple.test/r/TKN'
+		report: 'https://track.exemple.test/r/TKN',
+		attachmentOpen: 'https://track.exemple.test/ao/TKN'
 	}
 };
 
@@ -262,6 +272,111 @@ test('landing redirect : round-trip export/import préserve mode et URL', async 
 	const row = getScenario(key) as Scenario;
 	expect(row.landingMode).toBe('redirect');
 	expect(row.landingRedirectUrl).toBe('https://exemple.test/final');
+});
+
+test('pièce jointe html : import OK, champs conservés en base', async () => {
+	const { key } = await importBundle(
+		makeBundle({
+			key: 'pj-html',
+			attachmentMode: 'html',
+			attachmentFilename: 'facture.html',
+			attachmentTemplate: ATTACHMENT_HTML
+		})
+	);
+	const row = getScenario(key) as Scenario;
+	expect(row.attachmentMode).toBe('html');
+	expect(row.attachmentFilename).toBe('facture.html');
+	expect(row.attachmentTemplate).toContain('{{attachmentOpen}}');
+});
+
+test('pièce jointe refusée : PJ html avec un champ de capture', async () => {
+	const withInput = ATTACHMENT_HTML.replace(
+		'<p>Bonjour {{firstName}}</p>',
+		'<form><input type="text" name="user" /></form>'
+	);
+	await expect(
+		importBundle(
+			makeBundle({
+				key: 'pj-capture',
+				attachmentMode: 'html',
+				attachmentFilename: 'f.html',
+				attachmentTemplate: withInput
+			})
+		)
+	).rejects.toThrow(/zéro capture|formulaire/i);
+});
+
+test('pièce jointe refusée : PJ html sans le beacon {{attachmentOpen}}', async () => {
+	const withoutBeacon = ATTACHMENT_HTML.replace(/<img[^>]*>/, '');
+	await expect(
+		importBundle(
+			makeBundle({
+				key: 'pj-no-beacon',
+				attachmentMode: 'html',
+				attachmentFilename: 'f.html',
+				attachmentTemplate: withoutBeacon
+			})
+		)
+	).rejects.toThrow(/beacon/i);
+});
+
+test('pièce jointe refusée : modes html et pdf sans nom de fichier', async () => {
+	await expect(
+		importBundle(
+			makeBundle({
+				key: 'pj-html-nofile',
+				attachmentMode: 'html',
+				attachmentFilename: null,
+				attachmentTemplate: ATTACHMENT_HTML
+			})
+		)
+	).rejects.toThrow(/nom de fichier/i);
+	await expect(
+		importBundle(
+			makeBundle({
+				key: 'pj-pdf-nofile',
+				attachmentMode: 'pdf',
+				attachmentFilename: '',
+				attachmentTemplate: 'Texte du PDF'
+			})
+		)
+	).rejects.toThrow(/nom de fichier/i);
+});
+
+test('pièce jointe : mode none ignore les champs (NULL en base)', async () => {
+	await importBundle(
+		makeBundle({
+			key: 'pj-none',
+			attachmentMode: 'none',
+			attachmentFilename: 'ignore.html',
+			attachmentTemplate: 'ignoré'
+		})
+	);
+	const row = getScenario('pj-none') as Scenario;
+	expect(row.attachmentMode).toBe('none');
+	expect(row.attachmentFilename).toBeNull();
+	expect(row.attachmentTemplate).toBeNull();
+});
+
+test('pièce jointe : round-trip export/import conserve les champs', async () => {
+	await importBundle(
+		makeBundle({
+			key: 'pj-roundtrip',
+			attachmentMode: 'pdf',
+			attachmentFilename: 'contrat.pdf',
+			attachmentTemplate: 'Bonjour {{firstName}}'
+		})
+	);
+	const exported = await exportBundle('pj-roundtrip');
+	expect(exported.attachmentMode).toBe('pdf');
+	expect(exported.attachmentFilename).toBe('contrat.pdf');
+	expect(exported.attachmentTemplate).toBe('Bonjour {{firstName}}');
+
+	const { key } = await importBundle({ ...exported, key: 'pj-roundtrip-copie' });
+	const row = getScenario(key) as Scenario;
+	expect(row.attachmentMode).toBe('pdf');
+	expect(row.attachmentFilename).toBe('contrat.pdf');
+	expect(row.attachmentTemplate).toBe('Bonjour {{firstName}}');
 });
 
 test('import refusé : version de schéma inconnue', async () => {

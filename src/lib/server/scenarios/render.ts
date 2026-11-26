@@ -21,6 +21,8 @@ export type RenderCtx = {
 		beacon: string;
 		awareness: string;
 		report: string;
+		/** Beacon d'ouverture de la pièce jointe HTML (événement `attachment_opened`). */
+		attachmentOpen: string;
 	};
 };
 
@@ -41,7 +43,7 @@ export function escapeHtml(value: string): string {
  * Les clés reconnues par gabarit sont recensées dans
  * `$lib/scenarios/placeholders` (à tenir synchronisé).
  */
-function substitute(src: string, values: Record<string, string>): string {
+export function substitute(src: string, values: Record<string, string>): string {
 	return src.replace(/\{\{\s*(\w+)\s*\}\}/g, (_match, key: string) =>
 		Object.prototype.hasOwnProperty.call(values, key) ? values[key] : ''
 	);
@@ -77,6 +79,12 @@ export type ScenarioContent = {
 	landingMode?: 'awareness' | 'redirect';
 	/** URL absolue http(s) de redirection en mode `redirect` ; NULL sinon. */
 	landingRedirectUrl?: string | null;
+	/** Mode de pièce jointe piégée (voir la table `scenarios`). */
+	attachmentMode: 'none' | 'html' | 'pdf';
+	/** Nom du fichier joint (modes `html`/`pdf`) ; NULL en `none`. */
+	attachmentFilename: string | null;
+	/** Gabarit de la PJ : corps HTML (`html`) ou texte visible (`pdf`) ; NULL en `none`. */
+	attachmentTemplate: string | null;
 };
 
 /** Vrai si le contenu vit en base (scénario importé) plutôt que sur disque. */
@@ -99,7 +107,10 @@ export async function loadScenarioContent(scenario: Scenario): Promise<ScenarioC
 			landing: scenario.landingTemplate ?? '',
 			awareness: scenario.awarenessTemplate ?? '',
 			landingMode: scenario.landingMode,
-			landingRedirectUrl: scenario.landingRedirectUrl
+			landingRedirectUrl: scenario.landingRedirectUrl,
+			attachmentMode: scenario.attachmentMode,
+			attachmentFilename: scenario.attachmentFilename,
+			attachmentTemplate: scenario.attachmentTemplate
 		};
 	}
 	const path = scenario.path as string;
@@ -118,7 +129,12 @@ export async function loadScenarioContent(scenario: Scenario): Promise<ScenarioC
 		landing,
 		awareness,
 		landingMode: scenario.landingMode,
-		landingRedirectUrl: scenario.landingRedirectUrl
+		landingRedirectUrl: scenario.landingRedirectUrl,
+		// Les champs de PJ vivent dans la ligne `scenarios` quelle que soit la source
+		// (comme `landingMode`) : un paquet builtin sur disque n'en décrit aucun.
+		attachmentMode: scenario.attachmentMode,
+		attachmentFilename: scenario.attachmentFilename,
+		attachmentTemplate: scenario.attachmentTemplate
 	};
 }
 

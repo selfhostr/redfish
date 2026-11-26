@@ -100,6 +100,7 @@ test('funnel counts distinct recipients per stage; human excludes automated', as
 		sent: 3,
 		failed: 0,
 		opened: 2,
+		attachmentOpened: 0,
 		clicked: 2,
 		pageInteraction: 1,
 		formSubmitted: 1,
@@ -107,6 +108,7 @@ test('funnel counts distinct recipients per stage; human excludes automated', as
 		reported: 1,
 		human: {
 			opened: 2,
+			attachmentOpened: 0,
 			clicked: 2,
 			pageInteraction: 1,
 			formSubmitted: 1,
@@ -149,6 +151,22 @@ test('funnel is monotonic on a realistic mix', async () => {
 		expect(f.clicked).toBeGreaterThanOrEqual(f.pageInteraction);
 		expect(f.pageInteraction).toBeGreaterThanOrEqual(f.formSubmitted);
 	}
+});
+
+test('attachment_opened implies opened and surfaces as its own stage', async () => {
+	// Ouverture de la PJ seule (sans pixel d'ouverture ni clic) : implique `opened`.
+	ev(0, 'attachment_opened');
+	// Un autre destinataire clique sans ouvrir la PJ : parcours parallèle.
+	ev(1, 'clicked');
+	const f = await campaignFunnel(campaignId);
+	expect(f.attachmentOpened).toBe(1);
+	expect(f.opened).toBe(2); // 0 (PJ) + 1 (clic implique opened)
+	expect(f.clicked).toBe(1);
+	// L'ouverture de PJ n'implique pas le clic (activité parallèle).
+	expect(f.human.attachmentOpened).toBe(1);
+	// Monotonie : opened >= attachmentOpened et opened >= clicked.
+	expect(f.opened).toBeGreaterThanOrEqual(f.attachmentOpened);
+	expect(f.opened).toBeGreaterThanOrEqual(f.clicked);
 });
 
 test('scanner click and open count in raw but not in human', async () => {
