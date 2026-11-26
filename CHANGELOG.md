@@ -4,6 +4,8 @@ Format based on Keep a Changelog. Versions follow `0.MINOR.PATCH` until 1.0.
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-11-26
+
 ### Changed
 
 - New application shell, aligned with the other selfhostr apps: a sidebar on the left (foldable to an icon rail with Ctrl B / ⌘B, remembered), the active client switcher at its top, Documentation and GitHub links and the account menu at its foot, and a top bar with a breadcrumb. On phones and tablets the same sidebar opens as a drawer.
