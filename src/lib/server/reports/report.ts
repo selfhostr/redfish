@@ -1,6 +1,6 @@
 import { and, eq } from 'drizzle-orm';
 import { db } from '$lib/server/db';
-import { campaignRecipients, events, targets } from '$lib/server/db/schema';
+import { campaignRecipients, events, scenarios, targets, tenants } from '$lib/server/db/schema';
 import { getCampaign } from '$lib/server/campaigns';
 import { tenantTimezone } from '$lib/server/tenant';
 import { campaignFunnel, type HumanFunnel } from '$lib/server/tracking/stats';
@@ -16,6 +16,23 @@ export type ReportDetail = {
 	 */
 	attachmentOpened: boolean;
 };
+export type ReportSummary = {
+	verdict: string;
+	tone: 'positive' | 'warning' | 'critical' | 'neutral';
+	keyFigure: { label: string; value: string };
+	secondaryFigure?: { label: string; value: string };
+	topRecommendation: string | null;
+};
+
+export type ReportBranding = {
+	/** Organisation émettrice (prestataire), '' si non configurée. */
+	issuerName: string;
+	issuerContact: string;
+	clientName: string;
+	clientContact: string;
+	scenario: string;
+};
+
 export type ReportData = {
 	campaignId: string;
 	campaignName: string;
@@ -37,11 +54,66 @@ export type ReportData = {
 	};
 	attentionPoints: string[];
 	recommendations: string[];
+	summary: ReportSummary;
+	branding: ReportBranding;
 	/** Détail individuel : présent uniquement si non anonymisé. */
 	details?: ReportDetail[];
 };
 
 const pct = (r: number) => `${Math.round(r * 100)} %`;
+
+/** Organisation émettrice du rapport (prestataire), configurée par l'environnement. */
+export function reportIssuer(env: NodeJS.ProcessEnv = process.env): {
+	name: string;
+	contact: string;
+} {
+	return {
+		name: (env.REDFISH_ORG_NAME ?? '').trim(),
+		contact: (env.REDFISH_ORG_CONTACT ?? '').trim()
+	};
+}
+
+export function deriveSummary(
+	rates: ReportData['rates'],
+	counts: Pick<ReportData['counts'], 'sent'>,
+	recommendations: string[]
+): ReportSummary {
+	const topRecommendation = recommendations[0] ?? null;
+	if (counts.sent === 0)
+		return {
+			tone: 'neutral',
+			verdict: "Aucun e-mail n'a été envoyé : la campagne n'a pas encore produit de résultats.",
+			keyFigure: { label: 'Taux de clic', value: '—' },
+			topRecommendation
+		};
+	let tone: ReportSummary['tone'];
+	let verdict: string;
+	if (rates.click >= 0.3) {
+		tone = 'critical';
+		verdict = `Résultat préoccupant : ${pct(rates.click)} des destinataires ont cliqué sur le lien piégé.`;
+	} else if (rates.click >= 0.1) {
+		tone = 'warning';
+		verdict = `Vigilance à renforcer : ${pct(rates.click)} des destinataires ont cliqué sur le lien piégé.`;
+	} else {
+		tone = 'positive';
+		verdict = `Bon niveau de vigilance : peu d'interactions à risque (${pct(rates.click)} de clics).`;
+	}
+	if (tone !== 'critical' && rates.submission > 0) {
+		tone = 'critical';
+		verdict = `Résultat préoccupant : ${pct(rates.submission)} des destinataires ont soumis des informations sur la page simulée.`;
+	}
+	return {
+		tone,
+		verdict,
+		keyFigure: { label: 'Taux de clic', value: pct(rates.click) },
+		secondaryFigure:
+			rates.submission > 0
+				? { label: 'Taux de soumission', value: pct(rates.submission) }
+				: undefined,
+		topRecommendation
+	};
+}
+
 const STAGES: [string, string][] = [
 	['reported', 'Signalé'],
 	['awareness_viewed', 'Page de sensibilisation vue'],
@@ -123,6 +195,32 @@ export async function buildReport(
 		);
 	}
 
+	const tenant = db
+		.select({
+			name: tenants.name,
+			contactName: tenants.contactName,
+			contactEmail: tenants.contactEmail
+		})
+		.from(tenants)
+		.where(eq(tenants.id, campaign.tenantId))
+		.get();
+	const scenario = db
+		.select({ title: scenarios.title })
+		.from(scenarios)
+		.where(eq(scenarios.id, campaign.scenarioId))
+		.get();
+	const issuer = reportIssuer();
+	const branding: ReportBranding = {
+		issuerName: issuer.name,
+		issuerContact: issuer.contact,
+		clientName: tenant?.name ?? '',
+		clientContact: [tenant?.contactName, tenant?.contactEmail]
+			.map((v) => v?.trim())
+			.filter(Boolean)
+			.join(' · '),
+		scenario: scenario?.title ?? ''
+	};
+
 	const report: ReportData = {
 		campaignId,
 		campaignName: campaign.name,
@@ -143,7 +241,9 @@ export async function buildReport(
 		},
 		rates,
 		attentionPoints,
-		recommendations
+		recommendations,
+		summary: deriveSummary(rates, { sent: f.sent }, recommendations),
+		branding
 	};
 
 	if (!opts.anonymize) {

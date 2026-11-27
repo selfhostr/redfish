@@ -19,7 +19,7 @@ import {
 } from '$lib/server/db/schema';
 import { createCampaign } from '../campaigns';
 import { createTenant } from '../tenant';
-import { buildReport } from './report';
+import { buildReport, deriveSummary, reportIssuer, type ReportData } from './report';
 
 let campaignId: string;
 let recs: string[];
@@ -178,4 +178,71 @@ test('campagne sans destinataire : taux à 0', async () => {
 	db.delete(campaignRecipients).run();
 	const r = await buildReport(campaignId, { anonymize: true });
 	expect(r.rates.open).toBe(0);
+});
+
+const mkRates = (o: Partial<ReportData['rates']> = {}): ReportData['rates'] => ({
+	open: 0,
+	click: 0,
+	submission: 0,
+	awareness: 0,
+	report: 0,
+	attachment: 0,
+	...o
+});
+
+test('deriveSummary : taux de clic élevé → critique', () => {
+	const s = deriveSummary(mkRates({ click: 0.4 }), { sent: 10 }, []);
+	expect(s.tone).toBe('critical');
+	expect(s.verdict).toContain('préoccupant');
+	expect(s.keyFigure).toEqual({ label: 'Taux de clic', value: '40 %' });
+	expect(s.secondaryFigure).toBeUndefined();
+});
+
+test('deriveSummary : taux de clic bas → positif', () => {
+	const s = deriveSummary(mkRates({ click: 0 }), { sent: 10 }, []);
+	expect(s.tone).toBe('positive');
+	expect(s.verdict).toContain('Bon niveau de vigilance');
+});
+
+test('deriveSummary : taux intermédiaire → vigilance', () => {
+	const s = deriveSummary(mkRates({ click: 0.15 }), { sent: 10 }, []);
+	expect(s.tone).toBe('warning');
+});
+
+test('deriveSummary : aucun envoi → neutre', () => {
+	const s = deriveSummary(mkRates(), { sent: 0 }, ['A']);
+	expect(s.tone).toBe('neutral');
+	expect(s.verdict).toContain('Aucun e-mail');
+	expect(s.keyFigure.value).toBe('—');
+	expect(s.topRecommendation).toBe('A');
+});
+
+test('deriveSummary : recommandation prioritaire = première', () => {
+	expect(deriveSummary(mkRates(), { sent: 5 }, ['A', 'B']).topRecommendation).toBe('A');
+	expect(deriveSummary(mkRates(), { sent: 5 }, []).topRecommendation).toBeNull();
+});
+
+test('deriveSummary : une soumission force le ton critique', () => {
+	const s = deriveSummary(mkRates({ click: 0.05, submission: 0.2 }), { sent: 10 }, []);
+	expect(s.tone).toBe('critical');
+	expect(s.verdict).toContain('soumis des informations');
+	expect(s.secondaryFigure).toEqual({ label: 'Taux de soumission', value: '20 %' });
+});
+
+test("reportIssuer : lit les variables de l'env fourni, vide par défaut", () => {
+	expect(reportIssuer({ REDFISH_ORG_NAME: ' Acme ', REDFISH_ORG_CONTACT: 'x@acme.test' })).toEqual({
+		name: 'Acme',
+		contact: 'x@acme.test'
+	});
+	expect(reportIssuer({})).toEqual({ name: '', contact: '' });
+});
+
+test('buildReport : branding et synthèse présents', async () => {
+	ev(0, 'sent');
+	const r = await buildReport(campaignId, { anonymize: true });
+	expect(r.branding.clientName).toBe('A');
+	expect(r.branding.scenario).toBe('S');
+	expect(r.branding.clientContact).toBe('');
+	expect(r.summary.verdict.length).toBeGreaterThan(0);
+	expect(r.summary.keyFigure.label).toBe('Taux de clic');
 });

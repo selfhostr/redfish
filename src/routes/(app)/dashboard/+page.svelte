@@ -1,5 +1,6 @@
 <script lang="ts">
 	import TrendChart from '$lib/components/TrendChart.svelte';
+	import FunnelBars from '$lib/components/FunnelBars.svelte';
 	import StatusPill from '$lib/components/StatusPill.svelte';
 	import { Button, Panel, EmptyState, Page } from '$lib/components/ui';
 	import { funnelLabels } from '$lib/funnel-labels';
@@ -53,7 +54,7 @@
 	const stages = $derived.by(() => {
 		const f = data.featured?.funnel;
 		if (!f) return [];
-		const base = Math.max(f.sent, 1);
+		// La largeur des barres est calculée par FunnelBars à partir de `base` (= sent).
 		return [
 			{ label: funnelLabels.sent, value: f.sent },
 			{ label: funnelLabels.opened, value: f.opened },
@@ -61,7 +62,7 @@
 			{ label: funnelLabels.pageInteraction, value: f.pageInteraction },
 			{ label: funnelLabels.formSubmitted, value: f.formSubmitted },
 			{ label: funnelLabels.awarenessViewed, value: f.awarenessViewed }
-		].map((s) => ({ ...s, width: Math.round((s.value / base) * 100) }));
+		];
 	});
 </script>
 
@@ -199,26 +200,7 @@
 					{#if data.featured.funnel.sent === 0}
 						<p class="text-ink-dim">Campagne pas encore lancée, aucune donnée d'entonnoir.</p>
 					{:else}
-						<div class="flex flex-col gap-3">
-							{#each stages as s (s.label)}
-								<div
-									class="grid grid-cols-[1fr_auto] items-center gap-x-3 gap-y-1 md:flex md:gap-3"
-								>
-									<span class="text-ink-dim md:w-40 md:shrink-0">{s.label}</span>
-									<span class="text-right text-ink md:order-last md:w-24 md:shrink-0">
-										{s.value} · {s.width} %
-									</span>
-									<div
-										class="col-span-2 h-4 overflow-hidden rounded-flat bg-surface-2 md:col-auto md:grow"
-									>
-										<div
-											class="h-4 rounded-flat bg-ink-dim"
-											style="width: {Math.max(s.width, s.value > 0 ? 2 : 0)}%"
-										></div>
-									</div>
-								</div>
-							{/each}
-						</div>
+						<FunnelBars {stages} base={data.featured.funnel.sent} />
 						<p class="rf-meta mt-4">
 							Proportions calculées sur {data.featured.funnel.sent} e-mails envoyés ({data.featured
 								.funnel.recipients} destinataires).
